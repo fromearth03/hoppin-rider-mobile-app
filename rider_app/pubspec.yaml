@@ -1,0 +1,78 @@
+name: hoppin_rider
+description: Hoppin rider app — book rides, track the driver, pay, rate, get help.
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.12.0
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # The shared core (API client, models, auth, providers). Path dependency —
+  # both apps consume the same package from packages/hoppin_shared.
+  hoppin_shared:
+    path: ../packages/hoppin_shared
+
+  # Demo engine — imported ONLY by lib/main_demo.dart. Live builds
+  # (-t lib/main.dart) tree-shake it: the compiler follows imports from the
+  # entrypoint, and nothing on the live path reaches this package.
+  hoppin_demo:
+    path: ../packages/hoppin_demo
+
+  # Design system — tokens, the four HoppinTheme builders, brand components.
+  hoppin_ui:
+    path: ../packages/hoppin_ui
+
+  flutter_riverpod: ^3.3.2
+  go_router: ^17.3.0
+  supabase_flutter: ^2.15.4
+
+  # clock.now() instead of DateTime.now() — countdown math stays fully
+  # controllable under fake_async (trip riblet interactor and its tests).
+  clock: ^1.1.2
+
+  # Location + OS permission (COMPLY-02 JIT prompt). Rider-app-only — kept out
+  # of hoppin_shared/hoppin_demo behind the LocationService wrapper so the
+  # demo/live isolation greps stay clean.
+  geolocator: ^13.0.4
+  permission_handler: ^11.4.0
+
+  # Stripe SDK — the payments rail (Lane B, Wave 2). Added here because a
+  # worktree lane owns the whole manifest for the phase; Lane B consumes these
+  # already-resolved deps without a manifest collision. Kept behind the
+  # StripeSdkGateway seam, rider-app-only (never hoppin_shared/hoppin_demo).
+  flutter_stripe: ^13.0.0
+  flutter_stripe_web: ^8.0.0
+
+  # FCM push rail (NOTIF-01/02, Lane A). Isolated behind the FcmGateway L1c
+  # boundary — rider-app-only, NEVER hoppin_shared/hoppin_demo, mirroring the
+  # maplibre_gl (Phase 6) and flutter_stripe (Phase 9) isolation contracts.
+  # Delivery is GATED on the backend FCM_CREDENTIALS_FILE (DOCS/04:44, #15/#16)
+  # and on `device_os` accepting "web" (#69); the client is fully wired and the
+  # gateway no-ops until both land.
+  firebase_core: ^4.11.0
+  firebase_messaging: ^16.4.1
+
+  # Profile photo capture (camera/gallery) for POST /me/avatar/upload. Isolated
+  # behind the AvatarPicker seam in hoppin_shared — rider-app-only, never
+  # hoppin_shared/hoppin_demo, mirroring the picker isolation the driver app's
+  # document upload already follows.
+  image_picker: ^1.1.2
+
+  # Share targets for the trip-share sheet (SAFETY-02 / seam #57, Lane C) and
+  # the future `tel:` masked-proxy body-swap when #45 ships. NEVER used to dial
+  # a real number today — the voice seam is inert by locked decision.
+  url_launcher: ^6.3.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  fake_async: ^1.3.3
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

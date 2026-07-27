@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Hoppin — fixed-fare rides in Wolverhampton.">
+  <meta name="theme-color" content="#14523F">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Hoppin">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>Hoppin</title>
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    /* Boot canvas: warm paper, never flash-of-white-on-dark defaults. */
+    html, body { background-color: #FAFAF8; margin: 0; padding: 0; }
+  </style>
+
+  <!-- MapLibre GL JS — required by maplibre_gl_web (a JS-interop binding that
+       ships no JS of its own). Vendored locally (web/vendor/) rather than a CDN
+       so the map never depends on network reachability at runtime. Without this
+       the global `maplibregl` is undefined and every map renders blank on web. -->
+  <link href="vendor/maplibre-gl.css" rel="stylesheet" />
+  <script src="vendor/maplibre-gl.js"></script>
+</head>
+<body>
+  <!--
+    You can customize the "flutter_bootstrap.js" script.
+    This is useful to provide a custom configuration to the Flutter loader
+    or to give the user feedback during the initialization process.
+
+    For more details:
+    * https://docs.flutter.dev/platform-integration/web/initialization
+  -->
+  <!--
+    FCM background worker (NOTIF-01). Registered EXPLICITLY, with its own scope,
+    BEFORE flutter_bootstrap.js — never left to Firebase's SDK auto-discovery,
+    which race-conditions against Flutter's own flutter_service_worker.js on the
+    modern (3.22+) bootstrap this app uses (flutterfire#12586 / #12798).
+
+    In the current GATED build there is no Firebase config, so registration WILL
+    fail. That failure is swallowed into a console.info. The app must boot
+    regardless: push is ADDITIVE over the 3s poll floor, never a boot dependency.
+  -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker
+          .register('firebase-messaging-sw.js', { scope: '/firebase-cloud-messaging-push-scope' })
+          .catch(function (e) {
+            console.info('[hoppin] FCM service worker not registered (GATED):', e);
+          });
+      });
+    }
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
