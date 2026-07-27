@@ -832,7 +832,12 @@ class _CancelSurveySheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final reasons = ref.watch(cancellationReasonsProvider);
+    // STOPGAP FIX (unblocks web compile): unwrap the AsyncValue before using
+    // it as a list. Mirrors cancel_flow.dart. Must also land in Abdullah's repo.
+    final reasonsAsync = ref.watch(cancellationReasonsProvider);
+    final reasons = reasonsAsync.hasValue
+        ? reasonsAsync.requireValue
+        : const <CancellationReason>[];
     final hoppin = context.hoppin;
     final colors = hoppin.colors;
     final type = hoppin.type;
