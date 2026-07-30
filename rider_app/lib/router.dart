@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -43,6 +44,10 @@ import 'features/wallet/wallet_screen.dart';
 ///
 /// `redirect` gates everything on auth: signed-out users are bounced to
 /// /login; signed-in users hitting /login are sent to the Book tab.
+/// Root navigator key — lets context-free code (e.g. the Stripe card sheet)
+/// present modals over the app. Injected into [GoRouter] below.
+final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'rootNavigator');
+
 final riderRouterProvider = Provider<GoRouter>((ref) {
   final auth = ref.watch(authServiceProvider);
 
@@ -94,6 +99,7 @@ final riderRouterProvider = Provider<GoRouter>((ref) {
   String? pendingDeepLink;
 
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/book',
     refreshListenable: Listenable.merge([authChanges, tripChanges]),
     redirect: (context, state) {

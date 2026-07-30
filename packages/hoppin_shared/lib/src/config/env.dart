@@ -39,6 +39,15 @@ class Env {
   static const String appVersion =
       String.fromEnvironment('APP_VERSION', defaultValue: '0.0.0');
 
+  /// Stripe publishable key (pk_*). Safe to ship in the client. When present,
+  /// the app wires the real card-entry gateway; when empty it stays on the
+  /// gated no-op ('card payments coming soon').
+  static const String stripePublishableKey =
+      String.fromEnvironment('STRIPE_PUBLISHABLE_KEY');
+
+  /// True when a Stripe publishable key was supplied at build time.
+  static bool get stripeConfigured => stripePublishableKey.isNotEmpty;
+
   // ── FCM (NOTIF-01) ────────────────────────────────────────────────────────
   // The public Firebase web-app config. Safe to ship in the client (the VAPID
   // key is a *public* Web Push certificate), but supplied via --dart-define for

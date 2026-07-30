@@ -8,7 +8,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'features/notifications/fcm_gateway.dart';
 import 'features/notifications/firebase_fcm_gateway.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
+
+import 'features/payments/stripe_sdk_gateway.dart';
+import 'features/payments/web_stripe_gateway.dart';
 import 'features/profile/platform_avatar_picker.dart';
+import 'router.dart';
 
 /// Entry point for the Hoppin RIDER app.
 ///
@@ -50,6 +55,17 @@ Future<void> main() async {
   final overrides = <Override>[
     avatarPickerProvider.overrideWithValue(PlatformAvatarPicker()),
   ];
+
+  // Card entry: GATED on a Stripe publishable key. With it, wire the real
+  // web gateway (Stripe CardField + confirmSetupIntent); without it the app
+  // keeps the honest 'card payments coming soon' no-op.
+  if (Env.stripeConfigured) {
+    Stripe.publishableKey = Env.stripePublishableKey;
+    overrides.add(
+      stripeGatewayProvider
+          .overrideWithValue(WebStripeGateway(rootNavigatorKey)),
+    );
+  }
   if (Env.fcmConfigured) {
     try {
       await Firebase.initializeApp(
