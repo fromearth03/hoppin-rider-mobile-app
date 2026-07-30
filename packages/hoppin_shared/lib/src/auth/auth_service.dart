@@ -99,11 +99,17 @@ class AuthService {
     required String email,
     required String password,
     String? fullName,
+    String? phone,
   }) {
+    // full_name + phone ride along as user_metadata; the auth.users trigger
+    // (Go_Database mig 086/087) reads them to populate public.users.
+    final data = <String, dynamic>{};
+    if (fullName != null) data['full_name'] = fullName;
+    if (phone != null) data['phone'] = phone;
     return _auth.signUp(
       email: email,
       password: password,
-      data: fullName == null ? null : {'full_name': fullName},
+      data: data.isEmpty ? null : data,
     );
   }
 
