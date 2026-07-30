@@ -71,13 +71,27 @@ class _CardEntrySheetState extends State<_CardEntrySheet> {
             e.error.message ??
             'Your card could not be saved.';
       });
-    } catch (_) {
+    } catch (e) {
+      // On web a decline is thrown as a stripe_js error, not a StripeException —
+      // pull its message ('Your card was declined.', etc.) instead of a generic
+      // line so testers see the real reason.
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _error = 'Something went wrong. Please try again.';
+        _error = _stripeMessage(e) ??
+            'Your card could not be saved. Check the details or try another card.';
       });
     }
+  }
+
+  /// Best-effort message from any Stripe error object (StripeError / stripe_js)
+  /// that exposes a `message` field, without importing the web-only package.
+  String? _stripeMessage(Object e) {
+    try {
+      final m = (e as dynamic).message;
+      if (m is String && m.trim().isNotEmpty) return m;
+    } catch (_) {}
+    return null;
   }
 
   @override
