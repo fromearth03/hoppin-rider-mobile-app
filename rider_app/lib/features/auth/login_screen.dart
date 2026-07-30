@@ -90,6 +90,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           email: _emailCtrl.text.trim(),
           password: _passwordCtrl.text,
         );
+        // Role gate — this is the RIDER app. A driver or admin account must NOT
+        // get in: it is the wrong app and its token is not a rider. Sign it
+        // straight back out with a clear message instead of exposing rider
+        // features to it.
+        final role = auth.role;
+        if (role == AppRole.driver || role == AppRole.admin) {
+          await auth.signOut();
+          if (mounted) {
+            setState(() => _error = role == AppRole.driver
+                ? 'This is a driver account — please use the Hoppin Driver app.'
+                : 'Admin accounts cannot sign in to the rider app.');
+          }
+          return;
+        }
         // Router redirect handles navigation via onAuthStateChange.
       }
     } on Exception catch (e) {
