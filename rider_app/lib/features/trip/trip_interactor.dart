@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hoppin_shared/hoppin_shared.dart';
 
 import '../../providers.dart';
+import '../notifications/fcm_gateway.dart';
+import '../notifications/notification_feed.dart';
 import 'route_waypoints.dart';
 import 'trip_handoff.dart';
 import 'trip_state.dart';
@@ -114,6 +116,7 @@ class TripInteractor extends Notifier<TripState> {
   }
 
   void _absorb(int gen, Ride ride, RideDriverInfo? info) {
+    final previousPhase = state.phase;
     final driver = _mergeDriver(state.driver, info);
 
     // ETA re-sync: every poll that carries a countdown re-aims the deadline
@@ -153,6 +156,14 @@ class TripInteractor extends Notifier<TripState> {
       error: null,
     );
 
+    // A genuine phase change is the rider-facing event the notification
+    // centre is meant to carry. The FCM feed has no live producer (the
+    // default gateway is the no-op), so without this the bell/centre stay
+    // permanently empty. Emit the same titles a real push would.
+    if (phase != previousPhase) {
+      _notifyPhase(phase);
+    }
+
     if (ride.status.isTerminal) {
       _stopPolling();
       _stopTicker();
@@ -166,6 +177,33 @@ class TripInteractor extends Notifier<TripState> {
     } else {
       _syncTicker(phase);
     }
+  }
+
+  /// Maps a trip phase to the notification a real push would carry and drops
+  /// it into the session feed. Titles mirror fcm_gateway's _titleFor so a
+  /// local event and a real push read identically. Non-milestone phases emit
+  /// nothing.
+  void _notifyPhase(TripPhase phase) {
+    final (String, PushType)? event = switch (phase) {
+      TripPhase.driverEnRoute =>
+        ('Your driver is on the way', PushType.driverAssigned),
+      TripPhase.arrivingNow =>
+        ('Your driver is arriving', PushType.driverArriving),
+      TripPhase.driverArrived =>
+        ('Your driver has arrived', PushType.driverArrived),
+      TripPhase.onRoad => ('Your trip has started', PushType.tripStarted),
+      TripPhase.completed =>
+        ('Your trip is complete', PushType.tripCompleted),
+      TripPhase.cancelled =>
+        ('Your trip was cancelled', PushType.tripCancelled),
+      _ => null,
+    };
+    if (event == null) return;
+    ref.read(notificationFeedProvider.notifier).addLocal(
+          title: event.$1,
+          rideId: rideId,
+          type: event.$2,
+        );
   }
 
   /// Status → smart phase (world semantics): accepted splits on the seam's
