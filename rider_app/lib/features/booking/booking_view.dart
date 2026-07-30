@@ -559,12 +559,19 @@ class _MapBand extends StatelessWidget {
           HopMapPinRole.destination,
         ),
     ];
-    final track = (pickup != null && dropoff != null)
+    // Prefer the OSRM road polyline the estimate carries; fall back to a
+    // straight pickup→dropoff line until the estimate (with geometry) arrives.
+    final estRoute = est?.route;
+    final track = (estRoute != null && estRoute.length >= 2)
         ? HopMapTrack([
-            HopGeoPoint(pickup.lat, pickup.lng),
-            HopGeoPoint(dropoff.lat, dropoff.lng),
+            for (final p in estRoute) HopGeoPoint(p.lat, p.lng),
           ])
-        : null;
+        : (pickup != null && dropoff != null)
+            ? HopMapTrack([
+                HopGeoPoint(pickup.lat, pickup.lng),
+                HopGeoPoint(dropoff.lat, dropoff.lng),
+              ])
+            : null;
     final intent = pins.isEmpty
         ? const FitPoints([HopGeoPoint(52.5870, -2.1288)])
         : FitPoints([for (final p in pins) p.point]);

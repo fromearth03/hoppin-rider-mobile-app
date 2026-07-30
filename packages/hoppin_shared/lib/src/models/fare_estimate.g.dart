@@ -38,6 +38,9 @@ _FareEstimate _$FareEstimateFromJson(Map<String, dynamic> json) =>
       distanceMeters: (json['distance_meters'] as num).toInt(),
       durationSeconds: (json['duration_seconds'] as num).toInt(),
       vehicleCategoryId: json['vehicle_category_id'] as String?,
+      route: (json['route'] as List<dynamic>?)
+          ?.map((e) => GeoPoint.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
 
 Map<String, dynamic> _$FareEstimateToJson(_FareEstimate instance) =>
@@ -46,4 +49,5 @@ Map<String, dynamic> _$FareEstimateToJson(_FareEstimate instance) =>
       'distance_meters': instance.distanceMeters,
       'duration_seconds': instance.durationSeconds,
       'vehicle_category_id': instance.vehicleCategoryId,
+      'route': instance.route,
     };

@@ -1,5 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'ride_geo.dart';
+
 part 'fare_estimate.freezed.dart';
 part 'fare_estimate.g.dart';
 
@@ -35,6 +37,10 @@ abstract class FareEstimate with _$FareEstimate {
     @JsonKey(name: 'distance_meters') required int distanceMeters,
     @JsonKey(name: 'duration_seconds') required int durationSeconds,
     @JsonKey(name: 'vehicle_category_id') String? vehicleCategoryId,
+
+    /// The pickup→dropoff road polyline from OSRM; null when the server
+    /// could not fetch it, in which case the map draws a straight line.
+    @JsonKey(name: 'route') List<GeoPoint>? route,
   }) = _FareEstimate;
 
   factory FareEstimate.fromJson(Map<String, dynamic> json) =>

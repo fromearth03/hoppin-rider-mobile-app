@@ -305,7 +305,9 @@ as double,
 /// @nodoc
 mixin _$FareEstimate {
 
- Quote get estimate;@JsonKey(name: 'distance_meters') int get distanceMeters;@JsonKey(name: 'duration_seconds') int get durationSeconds;@JsonKey(name: 'vehicle_category_id') String? get vehicleCategoryId;
+ Quote get estimate;@JsonKey(name: 'distance_meters') int get distanceMeters;@JsonKey(name: 'duration_seconds') int get durationSeconds;@JsonKey(name: 'vehicle_category_id') String? get vehicleCategoryId;/// The pickup→dropoff road polyline from OSRM; null when the server
+/// could not fetch it, in which case the map draws a straight line.
+@JsonKey(name: 'route') List<GeoPoint>? get route;
 /// Create a copy of FareEstimate
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -318,16 +320,16 @@ $FareEstimateCopyWith<FareEstimate> get copyWith => _$FareEstimateCopyWithImpl<F
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is FareEstimate&&(identical(other.estimate, estimate) || other.estimate == estimate)&&(identical(other.distanceMeters, distanceMeters) || other.distanceMeters == distanceMeters)&&(identical(other.durationSeconds, durationSeconds) || other.durationSeconds == durationSeconds)&&(identical(other.vehicleCategoryId, vehicleCategoryId) || other.vehicleCategoryId == vehicleCategoryId));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is FareEstimate&&(identical(other.estimate, estimate) || other.estimate == estimate)&&(identical(other.distanceMeters, distanceMeters) || other.distanceMeters == distanceMeters)&&(identical(other.durationSeconds, durationSeconds) || other.durationSeconds == durationSeconds)&&(identical(other.vehicleCategoryId, vehicleCategoryId) || other.vehicleCategoryId == vehicleCategoryId)&&const DeepCollectionEquality().equals(other.route, route));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,estimate,distanceMeters,durationSeconds,vehicleCategoryId);
+int get hashCode => Object.hash(runtimeType,estimate,distanceMeters,durationSeconds,vehicleCategoryId,const DeepCollectionEquality().hash(route));
 
 @override
 String toString() {
-  return 'FareEstimate(estimate: $estimate, distanceMeters: $distanceMeters, durationSeconds: $durationSeconds, vehicleCategoryId: $vehicleCategoryId)';
+  return 'FareEstimate(estimate: $estimate, distanceMeters: $distanceMeters, durationSeconds: $durationSeconds, vehicleCategoryId: $vehicleCategoryId, route: $route)';
 }
 
 
@@ -338,7 +340,7 @@ abstract mixin class $FareEstimateCopyWith<$Res>  {
   factory $FareEstimateCopyWith(FareEstimate value, $Res Function(FareEstimate) _then) = _$FareEstimateCopyWithImpl;
 @useResult
 $Res call({
- Quote estimate,@JsonKey(name: 'distance_meters') int distanceMeters,@JsonKey(name: 'duration_seconds') int durationSeconds,@JsonKey(name: 'vehicle_category_id') String? vehicleCategoryId
+ Quote estimate,@JsonKey(name: 'distance_meters') int distanceMeters,@JsonKey(name: 'duration_seconds') int durationSeconds,@JsonKey(name: 'vehicle_category_id') String? vehicleCategoryId,@JsonKey(name: 'route') List<GeoPoint>? route
 });
 
 
@@ -355,13 +357,14 @@ class _$FareEstimateCopyWithImpl<$Res>
 
 /// Create a copy of FareEstimate
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? estimate = null,Object? distanceMeters = null,Object? durationSeconds = null,Object? vehicleCategoryId = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? estimate = null,Object? distanceMeters = null,Object? durationSeconds = null,Object? vehicleCategoryId = freezed,Object? route = freezed,}) {
   return _then(_self.copyWith(
 estimate: null == estimate ? _self.estimate : estimate // ignore: cast_nullable_to_non_nullable
 as Quote,distanceMeters: null == distanceMeters ? _self.distanceMeters : distanceMeters // ignore: cast_nullable_to_non_nullable
 as int,durationSeconds: null == durationSeconds ? _self.durationSeconds : durationSeconds // ignore: cast_nullable_to_non_nullable
 as int,vehicleCategoryId: freezed == vehicleCategoryId ? _self.vehicleCategoryId : vehicleCategoryId // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,route: freezed == route ? _self.route : route // ignore: cast_nullable_to_non_nullable
+as List<GeoPoint>?,
   ));
 }
 /// Create a copy of FareEstimate
@@ -455,10 +458,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Quote estimate, @JsonKey(name: 'distance_meters')  int distanceMeters, @JsonKey(name: 'duration_seconds')  int durationSeconds, @JsonKey(name: 'vehicle_category_id')  String? vehicleCategoryId)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Quote estimate, @JsonKey(name: 'distance_meters')  int distanceMeters, @JsonKey(name: 'duration_seconds')  int durationSeconds, @JsonKey(name: 'vehicle_category_id')  String? vehicleCategoryId, @JsonKey(name: 'route')  List<GeoPoint>? route)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _FareEstimate() when $default != null:
-return $default(_that.estimate,_that.distanceMeters,_that.durationSeconds,_that.vehicleCategoryId);case _:
+return $default(_that.estimate,_that.distanceMeters,_that.durationSeconds,_that.vehicleCategoryId,_that.route);case _:
   return orElse();
 
 }
@@ -476,10 +479,10 @@ return $default(_that.estimate,_that.distanceMeters,_that.durationSeconds,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Quote estimate, @JsonKey(name: 'distance_meters')  int distanceMeters, @JsonKey(name: 'duration_seconds')  int durationSeconds, @JsonKey(name: 'vehicle_category_id')  String? vehicleCategoryId)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Quote estimate, @JsonKey(name: 'distance_meters')  int distanceMeters, @JsonKey(name: 'duration_seconds')  int durationSeconds, @JsonKey(name: 'vehicle_category_id')  String? vehicleCategoryId, @JsonKey(name: 'route')  List<GeoPoint>? route)  $default,) {final _that = this;
 switch (_that) {
 case _FareEstimate():
-return $default(_that.estimate,_that.distanceMeters,_that.durationSeconds,_that.vehicleCategoryId);case _:
+return $default(_that.estimate,_that.distanceMeters,_that.durationSeconds,_that.vehicleCategoryId,_that.route);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -496,10 +499,10 @@ return $default(_that.estimate,_that.distanceMeters,_that.durationSeconds,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Quote estimate, @JsonKey(name: 'distance_meters')  int distanceMeters, @JsonKey(name: 'duration_seconds')  int durationSeconds, @JsonKey(name: 'vehicle_category_id')  String? vehicleCategoryId)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Quote estimate, @JsonKey(name: 'distance_meters')  int distanceMeters, @JsonKey(name: 'duration_seconds')  int durationSeconds, @JsonKey(name: 'vehicle_category_id')  String? vehicleCategoryId, @JsonKey(name: 'route')  List<GeoPoint>? route)?  $default,) {final _that = this;
 switch (_that) {
 case _FareEstimate() when $default != null:
-return $default(_that.estimate,_that.distanceMeters,_that.durationSeconds,_that.vehicleCategoryId);case _:
+return $default(_that.estimate,_that.distanceMeters,_that.durationSeconds,_that.vehicleCategoryId,_that.route);case _:
   return null;
 
 }
@@ -511,13 +514,26 @@ return $default(_that.estimate,_that.distanceMeters,_that.durationSeconds,_that.
 @JsonSerializable()
 
 class _FareEstimate implements FareEstimate {
-  const _FareEstimate({required this.estimate, @JsonKey(name: 'distance_meters') required this.distanceMeters, @JsonKey(name: 'duration_seconds') required this.durationSeconds, @JsonKey(name: 'vehicle_category_id') this.vehicleCategoryId});
+  const _FareEstimate({required this.estimate, @JsonKey(name: 'distance_meters') required this.distanceMeters, @JsonKey(name: 'duration_seconds') required this.durationSeconds, @JsonKey(name: 'vehicle_category_id') this.vehicleCategoryId, @JsonKey(name: 'route') final  List<GeoPoint>? route}): _route = route;
   factory _FareEstimate.fromJson(Map<String, dynamic> json) => _$FareEstimateFromJson(json);
 
 @override final  Quote estimate;
 @override@JsonKey(name: 'distance_meters') final  int distanceMeters;
 @override@JsonKey(name: 'duration_seconds') final  int durationSeconds;
 @override@JsonKey(name: 'vehicle_category_id') final  String? vehicleCategoryId;
+/// The pickup→dropoff road polyline from OSRM; null when the server
+/// could not fetch it, in which case the map draws a straight line.
+ final  List<GeoPoint>? _route;
+/// The pickup→dropoff road polyline from OSRM; null when the server
+/// could not fetch it, in which case the map draws a straight line.
+@override@JsonKey(name: 'route') List<GeoPoint>? get route {
+  final value = _route;
+  if (value == null) return null;
+  if (_route is EqualUnmodifiableListView) return _route;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(value);
+}
+
 
 /// Create a copy of FareEstimate
 /// with the given fields replaced by the non-null parameter values.
@@ -532,16 +548,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _FareEstimate&&(identical(other.estimate, estimate) || other.estimate == estimate)&&(identical(other.distanceMeters, distanceMeters) || other.distanceMeters == distanceMeters)&&(identical(other.durationSeconds, durationSeconds) || other.durationSeconds == durationSeconds)&&(identical(other.vehicleCategoryId, vehicleCategoryId) || other.vehicleCategoryId == vehicleCategoryId));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _FareEstimate&&(identical(other.estimate, estimate) || other.estimate == estimate)&&(identical(other.distanceMeters, distanceMeters) || other.distanceMeters == distanceMeters)&&(identical(other.durationSeconds, durationSeconds) || other.durationSeconds == durationSeconds)&&(identical(other.vehicleCategoryId, vehicleCategoryId) || other.vehicleCategoryId == vehicleCategoryId)&&const DeepCollectionEquality().equals(other._route, _route));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,estimate,distanceMeters,durationSeconds,vehicleCategoryId);
+int get hashCode => Object.hash(runtimeType,estimate,distanceMeters,durationSeconds,vehicleCategoryId,const DeepCollectionEquality().hash(_route));
 
 @override
 String toString() {
-  return 'FareEstimate(estimate: $estimate, distanceMeters: $distanceMeters, durationSeconds: $durationSeconds, vehicleCategoryId: $vehicleCategoryId)';
+  return 'FareEstimate(estimate: $estimate, distanceMeters: $distanceMeters, durationSeconds: $durationSeconds, vehicleCategoryId: $vehicleCategoryId, route: $route)';
 }
 
 
@@ -552,7 +568,7 @@ abstract mixin class _$FareEstimateCopyWith<$Res> implements $FareEstimateCopyWi
   factory _$FareEstimateCopyWith(_FareEstimate value, $Res Function(_FareEstimate) _then) = __$FareEstimateCopyWithImpl;
 @override @useResult
 $Res call({
- Quote estimate,@JsonKey(name: 'distance_meters') int distanceMeters,@JsonKey(name: 'duration_seconds') int durationSeconds,@JsonKey(name: 'vehicle_category_id') String? vehicleCategoryId
+ Quote estimate,@JsonKey(name: 'distance_meters') int distanceMeters,@JsonKey(name: 'duration_seconds') int durationSeconds,@JsonKey(name: 'vehicle_category_id') String? vehicleCategoryId,@JsonKey(name: 'route') List<GeoPoint>? route
 });
 
 
@@ -569,13 +585,14 @@ class __$FareEstimateCopyWithImpl<$Res>
 
 /// Create a copy of FareEstimate
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? estimate = null,Object? distanceMeters = null,Object? durationSeconds = null,Object? vehicleCategoryId = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? estimate = null,Object? distanceMeters = null,Object? durationSeconds = null,Object? vehicleCategoryId = freezed,Object? route = freezed,}) {
   return _then(_FareEstimate(
 estimate: null == estimate ? _self.estimate : estimate // ignore: cast_nullable_to_non_nullable
 as Quote,distanceMeters: null == distanceMeters ? _self.distanceMeters : distanceMeters // ignore: cast_nullable_to_non_nullable
 as int,durationSeconds: null == durationSeconds ? _self.durationSeconds : durationSeconds // ignore: cast_nullable_to_non_nullable
 as int,vehicleCategoryId: freezed == vehicleCategoryId ? _self.vehicleCategoryId : vehicleCategoryId // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,route: freezed == route ? _self._route : route // ignore: cast_nullable_to_non_nullable
+as List<GeoPoint>?,
   ));
 }
 

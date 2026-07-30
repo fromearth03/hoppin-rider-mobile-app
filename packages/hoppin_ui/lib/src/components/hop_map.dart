@@ -402,7 +402,13 @@ class _HopMapState extends State<HopMap> with TickerProviderStateMixin {
   }
 
   void _applyIntent({bool force = false}) {
-    if (!widget.interactive || !widget.follow || !_mapReady) return;
+    // Declarative camera framing (fit/follow/settle) needs only follow + a
+    // ready map — NOT interactivity. `interactive` governs USER gestures
+    // (IgnorePointer + *GesturesEnabled); gating the camera on it too pinned
+    // non-interactive preview maps (the booking route band) to their initial
+    // centre so they never fit the route. Follow going false (user grabbed an
+    // interactive map) still parks the camera, so we never fight a gesture.
+    if (!widget.follow || !_mapReady) return;
     final ctrl = _controller;
     if (ctrl == null) return;
 
