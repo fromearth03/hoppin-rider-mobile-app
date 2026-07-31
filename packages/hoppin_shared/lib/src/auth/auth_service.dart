@@ -157,6 +157,13 @@ class AuthService {
     return _auth.updateUser(UserAttributes(password: newPassword));
   }
 
+  /// Mirrors the display name into Supabase user_metadata (`full_name`) so
+  /// the session greeting refreshes immediately. Paired with PATCH /me/profile,
+  /// which owns the public.users copy the other party sees.
+  Future<void> updateFullName(String name) {
+    return _auth.updateUser(UserAttributes(data: {'full_name': name}));
+  }
+
   Future<AuthResponse> signInWithPassword({
     required String email,
     required String password,

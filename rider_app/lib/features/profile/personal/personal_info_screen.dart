@@ -1,63 +1,102 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hoppin_shared/hoppin_shared.dart';
 import 'package:hoppin_ui/hoppin_ui.dart';
 
 import 'personal_facts.dart';
-import 'widgets/personal_info_unavailable.dart';
 
-/// ACCT-02 — Personal Information, on seam 70 (SL-5).
+/// ACCT-02 - Personal Information (seam 70 / SL-5) - now EDITABLE.
 ///
-/// A rider must be able to SEE what we hold about them. That is a transparency
-/// obligation, not a nicety. But there is no `GET /me/profile` and no
-/// `PATCH /me/profile` — there never has been — so they must never be led to
-/// believe they can change any of it here.
-///
-/// The screen therefore does three things and nothing else:
-///
-/// 1. It CONSTRUCTS [PersonalInfoUnavailable] **unconditionally**, at the top.
-///    The seam is not "sometimes null"; it is ALWAYS null. There is no branch
-///    to hang the disclosure on and pretending there is one would be theatre.
-/// 2. It renders the four facts the session genuinely carries — and omits any
-///    row it does not know, rather than filling it with a placeholder.
-/// 3. It shows the Save button the Figma promises, VISIBLE and at full size,
-///    with `onPressed: null`.
-///
-/// 🔴 On (3): an empty callback is a lie; a null one is the truth. The parent
-/// of this very screen (`profile_screen.dart:261`) coalesced a null tap handler
-/// into an empty closure — five dead rows that gave a full tap ripple over
-/// silence. The rider tapped, the UI acknowledged, nothing happened. Wave 0
-/// caught it. A disabled control the rider can SEE is off is the honest form.
-///
-/// 🔴 What this screen refuses to draw, against the Figma frame:
-/// - **A City row** — no such field exists ANYWHERE. Not in the JWT, not in the
-///   session, not in DOCS/04, not in any endpoint. The city in the design is a
-///   fabrication.
-/// - **A photo picker** — there is no avatar endpoint. A picker would let a
-///   rider select a photo that goes nowhere.
-/// - **The Figma's placeholder rider name** — Wave 0 already deleted that
-///   literal once, from the hub, where every real rider saw it.
-/// - **An enabled Save** — there is nothing to save it to.
-///
-/// There is no interactor. This screen has nothing to do. That is the point.
-class PersonalInfoScreen extends ConsumerWidget {
-  /// Creates the read-only personal-information surface.
+/// GET /me/profile loads the canonical name + phone (email read-only); the rider
+/// edits name and phone and Saves, which PATCHes public.users AND mirrors the
+/// name into Supabase user_metadata (so the session greeting refreshes). Phone is
+/// globally unique - a duplicate returns PHONE_TAKEN, shown inline.
+class PersonalInfoScreen extends ConsumerStatefulWidget {
   const PersonalInfoScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PersonalInfoScreen> createState() => _PersonalInfoScreenState();
+}
+
+class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _name = TextEditingController();
+  final _phone = TextEditingController();
+  String _email = '';
+  bool _loading = true;
+  bool _busy = false;
+  String? _error;
+  String? _notice;
+
+  @override
+  void initState() {
+    super.initState();
+    final facts = ref.read(personalFactsProvider);
+    _name.text = facts.fullName?.trim() ?? '';
+    _phone.text = facts.phone?.trim() ?? '';
+    _email = facts.email?.trim() ?? '';
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final p = await ref.read(profileRepositoryProvider).getProfile();
+      if (!mounted) return;
+      _name.text = p.fullName;
+      _phone.text = p.phone;
+      if (p.email.isNotEmpty) _email = p.email;
+    } catch (_) {
+      // keep the session-seeded values
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _phone.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    setState(() {
+      _error = null;
+      _notice = null;
+    });
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _busy = true);
+    try {
+      final name = _name.text.trim();
+      final phone = _phone.text.trim();
+      await ref.read(profileRepositoryProvider).updateProfile(
+            fullName: name,
+            phoneNumber: phone.isEmpty ? null : phone,
+          );
+      try {
+        await ref.read(authServiceProvider).updateFullName(name);
+      } catch (_) {/* metadata mirror is non-fatal */}
+      if (mounted) setState(() => _notice = 'Saved.');
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() => _error = e.code == 'PHONE_TAKEN'
+            ? 'That phone number is already in use.'
+            : 'Could not save. Check your details and try again.');
+      }
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Could not save. Please try again.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final hoppin = context.hoppin;
     final colors = hoppin.colors;
-    final facts = ref.watch(personalFactsProvider);
-
-    // Supabase hands back an empty string as readily as a null for a phone the
-    // account never had. A blank row is exactly as misleading as a dashed one,
-    // so both collapse to "we do not know".
-    final phone = _orNull(facts.phone);
-    final email = _orNull(facts.email);
-    final name = _orNull(facts.fullName) ?? email ?? 'Your account';
-    final memberSince = _formatMemberSince(facts.memberSince);
-
+    final memberSince =
+        _formatMemberSince(ref.watch(personalFactsProvider).memberSince);
     return Scaffold(
       backgroundColor: colors.canvas,
       body: Column(
@@ -69,73 +108,62 @@ class PersonalInfoScreen extends ConsumerWidget {
                 context.canPop() ? context.pop() : context.go('/profile'),
           ),
           Expanded(
-            child: ListView(
-              padding: EdgeInsets.symmetric(
-                horizontal: hoppin.spacing.gutter,
-                vertical: hoppin.spacing.lg,
-              ),
-              children: [
-                // The gap-70 rung. Unconditional — see the class doc. This is
-                // the Group C mount site.
-                const PersonalInfoUnavailable(),
-                SizedBox(height: hoppin.spacing.lg),
-
-                // Only the facts the session actually holds. A row we cannot
-                // fill is a row we do not draw.
-                HopCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _ReadOnlyField(
-                        fieldKey: const Key('personal.name'),
-                        label: 'Full Name',
-                        value: name,
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : Form(
+                    key: _formKey,
+                    child: ListView(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: hoppin.spacing.gutter,
+                        vertical: hoppin.spacing.lg,
                       ),
-                      if (email != null) ...[
-                        SizedBox(height: hoppin.spacing.md),
-                        _ReadOnlyField(
-                          fieldKey: const Key('personal.email'),
-                          label: 'Email',
-                          value: email,
+                      children: [
+                        if (_error != null) ...[
+                          HopBanner.error(message: _error!),
+                          SizedBox(height: hoppin.spacing.md),
+                        ],
+                        if (_notice != null) ...[
+                          HopBanner.notice(message: _notice!),
+                          SizedBox(height: hoppin.spacing.md),
+                        ],
+                        TextFormField(
+                          controller: _name,
+                          enabled: !_busy,
+                          textCapitalization: TextCapitalization.words,
+                          decoration: const InputDecoration(
+                            labelText: 'Full Name',
+                            prefixIcon: Icon(Icons.person_outline),
+                          ),
                         ),
-                      ],
-                      // ⚠️ Rendered ONLY when the session knows it. When it does
-                      // not, the row is GONE — not blank, not "—", not "Not
-                      // set". Those read as "you haven't filled this in" when
-                      // the truth is "we can't tell you", and asserting absence
-                      // when the truth is ignorance is a lie, just a polite one.
-                      if (phone != null) ...[
                         SizedBox(height: hoppin.spacing.md),
-                        _ReadOnlyField(
-                          fieldKey: const Key('personal.phone'),
-                          label: 'Contact',
-                          value: phone,
+                        TextFormField(
+                          controller: _phone,
+                          enabled: !_busy,
+                          keyboardType: TextInputType.phone,
+                          validator: (v) {
+                            final t = v?.trim() ?? '';
+                            if (t.isEmpty) return null;
+                            return t.length < 7
+                                ? 'Enter a valid phone number'
+                                : null;
+                          },
+                          decoration: const InputDecoration(
+                            labelText: 'Contact number',
+                            prefixIcon: Icon(Icons.phone_outlined),
+                          ),
                         ),
+                        if (_email.isNotEmpty) ...[
+                          SizedBox(height: hoppin.spacing.lg),
+                          _readOnly(context, 'Email', _email),
+                        ],
+                        if (memberSince != null) ...[
+                          SizedBox(height: hoppin.spacing.md),
+                          _readOnly(context, 'Member Since', memberSince),
+                        ],
                       ],
-                      if (memberSince != null) ...[
-                        SizedBox(height: hoppin.spacing.md),
-                        _ReadOnlyField(
-                          fieldKey: const Key('personal.member_since'),
-                          label: 'Member Since',
-                          value: memberSince,
-                        ),
-                      ],
-                    ],
+                    ),
                   ),
-                ),
-                SizedBox(height: hoppin.spacing.lg),
-              ],
-            ),
           ),
-
-          // The Figma's navy CTA. Visible, full size, and OFF — because there
-          // is no PATCH /me/profile behind it. A no-op callback would still
-          // ripple; null does not.
-          //
-          // It is PINNED here, outside the scroll view, rather than sitting at
-          // the bottom of the list. An inert control the rider has to scroll to
-          // discover is a poor disclosure — the whole point is that they SEE it
-          // is off, without hunting for it.
           Padding(
             padding: EdgeInsets.fromLTRB(
               hoppin.spacing.gutter,
@@ -143,24 +171,30 @@ class PersonalInfoScreen extends ConsumerWidget {
               hoppin.spacing.gutter,
               hoppin.spacing.lg,
             ),
-            child: const HopButton.primary(
-              key: Key('personal.save'),
+            child: HopButton.primary(
+              key: const Key('personal.save'),
               label: 'Save Changes',
-              onPressed: null,
+              onPressed: (_busy || _loading) ? null : _save,
+              busy: _busy,
             ),
           ),
         ],
       ),
     );
   }
-}
 
-/// Collapses the empty string to null. Supabase returns `''` as freely as it
-/// returns `null` for a field the account never had, and a blank value must not
-/// become a blank row.
-String? _orNull(String? raw) {
-  final trimmed = raw?.trim();
-  return (trimmed == null || trimmed.isEmpty) ? null : trimmed;
+  Widget _readOnly(BuildContext context, String label, String value) {
+    final hoppin = context.hoppin;
+    final colors = hoppin.colors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: hoppin.type.meta.copyWith(color: colors.textMid)),
+        SizedBox(height: hoppin.spacing.xs),
+        Text(value, style: hoppin.type.bodyLarge),
+      ],
+    );
+  }
 }
 
 const _months = <String>[
@@ -168,73 +202,12 @@ const _months = <String>[
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
-/// Renders the session's account-creation timestamp as "August 2025".
-///
-/// Returns null when the value is missing or unparseable — an unreadable date
-/// is not a date, and a row we cannot fill is a row we do not draw.
+/// Renders the account-creation timestamp as "August 2025", or null when
+/// missing/unparseable.
 String? _formatMemberSince(String? iso) {
-  final raw = _orNull(iso);
-  if (raw == null) return null;
+  final raw = iso?.trim();
+  if (raw == null || raw.isEmpty) return null;
   final parsed = DateTime.tryParse(raw);
   if (parsed == null) return null;
   return '${_months[parsed.month - 1]} ${parsed.year}';
-}
-
-/// One labelled, unmistakably non-editable field.
-///
-/// A real [TextField] so it reads as a form field the way the Figma draws it —
-/// but `readOnly` and `enabled: false`, with no cursor and no keyboard. A field
-/// a rider can type into is a promise that the text goes somewhere. It does not.
-class _ReadOnlyField extends StatelessWidget {
-  const _ReadOnlyField({
-    required this.fieldKey,
-    required this.label,
-    required this.value,
-  });
-
-  final Key fieldKey;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final hoppin = context.hoppin;
-    final colors = hoppin.colors;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: hoppin.type.meta.copyWith(color: colors.textMid),
-        ),
-        SizedBox(height: hoppin.spacing.xs),
-        TextField(
-          key: fieldKey,
-          controller: TextEditingController(text: value),
-          readOnly: true,
-          enabled: false,
-          showCursor: false,
-          style: hoppin.type.bodyLarge.copyWith(color: colors.textHi),
-          decoration: InputDecoration(
-            isDense: true,
-            filled: true,
-            fillColor: colors.canvas,
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: hoppin.spacing.md,
-              vertical: hoppin.spacing.sm,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(hoppin.radii.input),
-              borderSide: BorderSide(color: colors.hairline),
-            ),
-            disabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(hoppin.radii.input),
-              borderSide: BorderSide(color: colors.hairline),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 }

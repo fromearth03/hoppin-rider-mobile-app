@@ -120,4 +120,28 @@ class ProfileRepository {
         '/me/device-tokens',
         body: {'fcm_token': fcmToken, 'device_os': deviceOs},
       );
+
+  // ── Profile (name + phone) `[either]` ─────────────
+
+  /// `GET /me/profile` — the caller's editable name + phone + read-only email.
+  Future<({String fullName, String phone, String email})> getProfile() async {
+    final res = await _api.get<Map<String, dynamic>>('/me/profile');
+    final d = res.data ?? const <String, dynamic>{};
+    return (
+      fullName: (d['full_name'] as String?)?.trim() ?? '',
+      phone: (d['phone_number'] as String?)?.trim() ?? '',
+      email: (d['email'] as String?)?.trim() ?? '',
+    );
+  }
+
+  /// `PATCH /me/profile` — update name and/or phone. Throws
+  /// ApiException(code: 'PHONE_TAKEN') when the phone is already in use.
+  Future<void> updateProfile({String? fullName, String? phoneNumber}) =>
+      _api.patch<Map<String, dynamic>>(
+        '/me/profile',
+        body: {
+          if (fullName != null) 'full_name': fullName,
+          if (phoneNumber != null) 'phone_number': phoneNumber,
+        },
+      );
 }
