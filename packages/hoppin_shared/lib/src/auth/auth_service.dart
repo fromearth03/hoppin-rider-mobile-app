@@ -148,6 +148,15 @@ class AuthService {
     return _auth.resetPasswordForEmail(email);
   }
 
+  /// Sets a NEW password on the current (recovery) session — the second
+  /// half of the forgot-password flow. The rider lands on the reset screen
+  /// from the emailed link, which Supabase turns into a temporary recovery
+  /// session; this writes the new password onto it. Throws when there is no
+  /// session (link expired / opened directly) or the password is too weak.
+  Future<void> updatePassword(String newPassword) {
+    return _auth.updateUser(UserAttributes(password: newPassword));
+  }
+
   Future<AuthResponse> signInWithPassword({
     required String email,
     required String password,
