@@ -377,6 +377,21 @@ class BookingInteractor extends Notifier<BookingState> {
         );
         return;
       }
+      if (e.code == 'NO_PAYMENT_METHOD') {
+        // 402 — no saved card, so a completed ride would collect nothing. Land
+        // on the failure card with a clear prompt; the rider adds a card in
+        // Wallet, then re-books.
+        state = BookingState(
+          phase: BookingPhase.failed,
+          pickup: pickup,
+          dropoff: dropoff,
+          estimate: s.estimate,
+          error: 'Add a payment card in Wallet to book a ride.',
+          pendingPromoCode: s.pendingPromoCode,
+          promoUnvalidated: s.promoUnvalidated,
+        );
+        return;
+      }
       // Any other API failure keeps the designed failure card.
       state = BookingState(
         phase: BookingPhase.failed,
