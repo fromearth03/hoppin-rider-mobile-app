@@ -46,10 +46,17 @@ class _ResetLandingScreenState extends ConsumerState<ResetLandingScreen> {
       final auth = ref.read(authServiceProvider);
       await hoppinEstablishResetSession(alreadySignedIn: auth.isSignedIn);
       await auth.updatePassword(_passwordCtrl.text);
+      hoppinMarkResetConsumed(passwordUpdated: true);
       if (!mounted) return;
-      // The recovery session is now a full session — drop them into the app.
-      context.go('/book');
+      context.go(auth.isSignedIn ? '/book' : '/login');
     } on Exception catch (e) {
+      if (hoppinPasswordAlreadySet(e)) {
+        hoppinMarkResetConsumed(passwordUpdated: true);
+        if (!mounted) return;
+        final auth = ref.read(authServiceProvider);
+        context.go(auth.isSignedIn ? '/book' : '/login');
+        return;
+      }
       if (mounted) setState(() => _error = hoppinResetErrorMessage(e));
     } finally {
       if (mounted) setState(() => _busy = false);

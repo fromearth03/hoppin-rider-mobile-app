@@ -47,6 +47,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _passwordCtrl.text = prefill.password;
       _prefilled = true;
     }
+    if (hoppinTakePasswordUpdatedNotice()) {
+      _notice = 'Password updated — sign in with your new password.';
+    }
   }
 
   @override

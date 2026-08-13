@@ -206,7 +206,10 @@ final riderRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/reset',
             builder: (context, _) => ResetLandingScreen(
-              onBackToSignIn: () => context.go('/login'),
+              onBackToSignIn: () {
+                hoppinMarkResetConsumed();
+                context.go('/login');
+              },
             ),
           ),
 
