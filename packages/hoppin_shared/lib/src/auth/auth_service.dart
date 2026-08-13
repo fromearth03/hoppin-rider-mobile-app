@@ -199,19 +199,31 @@ class AuthService {
   Future<void> refreshSession() => _auth.refreshSession();
 }
 
-/// Where the reset email should send the user. Web uses the current origin
-/// (`https://rider.hoppin.tech/reset` / `https://driver.hoppin.tech/reset`).
-/// Native builds can override with `--dart-define=PASSWORD_RESET_REDIRECT=...`.
+/// Where the reset email should send the user.
+///
+/// Never return localhost — GoTrue uses Site URL as fallback, and that was
+/// `http://localhost:5173`. Production default is rider.hoppin.tech.
 String? hoppinPasswordResetRedirect() {
   const configured = String.fromEnvironment('PASSWORD_RESET_REDIRECT');
-  if (configured.isNotEmpty) return configured;
+  if (_isPublicHoppinRedirect(configured)) return configured;
   if (kIsWeb) {
     final origin = Uri.base.origin;
-    if (origin.startsWith('http://') || origin.startsWith('https://')) {
-      return '$origin/reset';
-    }
+    if (_isPublicHoppinOrigin(origin)) return '$origin/reset';
   }
-  return null;
+  return 'https://rider.hoppin.tech/reset';
+}
+
+bool _isLocalRedirect(String url) {
+  final u = url.toLowerCase();
+  return u.contains('localhost') || u.contains('127.0.0.1');
+}
+
+bool _isPublicHoppinRedirect(String url) =>
+    url.isNotEmpty && !_isLocalRedirect(url);
+
+bool _isPublicHoppinOrigin(String origin) {
+  if (origin.isEmpty || _isLocalRedirect(origin)) return false;
+  return origin.startsWith('http://') || origin.startsWith('https://');
 }
 
 /// True when this navigation (or the current web URL) is a Supabase recovery /
