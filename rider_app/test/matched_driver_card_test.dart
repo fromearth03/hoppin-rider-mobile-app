@@ -13,6 +13,8 @@ void main() {
   const info = RideDriverInfo(
     fullName: 'Gurpreet Singh',
     rating: 4.9,
+    ratingCount: 12,
+    recentComments: ['Always on time'],
     tripsCount: 1480,
     vehicleMake: 'Toyota',
     vehicleModel: 'Prius',

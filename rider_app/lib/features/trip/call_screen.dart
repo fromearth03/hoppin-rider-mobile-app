@@ -299,7 +299,9 @@ class _CallIdentity extends StatelessWidget {
         // secondary emphasis is carried by ALPHA, the way the rest of this
         // frame does it (see the inert timer above).
         Text(
-          '★ ${info.rating.toStringAsFixed(1)} (${info.tripsCount} trips)',
+          info.rating == null || info.ratingCount <= 0
+              ? 'New driver · ${info.tripsCount} trips'
+              : '★ ${info.rating!.toStringAsFixed(1)} (${info.tripsCount} trips)',
           style: hoppin.type.bodySmall.copyWith(
             color: onNavy.withValues(alpha: 0.75),
           ),

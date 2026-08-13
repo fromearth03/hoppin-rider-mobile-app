@@ -184,7 +184,10 @@ class FakeDriverRepository implements DriverRepository {
   @override
   Future<TripRiderContext?> tripRiderContext(String rideId) async => (
         name: DemoPersonas.rider.fullName,
+        photoUrl: null,
         rating: DemoPersonas.rider.rating,
+        ratingCount: 12,
+        recentComments: const ['Always on time'],
         pickupLabel: DemoPlaces.scriptedPickup.label,
         pickupEtaSeconds: DemoScript.fromSeed(DemoSeed.seed).etaTotalSeconds,
       );

@@ -84,8 +84,8 @@ PushMessage pushMessageFromRemote(RemoteMessage m) {
     type: pushTypeFromWire(str('type')),
     title: m.notification?.title ?? str('title'),
     body: m.notification?.body ?? str('body'),
-    rideId: str('ride_id'),
-    deepLink: str('deep_link'),
+    rideId: str('ride_id') ?? str('rideId'),
+    deepLink: str('deep_link') ?? str('deepLink'),
     sentAt: m.sentTime,
   );
 }

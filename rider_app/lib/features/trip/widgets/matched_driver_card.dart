@@ -112,6 +112,18 @@ class MatchedDriverCard extends StatelessWidget {
                       style: hoppin.type.bodySmall
                           .copyWith(color: hoppin.colors.textMid),
                     ),
+                    if (info.recentComments.isNotEmpty) ...[
+                      SizedBox(height: hoppin.spacing.xs),
+                      Text(
+                        '"${info.recentComments.first}"',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: hoppin.type.bodySmall.copyWith(
+                          color: hoppin.colors.textMid,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -203,8 +215,13 @@ class MatchedDriverCard extends StatelessWidget {
     );
   }
 
-  static String _ratingLine(RideDriverInfo info) =>
-      '★ ${info.rating.toStringAsFixed(1)}';
+  static String _ratingLine(RideDriverInfo info) {
+    if (info.rating == null || info.ratingCount <= 0) return 'New';
+    if (info.ratingCount > 1) {
+      return '★ ${info.rating!.toStringAsFixed(1)} (${info.ratingCount})';
+    }
+    return '★ ${info.rating!.toStringAsFixed(1)}';
+  }
 
   static String _tripsLine(RideDriverInfo info) =>
       '${_thousands(info.tripsCount)} trips';

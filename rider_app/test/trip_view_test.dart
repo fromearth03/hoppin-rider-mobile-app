@@ -590,6 +590,7 @@ class _StubTripInteractor extends TripInteractor {
 const _fakeDriver = RideDriverInfo(
   fullName: 'Gurpreet Singh',
   rating: 4.9,
+  ratingCount: 12,
   tripsCount: 1480,
   vehicleMake: 'Toyota',
   vehicleModel: 'Prius',
