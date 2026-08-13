@@ -124,8 +124,7 @@ final riderRouterProvider = Provider<GoRouter>((ref) {
       // surface and is deliberately NOT allowlisted.
       if (hoppinIsAuthCallback(state.uri) &&
           state.matchedLocation != '/reset') {
-        final q = state.uri.hasQuery ? '?${state.uri.query}' : '';
-        return '/reset$q';
+        return '/reset${hoppinResetRedirectQuery(state.uri, signedIn: signedIn)}';
       }
       final onSignedOutAuthRoute = onLogin ||
           state.matchedLocation == '/signup' ||
@@ -139,7 +138,12 @@ final riderRouterProvider = Provider<GoRouter>((ref) {
         pendingDeepLink = state.uri.toString();
         return '/login';
       }
-      if (state.matchedLocation == '/reset') return null;
+      if (state.matchedLocation == '/reset') {
+        if (signedIn && state.uri.queryParameters.containsKey('code')) {
+          return '/reset${hoppinResetRedirectQuery(state.uri, signedIn: true)}';
+        }
+        return null;
+      }
       if (onLogin) {
         final pending = pendingDeepLink;
         pendingDeepLink = null;

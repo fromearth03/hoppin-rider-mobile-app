@@ -14,6 +14,7 @@ void main() {
 
     expect(find.text('Set a new password'), findsOneWidget);
     expect(find.byType(TextFormField), findsNWidgets(2));
+    expect(find.byType(IconButton), findsNWidgets(2));
     expect(find.byType(HopEmptyState), findsNothing);
     expect(find.textContaining("isn't active yet"), findsNothing);
     expect(find.text('Contact support'), findsNothing);
