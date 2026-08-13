@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// The app role stamped into every Supabase JWT as the top-level `user_role`
@@ -140,12 +141,16 @@ class AuthService {
     );
   }
 
-  /// Sends a password-reset email (also used by drivers who forget theirs).
-  /// Completing the reset opens a link — the in-app deep-link handler is
-  /// pending platform config; until then the link lands on the Supabase
-  /// project's configured site URL.
+  /// Rider/driver forgot-password. Do NOT use recover/resetPasswordForEmail —
+  /// that hits the project-wide Reset Password template, which is the admin
+  /// OTP email. Magic-link is a separate template (a URL). [emailRedirectTo]
+  /// lands on THIS app's `/reset`, not the Supabase Site URL (admin/invite).
   Future<void> sendPasswordReset(String email) {
-    return _auth.resetPasswordForEmail(email);
+    return _auth.signInWithOtp(
+      email: email,
+      shouldCreateUser: false,
+      emailRedirectTo: hoppinPasswordResetRedirect(),
+    );
   }
 
   /// Sets a NEW password on the current (recovery) session — the second
@@ -192,4 +197,38 @@ class AuthService {
   /// a token that expired between those timed refreshes. After it completes,
   /// [accessToken] re-reads the fresh bearer from [currentSession].
   Future<void> refreshSession() => _auth.refreshSession();
+}
+
+/// Where the reset email should send the user. Web uses the current origin
+/// (`https://rider.hoppin.tech/reset` / `https://driver.hoppin.tech/reset`).
+/// Native builds can override with `--dart-define=PASSWORD_RESET_REDIRECT=...`.
+String? hoppinPasswordResetRedirect() {
+  const configured = String.fromEnvironment('PASSWORD_RESET_REDIRECT');
+  if (configured.isNotEmpty) return configured;
+  if (kIsWeb) {
+    final origin = Uri.base.origin;
+    if (origin.startsWith('http://') || origin.startsWith('https://')) {
+      return '$origin/reset';
+    }
+  }
+  return null;
+}
+
+/// True when this navigation (or the current web URL) is a Supabase recovery /
+/// invite / magic-link callback and should open `/reset` instead of home/login.
+bool hoppinIsAuthCallback(Uri routeUri) {
+  String? typeOf(Uri u) {
+    final t = u.queryParameters['type'];
+    if (t != null && t.isNotEmpty) return t;
+    if (u.fragment.isEmpty) return null;
+    return Uri.splitQueryString(u.fragment)['type'];
+  }
+
+  final type = typeOf(routeUri) ?? typeOf(Uri.base);
+  if (type == 'recovery' || type == 'invite' || type == 'magiclink') {
+    return true;
+  }
+  // PKCE callback (`?code=`) — include `/reset`, not only `/` `/login`.
+  return routeUri.queryParameters.containsKey('code') ||
+      Uri.base.queryParameters.containsKey('code');
 }

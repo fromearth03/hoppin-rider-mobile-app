@@ -128,12 +128,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
     setState(() => _busy = true);
     try {
-      // NOTE: completing the reset opens a link — the in-app deep-link handler
-      // arrives with platform config (M1.5). Until then the link lands on the
-      // Supabase project's configured site URL.
       await ref.read(authServiceProvider).sendPasswordReset(email);
       if (mounted) {
-        setState(() => _notice = 'Password reset email sent to $email.');
+        setState(() => _notice =
+            'Check your email — open the Hoppin link to set a new password.');
       }
     } on Exception catch (e) {
       if (mounted) setState(() => _error = friendlyErrorMessage(e));

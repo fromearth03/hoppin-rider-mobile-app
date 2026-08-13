@@ -122,6 +122,11 @@ final riderRouterProvider = Provider<GoRouter>((ref) {
       //
       // Everything else Phase 12 adds (`/profile/*`) is an AUTHENTICATED
       // surface and is deliberately NOT allowlisted.
+      if (hoppinIsAuthCallback(state.uri) &&
+          state.matchedLocation != '/reset') {
+        final q = state.uri.hasQuery ? '?${state.uri.query}' : '';
+        return '/reset$q';
+      }
       final onSignedOutAuthRoute = onLogin ||
           state.matchedLocation == '/signup' ||
           state.matchedLocation == '/verify' ||
@@ -134,6 +139,7 @@ final riderRouterProvider = Provider<GoRouter>((ref) {
         pendingDeepLink = state.uri.toString();
         return '/login';
       }
+      if (state.matchedLocation == '/reset') return null;
       if (onLogin) {
         final pending = pendingDeepLink;
         pendingDeepLink = null;
@@ -191,9 +197,8 @@ final riderRouterProvider = Provider<GoRouter>((ref) {
               phone: state.uri.queryParameters['phone'] ?? '',
             ),
           ),
-          // The password-reset deep-link landing — GATED (#49) until the
-          // Supabase redirect config lands. Allowlisted above so a signed-out
-          // link renders.
+          // Password-reset / invite landing. Allowlisted while signed-out so
+          // the emailed link can open the set-password form.
           GoRoute(
             path: '/reset',
             builder: (context, _) => ResetLandingScreen(
