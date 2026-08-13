@@ -14,6 +14,8 @@ import 'features/payments/stripe_sdk_gateway.dart';
 import 'features/payments/web_stripe_gateway.dart';
 import 'features/profile/platform_avatar_picker.dart';
 import 'router.dart';
+import 'url_strategy_stub.dart'
+    if (dart.library.html) 'url_strategy_web.dart';
 
 /// Entry point for the Hoppin RIDER app.
 ///
@@ -28,6 +30,8 @@ import 'router.dart';
 /// FCM_VAPID_KEY). Without them the app boots on the 3s poll floor, exactly as
 /// it does today — push is ADDITIVE, never a boot dependency.
 Future<void> main() async {
+  hoppinCaptureAuthLink();
+  hoppinUsePathUrlStrategy();
   WidgetsFlutterBinding.ensureInitialized();
   Env.assertConfigured();
 

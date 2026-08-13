@@ -50,12 +50,8 @@ class _ResetLandingScreenState extends ConsumerState<ResetLandingScreen> {
       if (!mounted) return;
       // The recovery session is now a full session — drop them into the app.
       context.go('/book');
-    } on Exception catch (_) {
-      if (mounted) {
-        setState(() => _error =
-            'This reset link has expired or is invalid. Request a new one '
-            'from the sign-in screen.');
-      }
+    } on Exception catch (e) {
+      if (mounted) setState(() => _error = hoppinResetErrorMessage(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
