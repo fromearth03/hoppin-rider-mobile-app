@@ -4,16 +4,6 @@ import 'package:hoppin_rider/features/notifications/fcm_gateway.dart';
 import 'package:hoppin_rider/features/notifications/notification_feed.dart';
 import 'package:hoppin_shared/hoppin_shared.dart';
 
-/// NOTIF-01 / gap 69 — the honest-by-default assertion.
-///
-/// `POST /me/device-tokens` validates `device_os` ∈ {"ios","android"}
-/// (DOCS/04:184). There is NO "web". Hoppin ships WEB. So the one genuinely
-/// BOUND piece of the notification rail is unreachable on our only platform.
-///
-/// The tempting fix — `deviceOs: kIsWeb ? 'android' : ...` — writes a LIE into
-/// the backend's database, poisons per-platform targeting, and misroutes
-/// Web-Push subscriptions down an FCM-Android path that cannot deliver to them.
-/// This file exists to pin that we never do it.
 class _RecordingProfileRepository implements ProfileRepository {
   final List<({String fcmToken, String deviceOs})> calls = [];
 
@@ -30,8 +20,6 @@ class _RecordingProfileRepository implements ProfileRepository {
       throw UnsupportedError('Not part of this test: ${invocation.memberName}');
 }
 
-/// A gateway that WOULD hand us a token — so the only reason registration is
-/// skipped is the `device_os` contract, not a missing token.
 class _TokenBearingGateway implements FcmGateway {
   const _TokenBearingGateway();
 
@@ -52,32 +40,21 @@ class _TokenBearingGateway implements FcmGateway {
 }
 
 void main() {
-  group('NOTIF-01 gap 69: registerDeviceToken is NOT called on web', () {
-    test('web is skipped — the recorder sees ZERO calls', () async {
+  group('NOTIF-01: web registers with device_os "web"', () {
+    test('web posts exactly once with "web"', () async {
       final repo = _RecordingProfileRepository();
 
       final outcome = await registerDeviceTokenIfSupported(
         gateway: const _TokenBearingGateway(),
         profiles: repo,
         isWeb: true,
-        platform: TargetPlatform.android, // the browser's reported host OS
+        platform: TargetPlatform.android,
       );
 
-      expect(
-        repo.calls,
-        isEmpty,
-        reason:
-            'The gateway HAD a token. We still did not register it, because '
-            '`device_os` has no "web" value (gap 69). Skipping is the honest '
-            'act; sending a false value is not.',
-      );
-      expect(
-        outcome,
-        TokenRegistration.gatedNoWebPlatform,
-        reason:
-            'The skip must be a DISCLOSED, named outcome — not a silent '
-            'no-op that looks like success.',
-      );
+      expect(outcome, TokenRegistration.registered);
+      expect(repo.calls, hasLength(1));
+      expect(repo.calls.single.deviceOs, 'web');
+      expect(repo.calls.single.fcmToken, 'fcm-token-abc123');
     });
 
     test('"android" is NEVER sent from web, even when the host OS is Android',
@@ -91,25 +68,11 @@ void main() {
         platform: TargetPlatform.android,
       );
 
-      expect(
-        repo.calls.map((c) => c.deviceOs),
-        isNot(contains('android')),
-        reason:
-            'THE assertion this file exists for. Chrome-on-Android reports '
-            'TargetPlatform.android, so the lazy path is one line away. It '
-            'would write a lie into the backend database.',
-      );
-      expect(
-        repo.calls.map((c) => c.deviceOs),
-        isNot(contains('web')),
-        reason:
-            'The contract rejects "web" with 400 VALIDATION_FAILED. We do not '
-            'send it either — we do not send anything.',
-      );
+      expect(repo.calls.map((c) => c.deviceOs), isNot(contains('android')));
+      expect(repo.calls.single.deviceOs, 'web');
     });
 
-    test('iOS Safari on web is also skipped — the platform is the BROWSER',
-        () async {
+    test('iOS Safari on web still sends "web"', () async {
       final repo = _RecordingProfileRepository();
 
       final outcome = await registerDeviceTokenIfSupported(
@@ -119,8 +82,8 @@ void main() {
         platform: TargetPlatform.iOS,
       );
 
-      expect(repo.calls, isEmpty);
-      expect(outcome, TokenRegistration.gatedNoWebPlatform);
+      expect(outcome, TokenRegistration.registered);
+      expect(repo.calls.single.deviceOs, 'web');
     });
   });
 
@@ -168,11 +131,7 @@ void main() {
         platform: TargetPlatform.macOS,
       );
 
-      expect(
-        repo.calls,
-        isEmpty,
-        reason: 'macOS/Windows/Linux have no legal `device_os` either.',
-      );
+      expect(repo.calls, isEmpty);
       expect(outcome, TokenRegistration.gatedNoWebPlatform);
     });
   });
@@ -190,13 +149,7 @@ void main() {
       );
 
       expect(repo.calls, isEmpty);
-      expect(
-        outcome,
-        TokenRegistration.gatedNoToken,
-        reason:
-            'The live default IS the Noop (delivery is GATED on the backend '
-            'FCM creds, gaps 15/16). No token exists to register.',
-      );
+      expect(outcome, TokenRegistration.gatedNoToken);
     });
   });
 }

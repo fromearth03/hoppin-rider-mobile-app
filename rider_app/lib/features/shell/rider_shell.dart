@@ -1,8 +1,13 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hoppin_shared/hoppin_shared.dart';
 import 'package:hoppin_ui/hoppin_ui.dart';
 
+import '../notifications/fcm_gateway.dart';
 import '../notifications/notification_centre_screen.dart';
 import '../notifications/notification_feed.dart';
 
@@ -79,6 +84,7 @@ class RiderShell extends ConsumerWidget {
       body: BackdropGroup(
         child: Stack(
           children: [
+            const _FcmTokenBinder(),
             // Below the glass. Its scroll views are handed the padding they owe
             // the chrome via the MediaQuery insets injected here.
             Positioned.fill(child: _ChromeInsets(child: navigationShell)),
@@ -129,6 +135,36 @@ class RiderShell extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Asks for notification permission and POSTs the FCM token once the rider is
+/// inside the signed-in shell. No-op gateway (tests / unconfigured build)
+/// returns immediately without touching the API client.
+class _FcmTokenBinder extends ConsumerStatefulWidget {
+  const _FcmTokenBinder();
+
+  @override
+  ConsumerState<_FcmTokenBinder> createState() => _FcmTokenBinderState();
+}
+
+class _FcmTokenBinderState extends ConsumerState<_FcmTokenBinder> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final gateway = ref.read(fcmGatewayProvider);
+      if (gateway is NoopFcmGateway) return;
+      unawaited(registerDeviceTokenIfSupported(
+        gateway: gateway,
+        profiles: ref.read(profileRepositoryProvider),
+        isWeb: kIsWeb,
+        platform: defaultTargetPlatform,
+      ));
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.shrink();
 }
 
 /// Tells every tab how much room the glass is taking, WITHOUT taking it away.

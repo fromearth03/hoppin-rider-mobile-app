@@ -180,10 +180,7 @@ enum TokenRegistration {
   /// The token was registered with a contract-legal `device_os`.
   registered,
 
-  /// GATED on gap 69: `POST /me/device-tokens` validates
-  /// `device_os` ∈ {"ios","android"} (DOCS/04:184). There is no web value, and
-  /// Hoppin ships web — so the one genuinely BOUND piece of the notification
-  /// rail is unreachable on our only platform.
+  /// No contract-legal `device_os` for this platform (desktop native).
   gatedNoWebPlatform,
 
   /// GATED on gaps 15/16: the gateway has no token to register (the live
@@ -192,18 +189,7 @@ enum TokenRegistration {
 }
 
 /// Registers this device's FCM token — but ONLY when the platform maps to a
-/// `device_os` value the contract accepts.
-///
-/// 🔴 THE RULE THIS FUNCTION EXISTS TO ENFORCE.
-/// `device_os` is validated ∈ {"ios","android"}. We ship WEB. The one-line
-/// "fix" — passing the string "android" whenever the app is running on the web —
-/// writes a LIE into the backend's database, poisons any per-platform targeting
-/// built on that column, and misroutes Web-Push subscriptions down an
-/// FCM-Android path that cannot deliver to them. It is a lie in THEIR data, not
-/// just ours. The phase gate greps for that exact expression; do not add it.
-///
-/// So on web we SKIP, and we return the reason. Token registration is GATED, not
-/// BOUND, until the backend accepts a web value (gap 69).
+/// `device_os` value the contract accepts (`ios` / `android` / `web`).
 Future<TokenRegistration> registerDeviceTokenIfSupported({
   required FcmGateway gateway,
   required ProfileRepository profiles,
@@ -213,6 +199,11 @@ Future<TokenRegistration> registerDeviceTokenIfSupported({
   final deviceOs = contractDeviceOs(isWeb: isWeb, platform: platform);
   if (deviceOs == null) return TokenRegistration.gatedNoWebPlatform;
 
+  final permission = await gateway.requestPermission();
+  if (permission != FcmPermission.granted) {
+    return TokenRegistration.gatedNoToken;
+  }
+
   final token = await gateway.token();
   if (token == null || token.isEmpty) return TokenRegistration.gatedNoToken;
 
@@ -221,20 +212,15 @@ Future<TokenRegistration> registerDeviceTokenIfSupported({
 }
 
 /// The `device_os` value the contract accepts for this platform, or `null` when
-/// there is none.
-///
-/// `null` on web — deliberately, and even when the browser's host OS reports
-/// Android or iOS. The platform here is the BROWSER, and the contract has no
-/// value for it.
+/// there is none. Web is `"web"` even when Chrome reports an Android/iOS host.
 String? contractDeviceOs({
   required bool isWeb,
   required TargetPlatform platform,
 }) {
-  if (isWeb) return null;
+  if (isWeb) return 'web';
   return switch (platform) {
     TargetPlatform.iOS => 'ios',
     TargetPlatform.android => 'android',
-    // macOS / Windows / Linux / Fuchsia have no contract value either.
     _ => null,
   };
 }

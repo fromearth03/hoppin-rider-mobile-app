@@ -60,9 +60,8 @@
     which race-conditions against Flutter's own flutter_service_worker.js on the
     modern (3.22+) bootstrap this app uses (flutterfire#12586 / #12798).
 
-    In the current GATED build there is no Firebase config, so registration WILL
-    fail. That failure is swallowed into a console.info. The app must boot
-    regardless: push is ADDITIVE over the 3s poll floor, never a boot dependency.
+    Failure is swallowed into a console.info — push is ADDITIVE, never a boot
+    dependency.
   -->
   <script>
     if ('serviceWorker' in navigator) {
@@ -70,7 +69,7 @@
         navigator.serviceWorker
           .register('firebase-messaging-sw.js', { scope: '/firebase-cloud-messaging-push-scope' })
           .catch(function (e) {
-            console.info('[hoppin] FCM service worker not registered (GATED):', e);
+            console.info('[hoppin] FCM service worker not registered:', e);
           });
       });
     }
