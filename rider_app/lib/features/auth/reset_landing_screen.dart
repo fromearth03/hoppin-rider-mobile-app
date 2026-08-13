@@ -19,8 +19,7 @@ class ResetLandingScreen extends ConsumerStatefulWidget {
   final VoidCallback? onBackToSignIn;
 
   @override
-  ConsumerState<ResetLandingScreen> createState() =>
-      _ResetLandingScreenState();
+  ConsumerState<ResetLandingScreen> createState() => _ResetLandingScreenState();
 }
 
 class _ResetLandingScreenState extends ConsumerState<ResetLandingScreen> {
@@ -28,7 +27,7 @@ class _ResetLandingScreenState extends ConsumerState<ResetLandingScreen> {
   final _passwordCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
   bool _obscurePassword = true;
-  bool _obscureConfirm = true;
+  bool _obscureConfirmation = true;
   bool _busy = false;
   String? _error;
 
@@ -79,12 +78,17 @@ class _ResetLandingScreenState extends ConsumerState<ResetLandingScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('Set a new password',
-                        textAlign: TextAlign.center, style: type.headline),
+                    Text(
+                      'Set a new password',
+                      textAlign: TextAlign.center,
+                      style: type.headline,
+                    ),
                     SizedBox(height: hoppin.spacing.sm),
-                    Text('Choose a new password for your Hoppin account.',
-                        textAlign: TextAlign.center,
-                        style: type.body.copyWith(color: colors.textMid)),
+                    Text(
+                      'Choose a new password for your Hoppin account.',
+                      textAlign: TextAlign.center,
+                      style: type.body.copyWith(color: colors.textMid),
+                    ),
                     SizedBox(height: hoppin.spacing.xl),
                     if (_error != null) ...[
                       HopBanner.error(message: _error!),
@@ -96,18 +100,22 @@ class _ResetLandingScreenState extends ConsumerState<ResetLandingScreen> {
                       obscureText: _obscurePassword,
                       autofillHints: const [AutofillHints.newPassword],
                       textInputAction: TextInputAction.next,
-                      validator: (v) =>
-                          (v == null || v.length < 8) ? 'At least 8 characters' : null,
+                      validator: (v) => (v == null || v.length < 8)
+                          ? 'At least 8 characters'
+                          : null,
                       decoration: InputDecoration(
                         labelText: 'New password',
                         helperText: 'At least 8 characters',
                         prefixIcon: const Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
                           onPressed: () => setState(
-                              () => _obscurePassword = !_obscurePassword),
-                          icon: Icon(_obscurePassword
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined),
+                            () => _obscurePassword = !_obscurePassword,
+                          ),
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
                           tooltip: _obscurePassword
                               ? 'Show password'
                               : 'Hide password',
@@ -118,23 +126,27 @@ class _ResetLandingScreenState extends ConsumerState<ResetLandingScreen> {
                     TextFormField(
                       controller: _confirmCtrl,
                       enabled: !_busy,
-                      obscureText: _obscureConfirm,
+                      obscureText: _obscureConfirmation,
                       textInputAction: TextInputAction.done,
                       onFieldSubmitted: (_) => _submit(),
-                      validator: (v) =>
-                          (v != _passwordCtrl.text) ? 'Passwords do not match' : null,
+                      validator: (v) => (v != _passwordCtrl.text)
+                          ? 'Passwords do not match'
+                          : null,
                       decoration: InputDecoration(
                         labelText: 'Confirm new password',
                         prefixIcon: const Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
                           onPressed: () => setState(
-                              () => _obscureConfirm = !_obscureConfirm),
-                          icon: Icon(_obscureConfirm
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined),
-                          tooltip: _obscureConfirm
-                              ? 'Show password'
-                              : 'Hide password',
+                            () => _obscureConfirmation = !_obscureConfirmation,
+                          ),
+                          icon: Icon(
+                            _obscureConfirmation
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
+                          tooltip: _obscureConfirmation
+                              ? 'Show confirmation password'
+                              : 'Hide confirmation password',
                         ),
                       ),
                     ),
