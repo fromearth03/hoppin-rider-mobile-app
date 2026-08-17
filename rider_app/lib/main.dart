@@ -31,7 +31,6 @@ import 'url_strategy_stub.dart'
 /// it does today — push is ADDITIVE, never a boot dependency.
 Future<void> main() async {
   hoppinCaptureAuthLink();
-  hoppinUsePathUrlStrategy();
   WidgetsFlutterBinding.ensureInitialized();
   Env.assertConfigured();
 
@@ -40,6 +39,8 @@ Future<void> main() async {
     url: Env.supabaseUrl,
     publishableKey: Env.supabaseAnonKey,
   );
+  // After GoTrue has read `#access_token=` / `?code=` from the bar.
+  hoppinUsePathUrlStrategy();
 
   // ── FCM boot: GATED ──────────────────────────────────────────────────────
   // The ONLY Firebase.initializeApp() in the repository.

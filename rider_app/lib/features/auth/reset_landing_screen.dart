@@ -49,7 +49,7 @@ class _ResetLandingScreenState extends ConsumerState<ResetLandingScreen> {
       hoppinMarkResetConsumed(passwordUpdated: true);
       if (!mounted) return;
       context.go(auth.isSignedIn ? '/book' : '/login');
-    } on Exception catch (e) {
+    } on Object catch (e) {
       if (hoppinPasswordAlreadySet(e)) {
         hoppinMarkResetConsumed(passwordUpdated: true);
         if (!mounted) return;
