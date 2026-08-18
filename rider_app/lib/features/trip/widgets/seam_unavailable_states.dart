@@ -67,11 +67,10 @@ class DriverUnavailableCard extends StatelessWidget {
   }
 }
 
-/// Pre-ride promo unavailable-state (seam #46).
+/// Pre-ride promo check unavailable-state.
 ///
-/// The live path cannot validate a promo code before a ride exists, so the
-/// entry-time check answers `null`. Rather than fake a tick/cross, the booking
-/// flow shows this designed state and stages the code for the match beat.
+/// The endpoint is live, but a transport failure means the app has no answer.
+/// The code remains staged and the ride-level endpoint performs the final check.
 class PromoUnavailableState extends StatelessWidget {
   /// Creates the pre-ride promo unavailable-state.
   const PromoUnavailableState({super.key});
@@ -82,8 +81,8 @@ class PromoUnavailableState extends StatelessWidget {
       compact: true,
       headline: 'Code saved',
       supporting:
-          "We'll check this promo when your driver is matched — pre-ride "
-          'validation is coming soon.',
+          "We couldn't check this code right now. We'll verify it again "
+          'when your ride is matched.',
     );
   }
 }
