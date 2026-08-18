@@ -50,6 +50,16 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final hoppin = context.hoppin;
     final colors = hoppin.colors;
+    ref.watch(profileSnapshotProvider);
+    ref.listen(profileSnapshotProvider, (_, next) {
+      next.whenData((profile) {
+        final current = ref.read(avatarUploadControllerProvider);
+        if (current is AvatarUploading || current is AvatarUploaded) return;
+        ref
+            .read(avatarUploadControllerProvider.notifier)
+            .seed(profile.avatarUrl.isEmpty ? null : profile.avatarUrl);
+      });
+    });
     final auth = ref.watch(authServiceProvider);
 
     // WAVE-0: five of these six rows were dead — `onTap: null`, falling through
@@ -231,10 +241,7 @@ class _ProfileIdentity extends StatelessWidget {
           onTap: onPickAvatar,
         ),
         SizedBox(height: hoppin.spacing.md),
-        Text(
-          name,
-          style: hoppin.type.section.copyWith(color: colors.textHi),
-        ),
+        Text(name, style: hoppin.type.section.copyWith(color: colors.textHi)),
         if (location != null) ...[
           SizedBox(height: hoppin.spacing.xs),
           Row(

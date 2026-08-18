@@ -4,6 +4,7 @@ import '../api/api_client.dart';
 import '../api/api_exception.dart';
 import '../models/app_status.dart';
 import '../models/cancellation_reason_option.dart';
+import '../models/complaint_type.dart';
 import '../models/driver_position.dart';
 import '../models/fare_estimate.dart';
 import '../models/place_suggestion.dart';
@@ -78,7 +79,10 @@ class RidesRepository {
 
   /// `GET /rides` — trip history, newest first, scoped to the caller. `[either]`
   Future<List<Ride>> history({int limit = 50}) async {
-    final res = await _api.get<List<dynamic>>('/rides', query: {'limit': limit});
+    final res = await _api.get<List<dynamic>>(
+      '/rides',
+      query: {'limit': limit},
+    );
     return (res.data ?? [])
         .map((e) => Ride.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -155,14 +159,10 @@ class RidesRepository {
     try {
       final res = await _api.get<Map<String, dynamic>>(
         '/geocode/search',
-        query: {
-          'q': q,
-          'limit': limit,
-          'lat': ?lat,
-          'lng': ?lng,
-        },
+        query: {'q': q, 'limit': limit, 'lat': ?lat, 'lng': ?lng},
       );
-      final rows = (res.data?['results'] as List<dynamic>?) ?? const <dynamic>[];
+      final rows =
+          (res.data?['results'] as List<dynamic>?) ?? const <dynamic>[];
       return rows
           .whereType<Map<String, dynamic>>()
           .map(PlaceSuggestion.fromJson)
@@ -231,10 +231,12 @@ class RidesRepository {
     required String version,
   }) async {
     try {
-      final res = await _api.get<Map<String, dynamic>>(
-        '/app-status',
-        query: {'platform': platform, 'version': version},
-      ).timeout(const Duration(seconds: 2));
+      final res = await _api
+          .get<Map<String, dynamic>>(
+            '/app-status',
+            query: {'platform': platform, 'version': version},
+          )
+          .timeout(const Duration(seconds: 2));
       final data = res.data;
       if (data == null) return AppStatus.unknown;
       return AppStatus.fromJson(data);
@@ -264,6 +266,16 @@ class RidesRepository {
     } on ApiException {
       return const PlatformContacts();
     }
+  }
+
+  /// `GET /complaint-types` — only active admin-managed complaint types.
+  Future<List<ComplaintTypeOption>> complaintTypes() async {
+    final res = await _api.get<Map<String, dynamic>>('/complaint-types');
+    final rows = (res.data?['complaint_types'] as List<dynamic>?) ?? const [];
+    return rows
+        .map((e) => ComplaintTypeOption.fromJson(e as Map<String, dynamic>))
+        .where((e) => e.code.isNotEmpty && e.label.isNotEmpty)
+        .toList();
   }
 
   /// `GET /vehicle-types` — the bookable vehicle classes with their REAL ids.
@@ -330,7 +342,8 @@ class RidesRepository {
   /// fabricated placeholder, which 400s). `[either]`
   Future<List<CancellationReasonOption>> cancellationReasons() async {
     final res = await _api.get<Map<String, dynamic>>('/cancellation-reasons');
-    final rows = (res.data?['cancellation_reasons'] as List<dynamic>?) ??
+    final rows =
+        (res.data?['cancellation_reasons'] as List<dynamic>?) ??
         const <dynamic>[];
     return rows
         .whereType<Map<String, dynamic>>()
@@ -376,9 +389,7 @@ class RidesRepository {
   Future<List<RideMessage>> messages(String rideId, {DateTime? since}) async {
     final res = await _api.get<Map<String, dynamic>>(
       '/rides/$rideId/messages',
-      query: {
-        if (since != null) 'since': since.toUtc().toIso8601String(),
-      },
+      query: {if (since != null) 'since': since.toUtc().toIso8601String()},
     );
     final list = res.data?['messages'] as List<dynamic>? ?? [];
     return list
@@ -419,8 +430,7 @@ class RidesRepository {
         'pickup_lng': pickupLng,
         'dropoff_lat': dropoffLat,
         'dropoff_lng': dropoffLng,
-        'requested_pickup_time':
-            requestedPickupTime.toUtc().toIso8601String(),
+        'requested_pickup_time': requestedPickupTime.toUtc().toIso8601String(),
         'estimated_fare_id': ?estimatedFareId,
       },
     );

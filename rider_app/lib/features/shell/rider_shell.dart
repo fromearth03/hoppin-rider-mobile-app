@@ -10,6 +10,7 @@ import 'package:hoppin_ui/hoppin_ui.dart';
 import '../notifications/fcm_gateway.dart';
 import '../notifications/notification_centre_screen.dart';
 import '../notifications/notification_feed.dart';
+import '../device/device_checkin.dart';
 
 /// Stable widget keys the shell exposes for navigation + tests. The real
 /// chrome (HopTopBar / HopBottomNav) landed at convergence (08-05); these
@@ -152,14 +153,17 @@ class _FcmTokenBinderState extends ConsumerState<_FcmTokenBinder> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(checkInRiderDevice(ref.read(profileRepositoryProvider)));
       final gateway = ref.read(fcmGatewayProvider);
       if (gateway is NoopFcmGateway) return;
-      unawaited(registerDeviceTokenIfSupported(
-        gateway: gateway,
-        profiles: ref.read(profileRepositoryProvider),
-        isWeb: kIsWeb,
-        platform: defaultTargetPlatform,
-      ));
+      unawaited(
+        registerDeviceTokenIfSupported(
+          gateway: gateway,
+          profiles: ref.read(profileRepositoryProvider),
+          isWeb: kIsWeb,
+          platform: defaultTargetPlatform,
+        ),
+      );
     });
   }
 

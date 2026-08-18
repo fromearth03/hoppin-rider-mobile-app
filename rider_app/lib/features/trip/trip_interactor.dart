@@ -151,8 +151,9 @@ class TripInteractor extends Notifier<TripState> {
       driver: driver,
       etaSecondsRemaining: remaining,
       stripProgress: progress,
-      activeWaypoint:
-          phase == TripPhase.onRoad ? _waypointAt(progress, driver) : null,
+      activeWaypoint: phase == TripPhase.onRoad
+          ? _waypointAt(progress, driver)
+          : null,
       error: null,
     );
 
@@ -185,43 +186,48 @@ class TripInteractor extends Notifier<TripState> {
   /// nothing.
   void _notifyPhase(TripPhase phase) {
     final (String, PushType)? event = switch (phase) {
-      TripPhase.driverEnRoute =>
-        ('Your driver is on the way', PushType.driverAssigned),
-      TripPhase.arrivingNow =>
-        ('Your driver is arriving', PushType.driverArriving),
-      TripPhase.driverArrived =>
-        ('Your driver has arrived', PushType.driverArrived),
+      TripPhase.driverEnRoute => (
+        'Your driver is on the way',
+        PushType.driverAssigned,
+      ),
+      TripPhase.arrivingNow => (
+        'Your driver is arriving',
+        PushType.driverArriving,
+      ),
+      TripPhase.driverArrived => (
+        'Your driver has arrived',
+        PushType.driverArrived,
+      ),
       TripPhase.onRoad => ('Your trip has started', PushType.tripStarted),
-      TripPhase.completed =>
-        ('Your trip is complete', PushType.tripCompleted),
-      TripPhase.cancelled =>
-        ('Your trip was cancelled', PushType.tripCancelled),
+      TripPhase.completed => ('Your trip is complete', PushType.tripCompleted),
+      TripPhase.cancelled => (
+        'Your trip was cancelled',
+        PushType.tripCancelled,
+      ),
       _ => null,
     };
     if (event == null) return;
-    ref.read(notificationFeedProvider.notifier).addLocal(
-          title: event.$1,
-          rideId: rideId,
-          type: event.$2,
-        );
+    ref
+        .read(notificationFeedProvider.notifier)
+        .addLocal(title: event.$1, rideId: rideId, type: event.$2);
   }
 
   /// Status → smart phase (world semantics): accepted splits on the seam's
   /// countdown — a floored ETA is the calm "Arriving now" hold.
   TripPhase _phaseFor(RideStatus status, int? etaSeconds) => switch (status) {
-        RideStatus.requested ||
-        RideStatus.matching ||
-        RideStatus.assigned =>
-          TripPhase.finding,
-        RideStatus.accepted => (etaSeconds != null && etaSeconds <= 0)
-            ? TripPhase.arrivingNow
-            : TripPhase.driverEnRoute,
-        RideStatus.arriving => TripPhase.driverArrived,
-        RideStatus.started => TripPhase.onRoad,
-        RideStatus.completed => TripPhase.completed,
-        RideStatus.cancelled => TripPhase.cancelled,
-        RideStatus.unknown => TripPhase.error,
-      };
+    RideStatus.requested ||
+    RideStatus.matching ||
+    RideStatus.assigned => TripPhase.finding,
+    RideStatus.accepted =>
+      (etaSeconds != null && etaSeconds <= 0)
+          ? TripPhase.arrivingNow
+          : TripPhase.driverEnRoute,
+    RideStatus.arriving => TripPhase.driverArrived,
+    RideStatus.started => TripPhase.onRoad,
+    RideStatus.completed => TripPhase.completed,
+    RideStatus.cancelled => TripPhase.cancelled,
+    RideStatus.unknown => TripPhase.error,
+  };
 
   /// Keeps the identity through seam gaps and keeps the last known journey
   /// labels once the world archives the ride and drops them (04-01 caveat) —
@@ -343,8 +349,10 @@ class TripInteractor extends Notifier<TripState> {
     final gen = _generation;
     state = state.copyWith(promoBusy: true, promoError: null);
     try {
-      final result =
-          await _rides.applyPromo(rideId: rideId, promoCode: trimmed);
+      final result = await _rides.applyPromo(
+        rideId: rideId,
+        promoCode: trimmed,
+      );
       if (gen != _generation) return;
       state = state.copyWith(appliedPromo: result, promoBusy: false);
     } on Exception catch (e) {
@@ -372,17 +380,27 @@ class TripInteractor extends Notifier<TripState> {
       return false;
     }
     // Fetch the REAL seeded reasons from the backend and pick a rider-actor
-    // one — the app's old fabricated placeholder id 400'd every cancel (gap
-    // #1). Prefer a no-penalty rider reason; fall back to the first rider
-    // reason, then any reason.
+    // one. Prefer a no-penalty rider reason; never fall back to a driver
+    // reason or a fabricated id. The server validates both activity and actor
+    // type, so selecting anything else turns a valid cancellation into a
+    // guaranteed 400.
     final String reasonId;
     try {
       final reasons = await _rides.cancellationReasons();
-      final riderReasons =
-          reasons.where((r) => r.actorType == 'rider').toList();
+      final riderReasons = reasons
+          .where((r) => r.actorType == 'rider')
+          .toList();
+      if (riderReasons.isEmpty) {
+        if (gen != _generation) return false;
+        state = state.copyWith(
+          error:
+              'Cancellation is unavailable because no active rider reason is configured.',
+        );
+        return false;
+      }
       final pick = riderReasons.firstWhere(
         (r) => !r.appliesPenaltyFee,
-        orElse: () => riderReasons.isNotEmpty ? riderReasons.first : reasons.first,
+        orElse: () => riderReasons.first,
       );
       reasonId = pick.id;
     } on Exception catch (e) {
@@ -413,7 +431,7 @@ class TripInteractor extends Notifier<TripState> {
       state = state.copyWith(
         error: rejectedReason
             ? "We couldn't cancel this ride — cancellation isn't working yet. "
-                'Please contact support and we will sort it out for you.'
+                  'Please contact support and we will sort it out for you.'
             : friendlyErrorMessage(e),
       );
       return false;

@@ -7,10 +7,14 @@ import 'package:hoppin_ui/hoppin_ui.dart';
 import 'support_categories.dart';
 
 /// My tickets — `GET /me/support-tickets`.
-final ticketsProvider =
-    FutureProvider.autoDispose<List<SupportTicket>>((ref) {
+final ticketsProvider = FutureProvider.autoDispose<List<SupportTicket>>((ref) {
   return ref.watch(supportRepositoryProvider).myTickets();
 });
+
+final complaintTypesProvider =
+    FutureProvider.autoDispose<List<ComplaintTypeOption>>((ref) {
+      return ref.watch(ridesRepositoryProvider).complaintTypes();
+    });
 
 /// Support hub (SUPPORT-01): ticket list + open a new ticket.
 ///
@@ -78,9 +82,7 @@ class SupportScreen extends ConsumerWidget {
                 hoppin.spacing.gutter,
                 hoppin.spacing.sm,
               ),
-              child: const HopBanner.notice(
-                message: humanSupportDisclosure,
-              ),
+              child: const HopBanner.notice(message: humanSupportDisclosure),
             ),
             Expanded(
               child: RefreshIndicator(
@@ -98,42 +100,43 @@ class SupportScreen extends ConsumerWidget {
                 // genuinely be down; this is the branch that says so.
                 child: switch (tickets) {
                   AsyncValue(:final error?) => ListView(
-                      padding: gutter,
-                      children: [
-                        HopBanner.error(
-                          message: friendlyErrorMessage(error),
-                          actionLabel: 'Retry',
-                          onAction: () => ref.invalidate(ticketsProvider),
-                        ),
-                      ],
-                    ),
-                  AsyncValue(:final value?) => value.isEmpty
-                      ? ListView(
-                          padding: gutter,
-                          children: [
-                            SizedBox(height: hoppin.spacing.xl),
-                            // Honest, and provably so: `GET /me/support-tickets`
-                            // is BOUND, so an empty list is a FACT — not the
-                            // ignorance the notification centre has to disclose.
-                            const HopEmptyState(
-                              headline: 'No tickets yet',
-                              supporting:
-                                  'Need help with a trip? Open a ticket and a '
-                                  'person will pick it up.',
-                            ),
-                          ],
-                        )
-                      : ListView.separated(
-                          padding: gutter,
-                          itemCount: value.length,
-                          separatorBuilder: (_, _) =>
-                              SizedBox(height: hoppin.spacing.sm),
-                          itemBuilder: (context, i) =>
-                              _TicketCard(ticket: value[i]),
-                        ),
+                    padding: gutter,
+                    children: [
+                      HopBanner.error(
+                        message: friendlyErrorMessage(error),
+                        actionLabel: 'Retry',
+                        onAction: () => ref.invalidate(ticketsProvider),
+                      ),
+                    ],
+                  ),
+                  AsyncValue(:final value?) =>
+                    value.isEmpty
+                        ? ListView(
+                            padding: gutter,
+                            children: [
+                              SizedBox(height: hoppin.spacing.xl),
+                              // Honest, and provably so: `GET /me/support-tickets`
+                              // is BOUND, so an empty list is a FACT — not the
+                              // ignorance the notification centre has to disclose.
+                              const HopEmptyState(
+                                headline: 'No tickets yet',
+                                supporting:
+                                    'Need help with a trip? Open a ticket and a '
+                                    'person will pick it up.',
+                              ),
+                            ],
+                          )
+                        : ListView.separated(
+                            padding: gutter,
+                            itemCount: value.length,
+                            separatorBuilder: (_, _) =>
+                                SizedBox(height: hoppin.spacing.sm),
+                            itemBuilder: (context, i) =>
+                                _TicketCard(ticket: value[i]),
+                          ),
                   _ => Center(
-                      child: CircularProgressIndicator(color: colors.accent),
-                    ),
+                    child: CircularProgressIndicator(color: colors.accent),
+                  ),
                 },
               ),
             ),
@@ -235,6 +238,7 @@ class _NewTicketSheet extends ConsumerStatefulWidget {
 class _NewTicketSheetState extends ConsumerState<_NewTicketSheet> {
   final _subjectCtrl = TextEditingController();
   final _bodyCtrl = TextEditingController();
+  String? _typeCode;
 
   /// The picked category — ALWAYS a value from the single-source taxonomy.
   /// The five-value map that used to live inline here is gone: it is now
@@ -276,9 +280,12 @@ class _NewTicketSheetState extends ConsumerState<_NewTicketSheet> {
     });
     try {
       final body = _bodyCtrl.text.trim();
-      final id = await ref.read(supportRepositoryProvider).createTicket(
+      final id = await ref
+          .read(supportRepositoryProvider)
+          .createTicket(
             subject: subject,
             category: _category,
+            typeCode: _typeCode,
             body: body.isEmpty ? null : body,
           );
       ref.invalidate(ticketsProvider);
@@ -299,6 +306,7 @@ class _NewTicketSheetState extends ConsumerState<_NewTicketSheet> {
   Widget build(BuildContext context) {
     final hoppin = context.hoppin;
     final colors = hoppin.colors;
+    final types = ref.watch(complaintTypesProvider);
 
     return Padding(
       padding: EdgeInsets.only(
@@ -327,6 +335,16 @@ class _NewTicketSheetState extends ConsumerState<_NewTicketSheet> {
             category: _category,
             onTap: _busy ? null : _pickCategory,
           ),
+          if (types.hasValue && types.requireValue.isNotEmpty) ...[
+            SizedBox(height: hoppin.spacing.sm),
+            _ComplaintTypeField(
+              selected: _typeCode,
+              types: types.requireValue,
+              onChanged: _busy
+                  ? null
+                  : (value) => setState(() => _typeCode = value),
+            ),
+          ],
           SizedBox(height: hoppin.spacing.sm),
           TextField(
             key: const Key('support.newTicket.body'),
@@ -359,6 +377,29 @@ class _NewTicketSheetState extends ConsumerState<_NewTicketSheet> {
       ),
     );
   }
+}
+
+class _ComplaintTypeField extends StatelessWidget {
+  const _ComplaintTypeField({
+    required this.selected,
+    required this.types,
+    required this.onChanged,
+  });
+  final String? selected;
+  final List<ComplaintTypeOption> types;
+  final ValueChanged<String?>? onChanged;
+
+  @override
+  Widget build(BuildContext context) => DropdownButtonFormField<String>(
+    value: selected,
+    decoration: const InputDecoration(labelText: 'Complaint type'),
+    items: [
+      const DropdownMenuItem<String>(value: null, child: Text('Select a type')),
+      for (final type in types)
+        DropdownMenuItem(value: type.code, child: Text(type.label)),
+    ],
+    onChanged: onChanged,
+  );
 }
 
 /// The category control — a tappable token-styled field, not a raw dropdown.
@@ -434,12 +475,12 @@ class _CategorySheet extends StatelessWidget {
   }
 
   static IconData _iconFor(String value) => switch (value) {
-        SupportCategories.fare => Icons.receipt_long_outlined,
-        SupportCategories.driver => Icons.person_outline,
-        SupportCategories.lostItem => Icons.work_outline,
-        SupportCategories.app => Icons.phone_iphone_outlined,
-        SupportCategories.accountDeletion => Icons.person_remove_outlined,
-        SupportCategories.dataExport => Icons.download_outlined,
-        _ => Icons.help_outline,
-      };
+    SupportCategories.fare => Icons.receipt_long_outlined,
+    SupportCategories.driver => Icons.person_outline,
+    SupportCategories.lostItem => Icons.work_outline,
+    SupportCategories.app => Icons.phone_iphone_outlined,
+    SupportCategories.accountDeletion => Icons.person_remove_outlined,
+    SupportCategories.dataExport => Icons.download_outlined,
+    _ => Icons.help_outline,
+  };
 }
