@@ -34,8 +34,7 @@ class FirebaseFcmGateway implements FcmGateway {
     // never a fabricated "granted".
     return switch (settings.authorizationStatus) {
       AuthorizationStatus.authorized ||
-      AuthorizationStatus.provisional =>
-        FcmPermission.granted,
+      AuthorizationStatus.provisional => FcmPermission.granted,
       AuthorizationStatus.denied => FcmPermission.denied,
       AuthorizationStatus.notDetermined => FcmPermission.notDetermined,
     };
@@ -82,6 +81,7 @@ PushMessage pushMessageFromRemote(RemoteMessage m) {
 
   return PushMessage(
     type: pushTypeFromWire(str('type')),
+    notificationId: str('notification_id') ?? str('notificationId'),
     title: m.notification?.title ?? str('title'),
     body: m.notification?.body ?? str('body'),
     rideId: str('ride_id') ?? str('rideId'),

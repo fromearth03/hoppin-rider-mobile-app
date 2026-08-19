@@ -75,6 +75,7 @@ class PushMessage {
   /// Creates a normalised push.
   const PushMessage({
     required this.type,
+    this.notificationId,
     this.title,
     this.body,
     this.rideId,
@@ -85,6 +86,9 @@ class PushMessage {
   /// The event kind. Unknown wire values map to [PushType.unknown] and route to
   /// the notification centre — never a crash, never a dropped message.
   final PushType type;
+
+  /// Durable server id, used to reconcile a foreground push with history.
+  final String? notificationId;
 
   /// Display headline (FCM's top-level `notification.title`, falling back to
   /// `data.title`).
@@ -191,4 +195,6 @@ class NoopFcmGateway implements FcmGateway {
 /// live target. `main.dart` overrides it with `FirebaseFcmGateway` ONLY when
 /// `Env.fcmConfigured` is true; `main_demo.dart` overrides it with
 /// `FakeFcmGateway`. Nothing else ever constructs a gateway.
-final fcmGatewayProvider = Provider<FcmGateway>((ref) => const NoopFcmGateway());
+final fcmGatewayProvider = Provider<FcmGateway>(
+  (ref) => const NoopFcmGateway(),
+);

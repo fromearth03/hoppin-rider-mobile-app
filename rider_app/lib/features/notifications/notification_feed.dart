@@ -26,7 +26,7 @@ class AppNotification {
   /// (there is no notification record endpoint; gap 68).
   factory AppNotification.fromPush(PushMessage m, {required String id}) =>
       AppNotification(
-        id: id,
+        id: m.notificationId ?? id,
         title: m.title ?? _titleFor(m.type),
         body: m.body,
         receivedAt: m.sentAt ?? DateTime.now(),
