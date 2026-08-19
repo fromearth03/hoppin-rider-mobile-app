@@ -50,6 +50,7 @@ const List<String> _allowedPushPrefixes = <String>[
   '/history',
   '/payments',
   '/support',
+  '/profile',
 ];
 
 /// True only for a target we recognise as an in-app path.
