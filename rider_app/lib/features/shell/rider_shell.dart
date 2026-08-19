@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hoppin_shared/hoppin_shared.dart';
 import 'package:hoppin_ui/hoppin_ui.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../notifications/fcm_gateway.dart';
 import '../notifications/notification_centre_screen.dart';
@@ -161,11 +162,21 @@ class _FcmTokenBinder extends ConsumerStatefulWidget {
 }
 
 class _FcmTokenBinderState extends ConsumerState<_FcmTokenBinder> {
+  StreamSubscription<AuthState>? _authSub;
+
   @override
   void initState() {
     super.initState();
+    final auth = ref.read(authServiceProvider);
+    _authSub = auth.onAuthStateChange.listen((_) {
+      if (auth.isSignedIn) {
+        unawaited(checkInRiderDevice(ref.read(profileRepositoryProvider)));
+      }
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(checkInRiderDevice(ref.read(profileRepositoryProvider)));
+      if (auth.isSignedIn) {
+        unawaited(checkInRiderDevice(ref.read(profileRepositoryProvider)));
+      }
       final gateway = ref.read(fcmGatewayProvider);
       if (gateway is NoopFcmGateway) return;
       unawaited(
@@ -177,6 +188,12 @@ class _FcmTokenBinderState extends ConsumerState<_FcmTokenBinder> {
         ),
       );
     });
+  }
+
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    super.dispose();
   }
 
   @override
