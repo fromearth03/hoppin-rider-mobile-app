@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:hoppin_ui/hoppin_ui.dart';
 
 import 'notification_feed.dart';
-import 'widgets/notification_history_unavailable.dart';
 
 /// The in-app route the top-bar bell targets. Lane E adds the matching
 /// `GoRoute` (`router.dart` is contended); this constant is the contract both
@@ -25,17 +24,8 @@ enum NotificationFilter {
 
 /// The notification centre (NOTIF-02, Figma `Notifications.jpg`).
 ///
-/// Shows the SESSION feed — the pushes and poll-derived trip events this client
-/// actually saw arrive — day-sectioned, filterable, with the honest gap-68
-/// history disclosure.
-///
-/// Two things it deliberately does NOT do:
-///   * It never renders "you have no notifications". There is no history
-///     endpoint, so the client cannot know that. It discloses ignorance instead
-///     (see [NotificationHistoryUnavailable]).
-///   * "Delete all notifications" ships DISABLED, inside that disclosure.
-///     Deleting a *server* record we cannot reach would be a lie. "Mark all as
-///     read" stays ENABLED — read-state is purely local and lies about nothing.
+/// Shows durable server history merged with live events, day-sectioned and
+/// filterable. Push delivery is additive; history comes from the API.
 class NotificationCentreScreen extends ConsumerStatefulWidget {
   /// Creates the notification centre.
   const NotificationCentreScreen({super.key});
@@ -54,6 +44,13 @@ class _NotificationCentreScreenState
     final hoppin = context.hoppin;
     final colors = hoppin.colors;
     final feed = ref.watch(notificationFeedProvider);
+    final history = ref.watch(notificationHistoryProvider);
+    ref.listen(notificationHistoryProvider, (_, next) {
+      next.whenData(
+        (items) =>
+            ref.read(notificationFeedProvider.notifier).mergeHistory(items),
+      );
+    });
 
     final shown = switch (_filter) {
       NotificationFilter.all => feed,
@@ -105,31 +102,28 @@ class _NotificationCentreScreenState
                   hoppin.spacing.xl,
                 ),
                 children: [
+                  if (history.isLoading && feed.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 48),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
                   ..._sections(context, shown),
-                  SizedBox(height: hoppin.spacing.md),
-
-                  // THE gap-68 mount site (Group C reachability).
-                  //
-                  // Constructed on BOTH branches — the empty feed AND pinned
-                  // below a populated list. Live events do not make OLDER
-                  // history readable, so the disclosure never goes away.
-                  const NotificationHistoryUnavailable(),
+                  if (history.hasError && feed.isEmpty)
+                    _HistoryLoadError(
+                      onRetry: () =>
+                          ref.invalidate(notificationHistoryProvider),
+                    ),
 
                   SizedBox(height: hoppin.spacing.md),
 
-                  // Deleting a SERVER record we cannot reach is a lie. The
-                  // control ships (the design is real, and it body-swaps when
-                  // the endpoint lands) but it is inert and disclosed.
+                  // Deletion is intentionally not exposed until a server
+                  // retention contract exists. Read-state is fully wired.
                   const HopButton.secondary(
                     label: 'Delete all notifications',
                     onPressed: null,
                   ),
                   SizedBox(height: hoppin.spacing.sm),
 
-                  // Read-state is purely LOCAL. Nothing is claimed about a
-                  // server, so this one genuinely works — it stays enabled and
-                  // it really does what it says. (Idempotent when everything is
-                  // already read; never a dead `() {}`.)
                   HopButton.secondary(
                     label: 'Mark all as read',
                     onPressed: () => ref
@@ -185,6 +179,27 @@ class _NotificationCentreScreenState
     if (delta == 1) return 'Yesterday';
     return '${day.day}/${day.month}/${day.year}';
   }
+}
+
+class _HistoryLoadError extends StatelessWidget {
+  const _HistoryLoadError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => HopCard(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Notifications could not be loaded',
+          style: context.hoppin.type.titleSmall,
+        ),
+        SizedBox(height: context.hoppin.spacing.sm),
+        HopButton.secondary(label: 'Retry', onPressed: onRetry),
+      ],
+    ),
+  );
 }
 
 /// The All / Read / Unread segmented control.

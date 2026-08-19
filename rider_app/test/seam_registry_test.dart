@@ -9,7 +9,6 @@ import 'package:hoppin_rider/features/booking/widgets/matching_rung.dart';
 import 'package:hoppin_rider/features/booking/widgets/multistop_unavailable_notice.dart';
 import 'package:hoppin_rider/features/booking/widgets/ride_type_selector.dart';
 import 'package:hoppin_rider/features/booking/widgets/service_unavailable_screen.dart';
-import 'package:hoppin_rider/features/notifications/widgets/notification_history_unavailable.dart';
 import 'package:hoppin_rider/features/legal/widgets/consent_record_unavailable.dart';
 import 'package:hoppin_rider/features/profile/personal/widgets/personal_info_unavailable.dart';
 import 'package:hoppin_rider/features/promotions/widgets/promo_codes_unavailable.dart';
@@ -37,13 +36,13 @@ import 'package:hoppin_ui/hoppin_ui.dart';
 /// to cover each other exactly: no gaps, no orphans.
 void main() {
   Widget host(Widget child) => MaterialApp(
-        theme: HoppinTheme.riderLight(),
-        home: Scaffold(
-          body: Center(
-            child: Padding(padding: const EdgeInsets.all(16), child: child),
-          ),
-        ),
-      );
+    theme: HoppinTheme.riderLight(),
+    home: Scaffold(
+      body: Center(
+        child: Padding(padding: const EdgeInsets.all(16), child: child),
+      ),
+    ),
+  );
 
   /// Bounded settle — never pumpAndSettle (project convention).
   Future<void> pumpBounded(WidgetTester tester) async {
@@ -92,11 +91,6 @@ void main() {
     // #57 share MISSING-BE → the rung that renders WHERE the link would be.
     // Never a fabricated URL.
     'ShareLinkUnavailableState': () => const ShareLinkUnavailableState(),
-    // #68 notification history MISSING-BE → discloses that older history
-    // cannot be READ. It is NOT an empty state asserting there is none.
-    'NotificationHistoryUnavailable': () =>
-        const NotificationHistoryUnavailable(),
-
     // ── Phase 12 (#70–#74) ────────────────────────────────────────────────
     // These five widgets SHIPPED, and none of them was registered. Every group
     // below is a loop over the registry, so five unregistered seams contributed
@@ -151,8 +145,7 @@ void main() {
   test('group C has no builders for disclosures this app does not owe', () {
     // The inverse direction: a stale builder for a widget no disclosure names
     // is dead weight that makes coverage look bigger than it is.
-    final named =
-        riderOwed.map((o) => o.disclosure.unavailableWidget).toSet();
+    final named = riderOwed.map((o) => o.disclosure.unavailableWidget).toSet();
     expect(
       builders.keys.toSet().difference(named),
       isEmpty,
@@ -193,8 +186,11 @@ void main() {
       final declaring = sources.where(
         (s) => RegExp('class\\s+$name\\b').hasMatch(s.text),
       );
-      expect(declaring, isNotEmpty,
-          reason: '"$name" is named by a seam but declared nowhere in lib/');
+      expect(
+        declaring,
+        isNotEmpty,
+        reason: '"$name" is named by a seam but declared nowhere in lib/',
+      );
       final declPath = declaring.first.path;
 
       // Is it reachable from anywhere else? Two legitimate mount shapes:
@@ -228,15 +224,16 @@ void main() {
   });
 
   // One widget test per DISTINCT fallback widget named by a RIDER disclosure.
-  final distinctWidgets =
-      riderOwed.map((o) => o.disclosure.unavailableWidget).toSet();
+  final distinctWidgets = riderOwed
+      .map((o) => o.disclosure.unavailableWidget)
+      .toSet();
 
   for (final name in distinctWidgets) {
-    testWidgets('$name renders a designed non-blank unavailable-state',
-        (tester) async {
+    testWidgets('$name renders a designed non-blank unavailable-state', (
+      tester,
+    ) async {
       final build = builders[name];
-      expect(build, isNotNull,
-          reason: 'no builder registered for "$name"');
+      expect(build, isNotNull, reason: 'no builder registered for "$name"');
 
       await tester.pumpWidget(host(build!()));
       await pumpBounded(tester);
@@ -245,20 +242,32 @@ void main() {
       final finder = find.byWidgetPredicate(
         (w) => w.runtimeType.toString() == name,
       );
-      expect(finder, findsOneWidget,
-          reason: '"$name" must render its designed surface');
+      expect(
+        finder,
+        findsOneWidget,
+        reason: '"$name" must render its designed surface',
+      );
 
       // (2) It renders visible text (typography-led design) — proof it is not
       //     an empty pane. Every fallback here is a headline + supporting line.
-      expect(find.byType(Text), findsWidgets,
-          reason: '"$name" must render designed copy, not a blank box');
+      expect(
+        find.byType(Text),
+        findsWidgets,
+        reason: '"$name" must render designed copy, not a blank box',
+      );
 
       // (3) The rendered surface has real size — NOT a collapsed / shrunk box.
       final size = tester.getSize(finder.first);
-      expect(size.width, greaterThan(0),
-          reason: '"$name" must not collapse to zero width (blank over null)');
-      expect(size.height, greaterThan(0),
-          reason: '"$name" must not collapse to zero height (blank over null)');
+      expect(
+        size.width,
+        greaterThan(0),
+        reason: '"$name" must not collapse to zero width (blank over null)',
+      );
+      expect(
+        size.height,
+        greaterThan(0),
+        reason: '"$name" must not collapse to zero height (blank over null)',
+      );
     });
   }
 
@@ -271,10 +280,17 @@ void main() {
     await pumpBounded(tester);
 
     // The number is the point — the £5.00 stub penalty is visible up front.
-    expect(find.textContaining('£5.00'), findsWidgets,
-        reason: 'the fee disclosure must show the penalty figure, never hide '
-            'it behind a "coming soon" state');
-    expect(find.textContaining('2 min'), findsWidgets,
-        reason: 'the free-cancel window figure must be shown too');
+    expect(
+      find.textContaining('£5.00'),
+      findsWidgets,
+      reason:
+          'the fee disclosure must show the penalty figure, never hide '
+          'it behind a "coming soon" state',
+    );
+    expect(
+      find.textContaining('2 min'),
+      findsWidgets,
+      reason: 'the free-cancel window figure must be shown too',
+    );
   });
 }

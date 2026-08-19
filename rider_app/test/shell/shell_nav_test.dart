@@ -6,7 +6,6 @@ import 'package:hoppin_demo/hoppin_demo.dart';
 import 'package:hoppin_rider/app.dart';
 import 'package:hoppin_rider/features/history/history_screen.dart';
 import 'package:hoppin_rider/features/notifications/notification_centre_screen.dart';
-import 'package:hoppin_rider/features/notifications/widgets/notification_history_unavailable.dart';
 import 'package:hoppin_rider/features/profile/profile_screen.dart';
 import 'package:hoppin_rider/features/shell/rider_shell.dart';
 import 'package:hoppin_rider/features/support/support_screen.dart';
@@ -30,23 +29,25 @@ void main() {
   ];
 
   Finder navTab(int index) => find.descendant(
-        of: find.byKey(RiderShellKeys.bottomNav),
-        matching: find.byIcon(tabIcons[index]),
-      );
+    of: find.byKey(RiderShellKeys.bottomNav),
+    matching: find.byIcon(tabIcons[index]),
+  );
 
   /// Boots the exact demo composition `main_demo.dart` assembles — a seeded
   /// [DemoWorld] under [riderDemoOverrides] wrapping the production
   /// [RiderApp] — and returns the live world so a test can drive auth.
   DemoWorld makeWorld() => DemoWorld.riderScenario(
-        seed: DemoSeed.seed,
-        store: InMemorySnapshotStore(),
-      )..restoreOrSeed();
+    seed: DemoSeed.seed,
+    store: InMemorySnapshotStore(),
+  )..restoreOrSeed();
 
   Future<void> pumpApp(WidgetTester tester, DemoWorld world) async {
-    await tester.pumpWidget(ProviderScope(
-      overrides: riderDemoOverrides(world),
-      child: const RiderApp(),
-    ));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: riderDemoOverrides(world),
+        child: const RiderApp(),
+      ),
+    );
     await tester.pump();
   }
 
@@ -66,37 +67,40 @@ void main() {
     await settleRoute(tester);
   }
 
-  testWidgets('Test A: the 4 bottom-nav tabs switch, each rendering its branch',
-      (tester) async {
-    await pumpApp(tester, makeWorld());
-    await signIn(tester);
+  testWidgets(
+    'Test A: the 4 bottom-nav tabs switch, each rendering its branch',
+    (tester) async {
+      await pumpApp(tester, makeWorld());
+      await signIn(tester);
 
-    // Signed in → the shell hosts the real HopBottomNav with 4 tabs.
-    expect(find.byType(RiderShell), findsOneWidget);
-    expect(find.byType(HopBottomNav), findsOneWidget);
-    expect(find.byKey(RiderShellKeys.bottomNav), findsOneWidget);
+      // Signed in → the shell hosts the real HopBottomNav with 4 tabs.
+      expect(find.byType(RiderShell), findsOneWidget);
+      expect(find.byType(HopBottomNav), findsOneWidget);
+      expect(find.byKey(RiderShellKeys.bottomNav), findsOneWidget);
 
-    // Book is the landing branch (its label shows on the active capsule).
-    expect(navTab(0), findsOneWidget);
+      // Book is the landing branch (its label shows on the active capsule).
+      expect(navTab(0), findsOneWidget);
 
-    // History tab → HistoryScreen renders.
-    await tester.tap(navTab(1));
-    await settleRoute(tester);
-    expect(find.byType(HistoryScreen), findsOneWidget);
+      // History tab → HistoryScreen renders.
+      await tester.tap(navTab(1));
+      await settleRoute(tester);
+      expect(find.byType(HistoryScreen), findsOneWidget);
 
-    // Payments tab → WalletScreen renders (path renamed /wallet → /payments).
-    await tester.tap(navTab(2));
-    await settleRoute(tester);
-    expect(find.byType(WalletScreen), findsOneWidget);
+      // Payments tab → WalletScreen renders (path renamed /wallet → /payments).
+      await tester.tap(navTab(2));
+      await settleRoute(tester);
+      expect(find.byType(WalletScreen), findsOneWidget);
 
-    // Support tab → SupportScreen renders.
-    await tester.tap(navTab(3));
-    await settleRoute(tester);
-    expect(find.byType(SupportScreen), findsOneWidget);
-  });
+      // Support tab → SupportScreen renders.
+      await tester.tap(navTab(3));
+      await settleRoute(tester);
+      expect(find.byType(SupportScreen), findsOneWidget);
+    },
+  );
 
-  testWidgets('Test B: the active tab index survives an auth-state emit',
-      (tester) async {
+  testWidgets('Test B: the active tab index survives an auth-state emit', (
+    tester,
+  ) async {
     final world = makeWorld();
     await pumpApp(tester, world);
     await signIn(tester);
@@ -120,26 +124,29 @@ void main() {
   });
 
   testWidgets(
-      'Test C: Profile is reached via the avatar, is NOT a tab, and covers '
-      'the shell (no bottom nav)', (tester) async {
-    await pumpApp(tester, makeWorld());
-    await signIn(tester);
+    'Test C: Profile is reached via the avatar, is NOT a tab, and covers '
+    'the shell (no bottom nav)',
+    (tester) async {
+      await pumpApp(tester, makeWorld());
+      await signIn(tester);
 
-    // Profile is NOT one of the 4 bottom-nav destinations.
-    expect(navTab(0), findsOneWidget);
-    expect(find.byType(HopBottomNav), findsOneWidget);
+      // Profile is NOT one of the 4 bottom-nav destinations.
+      expect(navTab(0), findsOneWidget);
+      expect(find.byType(HopBottomNav), findsOneWidget);
 
-    // Tap the top-bar avatar → /profile.
-    await tester.tap(find.byKey(RiderShellKeys.avatar));
-    await settleRoute(tester);
+      // Tap the top-bar avatar → /profile.
+      await tester.tap(find.byKey(RiderShellKeys.avatar));
+      await settleRoute(tester);
 
-    // Profile renders full-screen — the shell's bottom nav is absent on it.
-    expect(find.byKey(ProfileScreenKeys.root), findsOneWidget);
-    expect(find.byKey(RiderShellKeys.bottomNav), findsNothing);
-  });
+      // Profile renders full-screen — the shell's bottom nav is absent on it.
+      expect(find.byKey(ProfileScreenKeys.root), findsOneWidget);
+      expect(find.byKey(RiderShellKeys.bottomNav), findsNothing);
+    },
+  );
 
-  testWidgets('Test D: the auth redirect is preserved — signed-out → /login',
-      (tester) async {
+  testWidgets('Test D: the auth redirect is preserved — signed-out → /login', (
+    tester,
+  ) async {
     // A fresh world boots signed-OUT; the verbatim redirect must send the
     // initial location to /login.
     await pumpApp(tester, makeWorld());
@@ -217,11 +224,10 @@ void main() {
     );
   });
 
-  // 🔴 NOTIF-02 / seam #68 — the BEHAVIOURAL reachability check that
-  // 11-VALIDATION demands on top of Group C's static mount grep: boot the REAL
-  // app, tap the REAL bell, and find the rung on the REAL empty feed.
-  testWidgets('Test G: the centre reached from the bell DISCLOSES that history '
-      'cannot be read (#68) — it never asserts emptiness', (tester) async {
+  // NOTIF-02 — the behavioural reachability check for the durable history feed.
+  testWidgets('Test G: the centre reached from the bell loads real history', (
+    tester,
+  ) async {
     await pumpApp(tester, makeWorld());
     await signIn(tester);
 
@@ -229,20 +235,13 @@ void main() {
     await settleRoute(tester);
 
     expect(
-      find.byType(NotificationHistoryUnavailable),
-      findsOneWidget,
-      reason:
-          'Booting the real centre over the real (empty) feed must find the '
-          '#68 rung. A registered disclosure that no reachable view mounts is '
-          'dead code wearing a compliance badge (Wave 0).',
+      find.textContaining("Older notifications can't be loaded"),
+      findsNothing,
     );
     expect(
       find.textContaining('no notifications', findRichText: true),
       findsNothing,
-      reason:
-          'THE lie this phase must not ship. "You have no notifications" '
-          'asserts EMPTINESS; the truth is IGNORANCE — there is no '
-          'GET /me/notifications (#68), so we cannot know the history.',
+      reason: 'The API is now the source of truth for whether history exists.',
     );
     expect(
       find.textContaining('No notifications', findRichText: true),

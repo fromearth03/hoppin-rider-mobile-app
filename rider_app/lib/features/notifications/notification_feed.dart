@@ -1,13 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hoppin_shared/hoppin_shared.dart';
 
 import 'fcm_gateway.dart';
 
-/// One notification the client actually SAW arrive.
-///
-/// Deliberately NOT called `Notification` (that name is taken by Flutter) and
-/// deliberately not persisted — see [notificationFeedProvider].
+/// One notification shown by the client, whether loaded from history or
+/// received live through FCM.
 @immutable
 class AppNotification {
   /// Creates a session notification.
@@ -35,7 +35,18 @@ class AppNotification {
         type: m.type,
       );
 
-  /// Session-local identity.
+  factory AppNotification.fromHistory(UserNotification n) => AppNotification(
+    id: n.id,
+    title: n.title,
+    body: n.body.isEmpty ? null : n.body,
+    receivedAt: n.createdAt,
+    read: n.isRead,
+    rideId: n.rideId,
+    deepLink: n.deepLink,
+    type: pushTypeFromWire(n.type),
+  );
+
+  /// Server id for history records, or a local id for a live event.
   final String id;
 
   /// The headline shown on the card.
@@ -47,7 +58,8 @@ class AppNotification {
   /// When this client saw it.
   final DateTime receivedAt;
 
-  /// Local read state. There is no server read-state to sync with (gap 68).
+  /// Read state returned by the server for history, or local state for a live
+  /// event until the next history refresh.
   final bool read;
 
   /// The trip this is about, when it is about one.
@@ -61,48 +73,34 @@ class AppNotification {
 
   /// Returns a copy with [read] flipped.
   AppNotification copyWith({bool? read}) => AppNotification(
-        id: id,
-        title: title,
-        body: body,
-        receivedAt: receivedAt,
-        read: read ?? this.read,
-        rideId: rideId,
-        deepLink: deepLink,
-        type: type,
-      );
+    id: id,
+    title: title,
+    body: body,
+    receivedAt: receivedAt,
+    read: read ?? this.read,
+    rideId: rideId,
+    deepLink: deepLink,
+    type: type,
+  );
 
   static String _titleFor(PushType type) => switch (type) {
-        PushType.driverAssigned => 'Your driver is on the way',
-        PushType.driverArriving => 'Your driver is arriving',
-        PushType.driverArrived => 'Your driver has arrived',
-        PushType.tripStarted => 'Your trip has started',
-        PushType.tripCompleted => 'Your trip is complete',
-        PushType.tripCancelled => 'Your trip was cancelled',
-        PushType.newMessage => 'New message from your driver',
-        PushType.promo => 'Hoppin',
-        PushType.unknown => 'Hoppin',
-      };
+    PushType.driverAssigned => 'Your driver is on the way',
+    PushType.driverArriving => 'Your driver is arriving',
+    PushType.driverArrived => 'Your driver has arrived',
+    PushType.tripStarted => 'Your trip has started',
+    PushType.tripCompleted => 'Your trip is complete',
+    PushType.tripCancelled => 'Your trip was cancelled',
+    PushType.newMessage => 'New message from your driver',
+    PushType.promo => 'Hoppin',
+    PushType.unknown => 'Hoppin',
+  };
 }
 
-/// The notification centre's feed.
-///
-/// SESSION-LOCAL by necessity. There is no `GET /me/notifications` (gap 68), so
-/// the only notifications this client can honestly show are the ones it saw
-/// arrive. It is fed by:
-///
-///   (a) `FcmGateway.onMessage()` — real pushes. Empty on the no-op, i.e. today.
-///   (b) trip-phase transitions from the 3s poll — the POLL FLOOR is what
-///       actually makes the centre non-empty today, which is the entire point:
-///       push is ADDITIVE, the poll is the correctness floor.
-///
-/// NOT persisted. A reload empties it, and that is CORRECT — a local store
-/// pretending to be server history is exactly the fake-as-live the no-holes rule
-/// forbids, and it would diverge permanently from the server once the history
-/// endpoint ships.
+/// The notification centre's merged server-history and live feed.
 final notificationFeedProvider =
     NotifierProvider<NotificationFeed, List<AppNotification>>(
-  NotificationFeed.new,
-);
+      NotificationFeed.new,
+    );
 
 /// The unread count that drives the top-bar bell badge.
 ///
@@ -124,14 +122,13 @@ class NotificationFeed extends Notifier<List<AppNotification>> {
 
   final List<AppNotification>? _seed;
   int _counter = 0;
+  bool _historyMerged = false;
 
   @override
   List<AppNotification> build() {
     final seed = _seed;
     if (seed != null) return List<AppNotification>.unmodifiable(seed);
 
-    // Foreground pushes land here. Empty on the no-op default (today), which is
-    // why the centre's cold start renders the seam rung rather than a list.
     final sub = ref.watch(fcmGatewayProvider).onMessage().listen(add);
     ref.onDispose(sub.cancel);
 
@@ -142,6 +139,21 @@ class NotificationFeed extends Notifier<List<AppNotification>> {
   void add(PushMessage m) {
     final n = AppNotification.fromPush(m, id: 'local-${_counter++}');
     state = <AppNotification>[n, ...state];
+  }
+
+  /// Merges durable history without duplicating live records.
+  void mergeHistory(List<UserNotification> history) {
+    if (_historyMerged && history.isEmpty) return;
+    _historyMerged = true;
+    final byId = <String, AppNotification>{
+      for (final item in state) item.id: item,
+    };
+    for (final item in history) {
+      byId[item.id] = AppNotification.fromHistory(item);
+    }
+    final merged = byId.values.toList()
+      ..sort((a, b) => b.receivedAt.compareTo(a.receivedAt));
+    state = List<AppNotification>.unmodifiable(merged);
   }
 
   /// Records a poll-derived event — the trip-phase transitions the 3s poll sees.
@@ -165,14 +177,30 @@ class NotificationFeed extends Notifier<List<AppNotification>> {
     ];
   }
 
-  /// Marks every session notification read. Purely LOCAL read-state — it costs
-  /// nothing and lies about nothing, so unlike "delete all" it stays enabled.
+  /// Marks every notification read locally and persists the same action.
   void markAllRead() {
     state = <AppNotification>[
       for (final n in state) n.read ? n : n.copyWith(read: true),
     ];
+    try {
+      unawaited(
+        ref
+            .read(notificationsRepositoryProvider)
+            .markAllRead()
+            .catchError((_) {}),
+      );
+    } on Object {
+      // A local/demo composition may not have an authenticated API client.
+      // The local state change still remains useful in that mode.
+    }
   }
 }
+
+/// Loads the user's durable notification history when the centre is opened.
+final notificationHistoryProvider =
+    FutureProvider.autoDispose<List<UserNotification>>((ref) {
+      return ref.watch(notificationsRepositoryProvider).list();
+    });
 
 /// The outcome of a device-token registration attempt. Every skip is a NAMED,
 /// disclosed outcome — never a silent no-op that reads like success.

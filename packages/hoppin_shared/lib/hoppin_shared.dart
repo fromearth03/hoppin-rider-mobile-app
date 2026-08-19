@@ -49,6 +49,7 @@ export 'src/models/payment_method.dart';
 export 'src/models/transaction.dart';
 export 'src/models/ride_message.dart';
 export 'src/models/scheduled_ride.dart';
+export 'src/models/user_notification.dart';
 
 // Repositories
 export 'src/repositories/ads_repository.dart';
@@ -58,6 +59,7 @@ export 'src/repositories/profile_repository.dart';
 export 'src/repositories/safety_repository.dart';
 export 'src/repositories/support_repository.dart';
 export 'src/repositories/payments_repository.dart';
+export 'src/repositories/notifications_repository.dart';
 
 // Widgets
 export 'src/widgets/status_banner.dart';

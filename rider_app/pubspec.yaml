@@ -63,6 +63,7 @@ dependencies:
   # document upload already follows.
   image_picker: ^1.1.2
   device_info_plus: ^11.5.0
+  shared_preferences: ^2.5.5
 
   # Share targets for the trip-share sheet (SAFETY-02 / seam #57, Lane C) and
   # the future `tel:` masked-proxy body-swap when #45 ships. NEVER used to dial
