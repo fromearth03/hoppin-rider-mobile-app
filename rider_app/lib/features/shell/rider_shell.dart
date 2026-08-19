@@ -48,11 +48,13 @@ class RiderShell extends ConsumerWidget {
     final avatarState = ref.watch(avatarUploadControllerProvider);
     final profile = ref.watch(profileSnapshotProvider);
     final profileAvatarUrl = profile.value?.avatarUrl.trim();
-    final avatarUrl = switch (avatarState) {
-      AvatarIdle(:final url) => url,
-      AvatarUploaded(:final url) => url,
-      _ => null,
-    } ?? ((profileAvatarUrl?.isEmpty ?? true) ? null : profileAvatarUrl);
+    final avatarUrl =
+        switch (avatarState) {
+          AvatarIdle(:final url) => url,
+          AvatarUploaded(:final url) => url,
+          _ => null,
+        } ??
+        ((profileAvatarUrl?.isEmpty ?? true) ? null : profileAvatarUrl);
     final avatarImage = avatarUrl == null
         ? null
         : NetworkImage(avatarUrl, headers: ref.watch(imageAuthHeadersProvider));
@@ -164,6 +166,19 @@ class _FcmTokenBinder extends ConsumerStatefulWidget {
 class _FcmTokenBinderState extends ConsumerState<_FcmTokenBinder> {
   StreamSubscription<AuthState>? _authSub;
 
+  void _registerPushIfAvailable() {
+    final gateway = ref.read(fcmGatewayProvider);
+    if (gateway is NoopFcmGateway) return;
+    unawaited(
+      registerDeviceTokenIfSupported(
+        gateway: gateway,
+        profiles: ref.read(profileRepositoryProvider),
+        isWeb: kIsWeb,
+        platform: defaultTargetPlatform,
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -171,22 +186,14 @@ class _FcmTokenBinderState extends ConsumerState<_FcmTokenBinder> {
     _authSub = auth.onAuthStateChange.listen((_) {
       if (auth.isSignedIn) {
         unawaited(checkInRiderDevice(ref.read(profileRepositoryProvider)));
+        _registerPushIfAvailable();
       }
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (auth.isSignedIn) {
         unawaited(checkInRiderDevice(ref.read(profileRepositoryProvider)));
+        _registerPushIfAvailable();
       }
-      final gateway = ref.read(fcmGatewayProvider);
-      if (gateway is NoopFcmGateway) return;
-      unawaited(
-        registerDeviceTokenIfSupported(
-          gateway: gateway,
-          profiles: ref.read(profileRepositoryProvider),
-          isWeb: kIsWeb,
-          platform: defaultTargetPlatform,
-        ),
-      );
     });
   }
 

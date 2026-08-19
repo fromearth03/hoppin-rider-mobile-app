@@ -207,8 +207,20 @@ Future<TokenRegistration> registerDeviceTokenIfSupported({
   final token = await gateway.token();
   if (token == null || token.isEmpty) return TokenRegistration.gatedNoToken;
 
-  await profiles.registerDeviceToken(fcmToken: token, deviceOs: deviceOs);
-  return TokenRegistration.registered;
+  for (var attempt = 0; attempt < 3; attempt++) {
+    try {
+      await profiles.registerDeviceToken(fcmToken: token, deviceOs: deviceOs);
+      return TokenRegistration.registered;
+    } on ApiException catch (error) {
+      if (error.statusCode >= 400 && error.statusCode < 500) {
+        return TokenRegistration.gatedNoToken;
+      }
+    } on Exception {
+      // Retry transient network/server failures below.
+    }
+    await Future<void>.delayed(Duration(seconds: attempt + 1));
+  }
+  return TokenRegistration.gatedNoToken;
 }
 
 /// The `device_os` value the contract accepts for this platform, or `null` when

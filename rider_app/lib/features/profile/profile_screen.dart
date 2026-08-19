@@ -50,7 +50,7 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final hoppin = context.hoppin;
     final colors = hoppin.colors;
-    ref.watch(profileSnapshotProvider);
+    final profile = ref.watch(profileSnapshotProvider);
     ref.listen(profileSnapshotProvider, (_, next) {
       next.whenData((profile) {
         final current = ref.read(avatarUploadControllerProvider);
@@ -62,11 +62,15 @@ class ProfileScreen extends ConsumerWidget {
     });
     final auth = ref.watch(authServiceProvider);
     final avatar = ref.watch(avatarUploadControllerProvider);
-    final avatarUrl = switch (avatar) {
-      AvatarIdle(:final url) => url,
-      AvatarUploaded(:final url) => url,
-      _ => null,
-    };
+    final liveAvatarUrl = profile.value?.avatarUrl.trim();
+    final avatarUrl =
+        switch (avatar) {
+          AvatarIdle(:final url) => url,
+          AvatarUploaded(:final url) => url,
+          _ => null,
+        } ??
+        ((liveAvatarUrl?.isEmpty ?? true) ? null : liveAvatarUrl);
+    final displayName = profile.value?.fullName.trim();
     final avatarImage = avatarUrl == null
         ? null
         : NetworkImage(avatarUrl, headers: ref.watch(imageAuthHeadersProvider));
@@ -170,8 +174,11 @@ class ProfileScreen extends ConsumerWidget {
                 // gap SL-5), so we show that and nothing more. We do NOT invent
                 // a city we cannot know.
                 _ProfileIdentity(
-                  name: auth.fullName ?? auth.email ?? 'Your account',
+                  name: (displayName?.isNotEmpty ?? false)
+                      ? displayName!
+                      : auth.fullName ?? auth.email ?? 'Your account',
                   avatar: avatar,
+                  imageUrl: avatarUrl,
                   imageHeaders: ref.watch(imageAuthHeadersProvider),
                   onPickAvatar: () => ref
                       .read(avatarUploadControllerProvider.notifier)
@@ -207,6 +214,7 @@ class _ProfileIdentity extends StatelessWidget {
     // ignore: unused_element_parameter
     this.location,
     this.avatar,
+    this.imageUrl,
     this.imageHeaders,
     this.onPickAvatar,
   });
@@ -217,6 +225,9 @@ class _ProfileIdentity extends StatelessWidget {
   /// Current avatar upload state. Null leaves the block non-interactive (the
   /// initials-only rendering the screen had before uploads existed).
   final AvatarUploadState? avatar;
+
+  /// Live profile URL, used when the upload controller has not emitted yet.
+  final String? imageUrl;
 
   /// Bearer headers for the photo — `/images/*` is authenticated.
   final Map<String, String>? imageHeaders;
@@ -237,11 +248,13 @@ class _ProfileIdentity extends StatelessWidget {
         // screen is built without an upload state (e.g. widget tests).
         HopAvatarEditor(
           name: name,
-          imageUrl: switch (avatar) {
-            AvatarIdle(:final url) => url,
-            AvatarUploaded(:final url) => url,
-            _ => null,
-          },
+          imageUrl:
+              imageUrl ??
+              switch (avatar) {
+                AvatarIdle(:final url) => url,
+                AvatarUploaded(:final url) => url,
+                _ => null,
+              },
           headers: imageHeaders,
           busy: avatar is AvatarUploading,
           error: switch (avatar) {

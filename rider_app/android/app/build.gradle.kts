@@ -4,6 +4,12 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Firebase configuration is supplied to release/build environments, not kept
+// in source control. Without it the app keeps the no-op push gateway.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.hoppin.hoppin_rider"
     compileSdk = flutter.compileSdkVersion

@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -71,16 +72,20 @@ Future<void> main() async {
           .overrideWithValue(WebStripeGateway(rootNavigatorKey)),
     );
   }
-  if (Env.fcmConfigured) {
+  if (Env.fcmConfigured || !kIsWeb) {
     try {
-      await Firebase.initializeApp(
-        options: const FirebaseOptions(
-          apiKey: Env.fcmApiKey,
-          appId: Env.fcmAppId,
-          messagingSenderId: Env.fcmSenderId,
-          projectId: Env.fcmProjectId,
-        ),
-      );
+      if (Env.fcmConfigured) {
+        await Firebase.initializeApp(
+          options: const FirebaseOptions(
+            apiKey: Env.fcmApiKey,
+            appId: Env.fcmAppId,
+            messagingSenderId: Env.fcmSenderId,
+            projectId: Env.fcmProjectId,
+          ),
+        );
+      } else {
+        await Firebase.initializeApp();
+      }
       overrides.add(
         fcmGatewayProvider.overrideWithValue(const FirebaseFcmGateway()),
       );
