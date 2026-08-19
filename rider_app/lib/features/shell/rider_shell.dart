@@ -44,6 +44,17 @@ class RiderShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.hoppin.colors;
     final index = navigationShell.currentIndex;
+    final avatarState = ref.watch(avatarUploadControllerProvider);
+    final profile = ref.watch(profileSnapshotProvider);
+    final profileAvatarUrl = profile.value?.avatarUrl.trim();
+    final avatarUrl = switch (avatarState) {
+      AvatarIdle(:final url) => url,
+      AvatarUploaded(:final url) => url,
+      _ => null,
+    } ?? ((profileAvatarUrl?.isEmpty ?? true) ? null : profileAvatarUrl);
+    final avatarImage = avatarUrl == null
+        ? null
+        : NetworkImage(avatarUrl, headers: ref.watch(imageAuthHeadersProvider));
 
     // 🔴 THE SHELL LAYERS. IT DOES NOT STACK.
     //
@@ -108,6 +119,7 @@ class RiderShell extends ConsumerWidget {
               child: HopTopBar(
                 title: _branchTitles[index],
                 notificationCount: ref.watch(unreadNotificationCountProvider),
+                avatarImage: avatarImage,
                 // PUSH, not `go`. `go` REPLACES the current route, so `canPop()` is
                 // false on the far side and the back button there falls through to
                 // a hardcoded fallback — the rider taps back and is teleported to

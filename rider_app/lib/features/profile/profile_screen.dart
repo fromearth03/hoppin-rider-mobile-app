@@ -61,6 +61,15 @@ class ProfileScreen extends ConsumerWidget {
       });
     });
     final auth = ref.watch(authServiceProvider);
+    final avatar = ref.watch(avatarUploadControllerProvider);
+    final avatarUrl = switch (avatar) {
+      AvatarIdle(:final url) => url,
+      AvatarUploaded(:final url) => url,
+      _ => null,
+    };
+    final avatarImage = avatarUrl == null
+        ? null
+        : NetworkImage(avatarUrl, headers: ref.watch(imageAuthHeadersProvider));
 
     // WAVE-0: five of these six rows were dead — `onTap: null`, falling through
     // to `onTap: rows[i].onTap ?? () {}`, which gave a full tap ripple and did
@@ -141,6 +150,7 @@ class ProfileScreen extends ConsumerWidget {
           HopTopBar(
             title: 'My Profile',
             notificationCount: ref.watch(unreadNotificationCountProvider),
+            avatarImage: avatarImage,
             onBell: () => context.push(kNotificationCentreRoute),
             onBack: () =>
                 context.canPop() ? context.pop() : context.go('/book'),
@@ -161,7 +171,7 @@ class ProfileScreen extends ConsumerWidget {
                 // a city we cannot know.
                 _ProfileIdentity(
                   name: auth.fullName ?? auth.email ?? 'Your account',
-                  avatar: ref.watch(avatarUploadControllerProvider),
+                  avatar: avatar,
                   imageHeaders: ref.watch(imageAuthHeadersProvider),
                   onPickAvatar: () => ref
                       .read(avatarUploadControllerProvider.notifier)
