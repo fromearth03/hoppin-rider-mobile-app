@@ -62,51 +62,57 @@ class HopSheet extends StatelessWidget {
       top: Radius.circular(hoppin.radii.sheet),
     );
 
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        // NO fill here any more — the glass draws the surface. A colour on this
-        // box would sit UNDER the blur and defeat it: the pane would be sampling
-        // an opaque slab of card, which is a very expensive way to render a
-        // card. The box now exists only to cast.
-        borderRadius: radius,
-        // The one ambient veil: a static drawn shadow — warm black via the
-        // scrim base token, stronger in dark where the canvas swallows it.
-        // It sits OUTSIDE the glass clip, as every cast must.
-        boxShadow: [
-          BoxShadow(
-            color: colors.scrim.withValues(alpha: dark ? 0.45 : 0.18),
-            blurRadius: 24,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: HopGlass(
-        borderRadius: radius,
-        // The SHEET tier: body copy needs a denser pane than a nav bar does.
-        tier: HopGlassTier.sheet,
-        // The sheet is welded to the bottom of the screen and already casts (the
-        // veil above). A second shadow from the glass would double it.
-        floating: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: EdgeInsets.only(top: hoppin.spacing.sm),
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: colors.hairline,
-                  borderRadius: const BorderRadius.all(Radius.circular(2)),
-                ),
-              ),
-            ),
-            Padding(
-              padding: padding ?? EdgeInsets.all(hoppin.spacing.gutter),
-              child: child,
+    // A sheet can be opened from a shell route or from a root route such as
+    // scheduled rides. Grouping locally guarantees BackdropFilter.grouped has
+    // a valid ancestor in both cases; without it, some Android renderers paint
+    // the transient sheet and then drop the route during the first frame.
+    return BackdropGroup(
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          // NO fill here any more — the glass draws the surface. A colour on this
+          // box would sit UNDER the blur and defeat it: the pane would be sampling
+          // an opaque slab of card, which is a very expensive way to render a
+          // card. The box now exists only to cast.
+          borderRadius: radius,
+          // The one ambient veil: a static drawn shadow — warm black via the
+          // scrim base token, stronger in dark where the canvas swallows it.
+          // It sits OUTSIDE the glass clip, as every cast must.
+          boxShadow: [
+            BoxShadow(
+              color: colors.scrim.withValues(alpha: dark ? 0.45 : 0.18),
+              blurRadius: 24,
+              offset: const Offset(0, -4),
             ),
           ],
+        ),
+        child: HopGlass(
+          borderRadius: radius,
+          // The SHEET tier: body copy needs a denser pane than a nav bar does.
+          tier: HopGlassTier.sheet,
+          // The sheet is welded to the bottom of the screen and already casts (the
+          // veil above). A second shadow from the glass would double it.
+          floating: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: EdgeInsets.only(top: hoppin.spacing.sm),
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: colors.hairline,
+                    borderRadius: const BorderRadius.all(Radius.circular(2)),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: padding ?? EdgeInsets.all(hoppin.spacing.gutter),
+                child: child,
+              ),
+            ],
+          ),
         ),
       ),
     );

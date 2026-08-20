@@ -6,6 +6,10 @@ import 'package:hoppin_rider/features/scheduled/schedule_picker.dart';
 import 'package:hoppin_rider/features/scheduled/scheduled_builder.dart';
 import 'package:hoppin_rider/features/scheduled/scheduled_screen.dart';
 import 'package:hoppin_rider/features/scheduled/scheduled_state.dart';
+import 'package:hoppin_rider/features/booking/booking_builder.dart';
+import 'package:hoppin_rider/features/booking/booking_interactor.dart';
+import 'package:hoppin_rider/features/booking/booking_state.dart';
+import 'package:hoppin_rider/features/booking/place.dart';
 import 'package:hoppin_shared/hoppin_shared.dart';
 import 'package:hoppin_ui/hoppin_ui.dart';
 
@@ -220,7 +224,39 @@ void main() {
       expect(find.byType(ScheduledScreen), findsOneWidget);
       expect(find.byType(HopCard), findsWidgets);
     });
+
+    testWidgets('schedule button keeps the picker sheet open', (tester) async {
+      final repo = _RecordingScheduledRepo();
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          ridesRepositoryProvider.overrideWithValue(repo),
+          bookingInteractorProvider.overrideWith(_SeedBookingInteractor.new),
+        ],
+        child: MaterialApp(
+          theme: HoppinTheme.riderLight(),
+          home: const ScheduledScreen(),
+        ),
+      ));
+      for (var i = 0; i < 6; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      await tester.tap(find.text('Schedule a ride'));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Schedule your ride'), findsOneWidget);
+      expect(find.text('Choose date & time'), findsOneWidget);
+    });
   });
+}
+
+class _SeedBookingInteractor extends BookingInteractor {
+  @override
+  BookingState build() => const BookingState(
+        pickup: Place(label: 'Pickup', lat: 52.58, lng: -2.12),
+        dropoff: Place(label: 'Dropoff', lat: 52.60, lng: -2.09),
+      );
 }
 
 /// A repo-level fake for the scheduled surface: records created times, serves

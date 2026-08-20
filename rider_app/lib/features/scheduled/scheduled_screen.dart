@@ -7,6 +7,7 @@ import 'package:hoppin_shared/hoppin_shared.dart';
 import 'package:hoppin_ui/hoppin_ui.dart';
 
 import '../booking/booking_builder.dart';
+import '../booking/location_picker_screen.dart';
 import 'schedule_picker.dart';
 import 'scheduled_builder.dart';
 import 'scheduled_state.dart';
@@ -95,22 +96,30 @@ class _ScheduledScreenState extends ConsumerState<ScheduledScreen> {
   /// never a silent no-op).
   Future<void> _openPicker(BuildContext context) async {
     final booking = ref.read(bookingInteractorProvider);
-    final pickup = booking.pickup;
-    final dropoff = booking.dropoff;
-    final colors = context.hoppin.colors;
+    var pickup = booking.pickup;
+    var dropoff = booking.dropoff;
 
-    if (pickup == null || dropoff == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-            'Choose your pickup and destination on the Book screen first, '
-            'then schedule it for later.',
-          ),
-          backgroundColor: colors.textHi,
-        ),
+    // Scheduling is a complete booking flow. When the rider entered this
+    // surface directly, collect any missing locations instead of showing a
+    // transient message and leaving the button apparently broken.
+    if (pickup == null) {
+      pickup = await LocationPickerScreen.pick(
+        context,
+        title: 'Choose pickup',
       );
-      return;
+      if (!mounted || pickup == null) return;
     }
+    if (dropoff == null) {
+      dropoff = await LocationPickerScreen.pick(
+        context,
+        title: 'Choose destination',
+      );
+      if (!mounted || dropoff == null) return;
+    }
+    final selectedPickup = pickup;
+    final selectedDropoff = dropoff;
+    if (selectedPickup == null || selectedDropoff == null) return;
+    final colors = context.hoppin.colors;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -126,10 +135,10 @@ class _ScheduledScreenState extends ConsumerState<ScheduledScreen> {
             ref
                 .read(scheduledInteractorProvider.notifier)
                 .create(
-                  pickupLat: pickup.lat,
-                  pickupLng: pickup.lng,
-                  dropoffLat: dropoff.lat,
-                  dropoffLng: dropoff.lng,
+                  pickupLat: selectedPickup.lat,
+                  pickupLng: selectedPickup.lng,
+                  dropoffLat: selectedDropoff.lat,
+                  dropoffLng: selectedDropoff.lng,
                   requestedPickupTime: when,
                   // No client-held estimate id on the FareEstimate model — the
                   // server prices the scheduled ride at pickup time. Left null
