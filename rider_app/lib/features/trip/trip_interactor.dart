@@ -145,6 +145,14 @@ class TripInteractor extends Notifier<TripState> {
       _ => 0.0,
     };
 
+    // Invalidate the live-trip redirect cache BEFORE publishing the terminal
+    // phase. Otherwise the navigation listener can send the rider to /book
+    // while the router still sees the old active ride and immediately bounces
+    // them back into the trip route.
+    if (ride.status.isTerminal) {
+      ref.invalidate(historyProvider);
+    }
+
     state = state.copyWith(
       phase: phase,
       ride: ride,
@@ -168,9 +176,6 @@ class TripInteractor extends Notifier<TripState> {
     if (ride.status.isTerminal) {
       _stopPolling();
       _stopTicker();
-      // The session-long history cache still holds this ride as live —
-      // refresh it so home's card and recent rows flip with the ride.
-      ref.invalidate(historyProvider);
       if (phase == TripPhase.completed) {
         _fetchReceiptOnce(gen);
         _armRatingPrompt(gen);
