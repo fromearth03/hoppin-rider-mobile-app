@@ -31,6 +31,13 @@ android {
         versionName = flutter.versionName
     }
 
+    // Stripe's optional issuing-push-provisioning lint check references a
+    // Google artifact that is not published to the configured repositories.
+    // Runtime Stripe integration remains enabled; skip only release lint.
+    lint {
+        checkReleaseBuilds = false
+    }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.
