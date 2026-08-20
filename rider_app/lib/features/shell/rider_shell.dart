@@ -166,6 +166,17 @@ class _FcmTokenBinder extends ConsumerStatefulWidget {
 class _FcmTokenBinderState extends ConsumerState<_FcmTokenBinder> {
   StreamSubscription<AuthState>? _authSub;
 
+  void _checkInDevice() {
+    unawaited(
+      checkInRiderDevice(ref.read(profileRepositoryProvider)).then((message) {
+        if (!mounted || message == null) return;
+        ScaffoldMessenger.maybeOf(
+          context,
+        )?.showSnackBar(SnackBar(content: Text(message)));
+      }),
+    );
+  }
+
   void _registerPushIfAvailable() {
     final gateway = ref.read(fcmGatewayProvider);
     if (gateway is NoopFcmGateway) return;
@@ -185,13 +196,13 @@ class _FcmTokenBinderState extends ConsumerState<_FcmTokenBinder> {
     final auth = ref.read(authServiceProvider);
     _authSub = auth.onAuthStateChange.listen((_) {
       if (auth.isSignedIn) {
-        unawaited(checkInRiderDevice(ref.read(profileRepositoryProvider)));
+        _checkInDevice();
         _registerPushIfAvailable();
       }
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (auth.isSignedIn) {
-        unawaited(checkInRiderDevice(ref.read(profileRepositoryProvider)));
+        _checkInDevice();
         _registerPushIfAvailable();
       }
     });
