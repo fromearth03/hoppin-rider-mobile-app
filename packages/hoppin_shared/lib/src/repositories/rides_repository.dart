@@ -341,7 +341,10 @@ class RidesRepository {
   /// `reason_id` against these rows, so the app MUST use these real ids (not a
   /// fabricated placeholder, which 400s). `[either]`
   Future<List<CancellationReasonOption>> cancellationReasons() async {
-    final res = await _api.get<Map<String, dynamic>>('/cancellation-reasons');
+    final res = await _api.get<Map<String, dynamic>>(
+      '/cancellation-reasons',
+      query: {'actor': 'rider'},
+    );
     final rows =
         (res.data?['cancellation_reasons'] as List<dynamic>?) ??
         const <dynamic>[];

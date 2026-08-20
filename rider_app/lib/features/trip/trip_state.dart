@@ -137,8 +137,9 @@ class TripState {
           : activeWaypoint as String?,
       receipt: receipt ?? this.receipt,
       appliedPromo: appliedPromo ?? this.appliedPromo,
-      promoError:
-          identical(promoError, _unset) ? this.promoError : promoError as String?,
+      promoError: identical(promoError, _unset)
+          ? this.promoError
+          : promoError as String?,
       promoBusy: promoBusy ?? this.promoBusy,
       ratingPromptDue: ratingPromptDue ?? this.ratingPromptDue,
       ratingPromptShown: ratingPromptShown ?? this.ratingPromptShown,
@@ -149,16 +150,17 @@ class TripState {
     );
   }
 
-  /// The phases in which the rider may still cancel (mirrors the backend's
-  /// cancellable status set — matching/accepted/arriving, never started).
+  /// The phases in which the rider may still cancel. A started trip remains
+  /// cancellable: the backend transitions it atomically and applies the active
+  /// `rider_mid_trip` rule, including its time/distance grace, if configured.
   bool get cancellable => switch (phase) {
-        TripPhase.finding ||
-        TripPhase.driverEnRoute ||
-        TripPhase.arrivingNow ||
-        TripPhase.driverArrived =>
-          true,
-        _ => false,
-      };
+    TripPhase.finding ||
+    TripPhase.driverEnRoute ||
+    TripPhase.arrivingNow ||
+    TripPhase.driverArrived ||
+    TripPhase.onRoad => true,
+    _ => false,
+  };
 
   /// Client-side mirror of the server's active-trip-only chat window. The
   /// server `409 CHAT_CLOSED` remains the AUTHORITY — this is UX, so the
@@ -166,14 +168,15 @@ class TripState {
   ///
   /// NOT a copy of [cancellable], and deliberately so: chat is CLOSED while
   /// [TripPhase.finding] (there is no driver to message yet) and OPEN on
-  /// [TripPhase.onRoad] (where cancelling is not). The two windows are the
-  /// inverse of one another at both ends.
+  /// [TripPhase.onRoad] (where both actions are available). The two windows
+  /// are the inverse of one another at the pre-trip ends. On-road trips keep both
+  /// chat and cancellation available because cancellation is a supported
+  /// terminal transition with its own billing rule.
   bool get chatOpen => switch (phase) {
-        TripPhase.driverEnRoute ||
-        TripPhase.arrivingNow ||
-        TripPhase.driverArrived ||
-        TripPhase.onRoad =>
-          true,
-        _ => false,
-      };
+    TripPhase.driverEnRoute ||
+    TripPhase.arrivingNow ||
+    TripPhase.driverArrived ||
+    TripPhase.onRoad => true,
+    _ => false,
+  };
 }

@@ -25,11 +25,14 @@ import 'package:hoppin_ui/hoppin_ui.dart';
 /// cancelled state — with every navigation leaving as an intent that only
 /// TripNavigationHost translates. Bounded pumps throughout, never settle.
 void main() {
-  final etaClock = find.byWidgetPredicate((w) =>
-      w is Text && w.data != null && RegExp(r'^\d+:\d\d$').hasMatch(w.data!));
+  final etaClock = find.byWidgetPredicate(
+    (w) =>
+        w is Text && w.data != null && RegExp(r'^\d+:\d\d$').hasMatch(w.data!),
+  );
 
-  testWidgets('driverEnRoute: ETA hero ticks and the card is plate-first',
-      (tester) async {
+  testWidgets('driverEnRoute: ETA hero ticks and the card is plate-first', (
+    tester,
+  ) async {
     final h = await _boot(tester);
 
     await _pumpUntilFound(tester, etaClock);
@@ -38,8 +41,11 @@ void main() {
     final second = tester.widget<Text>(etaClock.first).data!;
     await tester.pump(const Duration(seconds: 1));
     final third = tester.widget<Text>(etaClock.first).data!;
-    expect({first, second, third}.length, greaterThan(1),
-        reason: 'the mm:ss hero must visibly tick across 1s pumps');
+    expect(
+      {first, second, third}.length,
+      greaterThan(1),
+      reason: 'the mm:ss hero must visibly tick across 1s pumps',
+    );
 
     expect(find.text('Gurpreet is on the way'), findsOneWidget);
     expect(find.byType(MatchedDriverCard), findsOneWidget);
@@ -49,8 +55,9 @@ void main() {
     await _cleanup(tester, h);
   });
 
-  testWidgets('arrivingNow recomposes: calm headline, ticking clock gone',
-      (tester) async {
+  testWidgets('arrivingNow recomposes: calm headline, ticking clock gone', (
+    tester,
+  ) async {
     final h = await _boot(tester);
 
     // The ETA floors 120s after the match; the next poll lands inside the
@@ -59,17 +66,23 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400)); // switcher settles
 
     expect(find.text('Arriving now'), findsOneWidget);
-    expect(etaClock, findsNothing,
-        reason: 'the hold is calm — no ticking mm:ss remains');
-    expect(find.text('Meet Gurpreet at Wolverhampton Rail Station'),
-        findsOneWidget);
+    expect(
+      etaClock,
+      findsNothing,
+      reason: 'the hold is calm — no ticking mm:ss remains',
+    );
+    expect(
+      find.text('Meet Gurpreet at Wolverhampton Rail Station'),
+      findsOneWidget,
+    );
     expect(find.byType(MatchedDriverCard), findsOneWidget);
 
     await _cleanup(tester, h);
   });
 
-  testWidgets('driverArrived: meet-your-driver state with the plate reminder',
-      (tester) async {
+  testWidgets('driverArrived: meet-your-driver state with the plate reminder', (
+    tester,
+  ) async {
     final h = await _boot(tester);
 
     h.world.markArrived(h.rideId);
@@ -87,36 +100,42 @@ void main() {
   });
 
   testWidgets(
-      'onRoad: RouteStrip, compact card, fixed-fare reminder, promo row',
-      (tester) async {
-    final h = await _boot(
-      tester,
-      handoff: const TripHandoff(fareTotalPounds: 6.39, durationSeconds: 780),
-    );
+    'onRoad: RouteStrip, compact card, fixed-fare reminder, promo row',
+    (tester) async {
+      final h = await _boot(
+        tester,
+        handoff: const TripHandoff(fareTotalPounds: 6.39, durationSeconds: 780),
+      );
 
-    h.world.markArrived(h.rideId);
-    h.world.startRide(h.rideId);
-    await _pumpUntilFound(tester, find.byType(RouteStrip));
-    await tester.pump(const Duration(milliseconds: 400));
+      h.world.markArrived(h.rideId);
+      h.world.startRide(h.rideId);
+      await _pumpUntilFound(tester, find.byType(RouteStrip));
+      await tester.pump(const Duration(milliseconds: 400));
 
-    final strip = tester.widget<RouteStrip>(find.byType(RouteStrip));
-    expect(strip.destinationLabel, 'New Cross Hospital');
-    expect(strip.complete, isFalse);
-    expect(find.text('On your way to New Cross Hospital'), findsOneWidget);
+      final strip = tester.widget<RouteStrip>(find.byType(RouteStrip));
+      expect(strip.destinationLabel, 'New Cross Hospital');
+      expect(strip.complete, isFalse);
+      expect(find.text('On your way to New Cross Hospital'), findsOneWidget);
 
-    final card =
-        tester.widget<MatchedDriverCard>(find.byType(MatchedDriverCard));
-    expect(card.compact, isTrue,
-        reason: 'on-road shows the mini-card, not the full matched beat');
+      final card = tester.widget<MatchedDriverCard>(
+        find.byType(MatchedDriverCard),
+      );
+      expect(
+        card.compact,
+        isTrue,
+        reason: 'on-road shows the mini-card, not the full matched beat',
+      );
 
-    expect(find.text('£6.39 fixed'), findsOneWidget);
-    expect(find.text('Add promo code'), findsOneWidget);
+      expect(find.text('£6.39 fixed'), findsOneWidget);
+      expect(find.text('Add promo code'), findsOneWidget);
 
-    await _cleanup(tester, h);
-  });
+      await _cleanup(tester, h);
+    },
+  );
 
-  testWidgets('a promo that failed at match is said out loud, never silent',
-      (tester) async {
+  testWidgets('a promo that failed at match is said out loud, never silent', (
+    tester,
+  ) async {
     final h = await _boot(
       tester,
       handoff: const TripHandoff(
@@ -131,18 +150,26 @@ void main() {
     await _pumpUntilFound(tester, find.byType(RouteStrip));
     await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.byType(HopBanner), findsOneWidget,
-        reason: 'a staged code that failed at match must never vanish '
-            'silently');
+    expect(
+      find.byType(HopBanner),
+      findsOneWidget,
+      reason:
+          'a staged code that failed at match must never vanish '
+          'silently',
+    );
     expect(find.textContaining('Promo code not found'), findsOneWidget);
-    expect(find.text('Add promo code'), findsOneWidget,
-        reason: 'the rider can still stage a working code');
+    expect(
+      find.text('Add promo code'),
+      findsOneWidget,
+      reason: 'the rider can still stage a working code',
+    );
 
     await _cleanup(tester, h);
   });
 
-  testWidgets('fixed-fare reminder hides when the handoff is null (reload)',
-      (tester) async {
+  testWidgets('fixed-fare reminder hides when the handoff is null (reload)', (
+    tester,
+  ) async {
     final h = await _boot(tester); // no handoff written
 
     h.world.markArrived(h.rideId);
@@ -179,23 +206,31 @@ void main() {
       dropoffLng: DemoPlaces.newCrossHospital.lng,
     );
     final promo = promoResultFor(
-        code: 'HOPPIN20', originalFare: estimate.estimate.total)!;
+      code: 'HOPPIN20',
+      originalFare: estimate.estimate.total,
+    )!;
 
     expect(find.text('HOPPIN20 · 20% off'), findsOneWidget);
-    final struck = find.byWidgetPredicate((w) =>
-        w is Text &&
-        w.data == formatPounds(promo.originalFare) &&
-        w.style?.decoration == TextDecoration.lineThrough);
-    expect(struck, findsOneWidget,
-        reason: 'the old total must be struck through, not erased');
+    final struck = find.byWidgetPredicate(
+      (w) =>
+          w is Text &&
+          w.data == formatPounds(promo.originalFare) &&
+          w.style?.decoration == TextDecoration.lineThrough,
+    );
+    expect(
+      struck,
+      findsOneWidget,
+      reason: 'the old total must be struck through, not erased',
+    );
     expect(find.byType(MoneyTicker), findsOneWidget);
     expect(find.text(formatPounds(promo.newFare)), findsOneWidget);
 
     await _cleanup(tester, h);
   });
 
-  testWidgets('promo failure explains why without changing the trip',
-      (tester) async {
+  testWidgets('promo failure explains why without changing the trip', (
+    tester,
+  ) async {
     final h = await _boot(tester);
     h.world.markArrived(h.rideId);
     h.world.startRide(h.rideId);
@@ -211,8 +246,11 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('Promo code not found'), findsOneWidget);
-    expect(find.byType(RouteStrip), findsOneWidget,
-        reason: 'a promo failure never disturbs the on-road state');
+    expect(
+      find.byType(RouteStrip),
+      findsOneWidget,
+      reason: 'a promo failure never disturbs the on-road state',
+    );
 
     await _cleanup(tester, h);
   });
@@ -232,8 +270,11 @@ void main() {
 
     expect(find.text('Trip cancelled'), findsOneWidget);
     expect(find.byType(RouteStrip), findsNothing);
-    expect(find.text('Driver on the way'), findsNothing,
-        reason: 'no dead status-timeline survives the cancelled state');
+    expect(
+      find.text('Driver on the way'),
+      findsNothing,
+      reason: 'no dead status-timeline survives the cancelled state',
+    );
     expect(find.byType(MatchedDriverCard), findsNothing);
 
     // Book again flows through the intent → TripNavigationHost → router.
@@ -259,25 +300,30 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500)); // route settles
 
     expect(find.text('safety-stub'), findsOneWidget);
-    expect(find.byType(TripScreen), findsNothing,
-        reason: 'the host consumed the intent and moved the route');
+    expect(
+      find.byType(TripScreen),
+      findsNothing,
+      reason: 'the host consumed the intent and moved the route',
+    );
 
     await _cleanup(tester, h);
   });
 
-  testWidgets('the Message button on the matched card routes to chat via intent',
-      (tester) async {
-    final h = await _boot(tester);
-    await _pumpUntilFound(tester, find.text('Message'));
+  testWidgets(
+    'the Message button on the matched card routes to chat via intent',
+    (tester) async {
+      final h = await _boot(tester);
+      await _pumpUntilFound(tester, find.text('Message'));
 
-    await tester.tap(find.text('Message'));
-    await tester.pump(const Duration(milliseconds: 200));
-    await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(find.text('Message'));
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.text('chat-stub'), findsOneWidget);
+      expect(find.text('chat-stub'), findsOneWidget);
 
-    await _cleanup(tester, h);
-  });
+      await _cleanup(tester, h);
+    },
+  );
 
   // ── PHASE 11 — the convergence assertions. These boot the REAL trip screen
   // and prove the lanes' surfaces are REACHABLE BY TAPPING, not merely
@@ -298,28 +344,43 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
 
       // Chat and Call are two DISTINCT icons with two DISTINCT destinations.
-      expect(find.byTooltip('Message driver'), findsOneWidget,
-          reason: 'chat keeps its own affordance (BOUND)');
-      expect(find.byTooltip('Call driver'), findsOneWidget,
-          reason: 'the #45 call seam gets an affordance of its OWN — the whole '
-              'point of killing the phone-icon-opens-chat lie');
+      expect(
+        find.byTooltip('Message driver'),
+        findsOneWidget,
+        reason: 'chat keeps its own affordance (BOUND)',
+      );
+      expect(
+        find.byTooltip('Call driver'),
+        findsOneWidget,
+        reason:
+            'the #45 call seam gets an affordance of its OWN — the whole '
+            'point of killing the phone-icon-opens-chat lie',
+      );
 
       await tester.tap(find.byTooltip('Call driver'));
       await tester.pump(const Duration(milliseconds: 200));
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.text('call-stub'), findsOneWidget,
-          reason: 'the phone affordance must reach the CALL surface');
-      expect(find.text('chat-stub'), findsNothing,
-          reason: 'a phone icon that opens chat is the exact lie Wave 0 '
-              'deleted — it must never come back');
+      expect(
+        find.text('call-stub'),
+        findsOneWidget,
+        reason: 'the phone affordance must reach the CALL surface',
+      );
+      expect(
+        find.text('chat-stub'),
+        findsNothing,
+        reason:
+            'a phone icon that opens chat is the exact lie Wave 0 '
+            'deleted — it must never come back',
+      );
 
       await _cleanup(tester, h);
     });
 
-    testWidgets('the on-road CHAT affordance still routes to chat',
-        (tester) async {
+    testWidgets('the on-road CHAT affordance still routes to chat', (
+      tester,
+    ) async {
       final h = await _boot(tester);
       h.world.markArrived(h.rideId);
       h.world.startRide(h.rideId);
@@ -331,9 +392,13 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.text('chat-stub'), findsOneWidget,
-          reason: 'chat stays BOUND and reachable — splitting the affordances '
-              'must not cost the rider the working one');
+      expect(
+        find.text('chat-stub'),
+        findsOneWidget,
+        reason:
+            'chat stays BOUND and reachable — splitting the affordances '
+            'must not cost the rider the working one',
+      );
 
       await _cleanup(tester, h);
     });
@@ -350,8 +415,12 @@ void main() {
           return null;
         },
       );
-      addTearDown(() => tester.binding.defaultBinaryMessenger
-          .setMockMethodCallHandler(SystemChannels.platform, null));
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
 
       final h = await _boot(tester);
       await _pumpUntilFound(tester, find.text('Share trip'));
@@ -361,15 +430,26 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump(const Duration(milliseconds: 400));
 
-      expect(find.byType(ShareLinkUnavailableState), findsOneWidget,
-          reason: 'the share affordance must open the DESIGNED sheet and '
-              'render the #57 rung where the link would be');
-      expect(find.text('Link copied'), findsNothing,
-          reason: 'the Wave-0 "copied" lie must stay dead — there is no link');
-      expect(clipboardWrites, isEmpty,
-          reason: 'nothing may be written to the clipboard: there is no '
-              'tokenised tracking URL to copy (#57), so copying anything at '
-              'all would be copying a claim we cannot keep');
+      expect(
+        find.byType(ShareLinkUnavailableState),
+        findsOneWidget,
+        reason:
+            'the share affordance must open the DESIGNED sheet and '
+            'render the #57 rung where the link would be',
+      );
+      expect(
+        find.text('Link copied'),
+        findsNothing,
+        reason: 'the Wave-0 "copied" lie must stay dead — there is no link',
+      );
+      expect(
+        clipboardWrites,
+        isEmpty,
+        reason:
+            'nothing may be written to the clipboard: there is no '
+            'tokenised tracking URL to copy (#57), so copying anything at '
+            'all would be copying a claim we cannot keep',
+      );
 
       await _cleanup(tester, h);
     });
@@ -387,9 +467,13 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump(const Duration(milliseconds: 400));
 
-      expect(find.byType(ShareLinkUnavailableState), findsOneWidget,
-          reason: 'the second share site must open the sheet too — a half '
-              're-pointed affordance would leave one path on the deleted lie');
+      expect(
+        find.byType(ShareLinkUnavailableState),
+        findsOneWidget,
+        reason:
+            'the second share site must open the sheet too — a half '
+            're-pointed affordance would leave one path on the deleted lie',
+      );
 
       await _cleanup(tester, h);
     });
@@ -398,11 +482,15 @@ void main() {
     // this is the UX half — the rider is never handed an entry into a channel
     // that will reject them.
     testWidgets('the chat entry is DISABLED in a terminal phase (completed / '
-        'cancelled) — the client mirror of the server chat window',
-        (tester) async {
+        'cancelled) — the client mirror of the server chat window', (
+      tester,
+    ) async {
       for (final phase in [TripPhase.completed, TripPhase.cancelled]) {
-        expect(_stateFor(phase).chatOpen, isFalse,
-            reason: '$phase is terminal — chat is closed');
+        expect(
+          _stateFor(phase).chatOpen,
+          isFalse,
+          reason: '$phase is terminal — chat is closed',
+        );
       }
       // ...and open exactly where the server allows it.
       for (final phase in [
@@ -411,18 +499,30 @@ void main() {
         TripPhase.driverArrived,
         TripPhase.onRoad,
       ]) {
-        expect(_stateFor(phase).chatOpen, isTrue,
-            reason: '$phase has a driver on an active trip — chat is open');
+        expect(
+          _stateFor(phase).chatOpen,
+          isTrue,
+          reason: '$phase has a driver on an active trip — chat is open',
+        );
       }
       // NOT a copy of `cancellable`: chat is closed while finding (no driver
       // to message) and open on-road (where cancelling is not).
-      expect(_stateFor(TripPhase.finding).chatOpen, isFalse,
-          reason: 'there is no driver to message yet while finding');
-      expect(_stateFor(TripPhase.finding).cancellable, isTrue,
-          reason: 'the two windows are the INVERSE of one another at this end');
+      expect(
+        _stateFor(TripPhase.finding).chatOpen,
+        isFalse,
+        reason: 'there is no driver to message yet while finding',
+      );
+      expect(
+        _stateFor(TripPhase.finding).cancellable,
+        isTrue,
+        reason: 'the two windows are the INVERSE of one another at this end',
+      );
       expect(_stateFor(TripPhase.onRoad).chatOpen, isTrue);
-      expect(_stateFor(TripPhase.onRoad).cancellable, isFalse,
-          reason: '...and at the other. chatOpen is not a copy of cancellable.');
+      expect(
+        _stateFor(TripPhase.onRoad).cancellable,
+        isTrue,
+        reason: 'started rides remain cancellable with the mid-trip rule',
+      );
 
       // The view honours it: the on-road icon row disables Message when the
       // mirror says the window is shut.
@@ -430,9 +530,13 @@ void main() {
         tester,
         _stateFor(TripPhase.completed, driver: _fakeDriver),
       );
-      expect(find.byTooltip('Message driver'), findsNothing,
-          reason: 'the completed phase does not render the on-road icon row at '
-              'all — there is no live chat entry to disable');
+      expect(
+        find.byTooltip('Message driver'),
+        findsNothing,
+        reason:
+            'the completed phase does not render the on-road icon row at '
+            'all — there is no live chat entry to disable',
+      );
     });
 
     testWidgets('the matched card disables Message when the chat window is '
@@ -442,21 +546,34 @@ void main() {
         tester,
         _stateFor(TripPhase.driverEnRoute, driver: _fakeDriver),
       );
-      final card =
-          tester.widget<MatchedDriverCard>(find.byType(MatchedDriverCard));
-      expect(card.onContact, isNotNull,
-          reason: 'chat is OPEN on driverEnRoute — the entry must be live');
-      expect(card.onCall, isNotNull,
-          reason: 'Call is a separate affordance on the #45 seam — it is NOT '
-              'gated on the chat window');
-      expect(identical(card.onContact, card.onCall), isFalse,
-          reason: 'Message and Call must never be the same callback — that '
-              'identity WAS the Wave-0 lie');
+      final card = tester.widget<MatchedDriverCard>(
+        find.byType(MatchedDriverCard),
+      );
+      expect(
+        card.onContact,
+        isNotNull,
+        reason: 'chat is OPEN on driverEnRoute — the entry must be live',
+      );
+      expect(
+        card.onCall,
+        isNotNull,
+        reason:
+            'Call is a separate affordance on the #45 seam — it is NOT '
+            'gated on the chat window',
+      );
+      expect(
+        identical(card.onContact, card.onCall),
+        isFalse,
+        reason:
+            'Message and Call must never be the same callback — that '
+            'identity WAS the Wave-0 lie',
+      );
     });
   });
 
-  testWidgets('dark theme smoke: driverEnRoute renders without exceptions',
-      (tester) async {
+  testWidgets('dark theme smoke: driverEnRoute renders without exceptions', (
+    tester,
+  ) async {
     final h = await _boot(tester, theme: _dark);
 
     await _pumpUntilFound(tester, etaClock);
@@ -487,13 +604,17 @@ void main() {
     cases.forEach((phase, marker) {
       testWidgets('$phase renders its distinctive copy', (tester) async {
         await _bootStub(tester, _stateFor(phase));
-        expect(find.textContaining(marker), findsWidgets,
-            reason: '$phase must recompose to its own designed layout');
+        expect(
+          find.textContaining(marker),
+          findsWidgets,
+          reason: '$phase must recompose to its own designed layout',
+        );
       });
     });
 
-    testWidgets('error phase offers a real exit, not a dead end',
-        (tester) async {
+    testWidgets('error phase offers a real exit, not a dead end', (
+      tester,
+    ) async {
       await _bootStub(tester, _stateFor(TripPhase.error));
       expect(find.text('Back to home'), findsOneWidget);
     });
@@ -511,8 +632,9 @@ void main() {
       expect(find.text('BK72 WNH'), findsOneWidget);
     });
 
-    testWidgets('degrades to a designed rung when driverInfo is null (#5)',
-        (tester) async {
+    testWidgets('degrades to a designed rung when driverInfo is null (#5)', (
+      tester,
+    ) async {
       await _bootStub(
         tester,
         _stateFor(TripPhase.driverEnRoute), // driver: null
@@ -523,8 +645,11 @@ void main() {
       // a silent blank.
       expect(find.byType(DriverUnavailableCard), findsOneWidget);
       final size = tester.getSize(find.byType(DriverUnavailableCard));
-      expect(size.height, greaterThan(48),
-          reason: 'the #5 degrade is a real-sized surface, not blank');
+      expect(
+        size.height,
+        greaterThan(48),
+        reason: 'the #5 degrade is a real-sized surface, not blank',
+      );
     });
   });
 
@@ -532,31 +657,39 @@ void main() {
   // DISTINCT from a terminal failure, and never claims a driver was found.
   group('BOOK-08: MatchingRung retry state', () {
     Widget host(Widget child) => MaterialApp(
-          theme: _light,
-          home: Scaffold(body: child),
-        );
+      theme: _light,
+      home: Scaffold(body: child),
+    );
 
-    testWidgets('renders a "finding another driver" retry state',
-        (tester) async {
+    testWidgets('renders a "finding another driver" retry state', (
+      tester,
+    ) async {
       await tester.pumpWidget(host(MatchingRung(onExit: () {})));
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.textContaining('another driver'), findsWidgets,
-          reason: 'the retry rung reflects the ongoing re-dispatch');
+      expect(
+        find.textContaining('another driver'),
+        findsWidgets,
+        reason: 'the retry rung reflects the ongoing re-dispatch',
+      );
       // Never a fake success.
       expect(find.textContaining('found'), findsNothing);
       expect(find.textContaining('Driver assigned'), findsNothing);
     });
 
-    testWidgets('is visually distinct from a terminal failure state',
-        (tester) async {
+    testWidgets('is visually distinct from a terminal failure state', (
+      tester,
+    ) async {
       await tester.pumpWidget(host(MatchingRung(onExit: () {})));
       await tester.pump(const Duration(milliseconds: 300));
 
       // The retry rung is a LIVE search, not the dead-end failure card.
       expect(find.text("We couldn't get you moving"), findsNothing);
-      expect(find.text('Try again'), findsNothing,
-          reason: 'retry leads; it is not the manual dead-end');
+      expect(
+        find.text('Try again'),
+        findsNothing,
+        reason: 'retry leads; it is not the manual dead-end',
+      );
     });
 
     testWidgets('keeps a manual exit reachable', (tester) async {
@@ -565,8 +698,11 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       final exit = find.byType(TextButton);
-      expect(exit, findsWidgets,
-          reason: 'an escape hatch stays available under the retry');
+      expect(
+        exit,
+        findsWidgets,
+        reason: 'an escape hatch stays available under the retry',
+      );
       await tester.tap(exit.first);
       await tester.pump(const Duration(milliseconds: 100));
       expect(exits, 1);
@@ -602,26 +738,29 @@ const _fakeDriver = RideDriverInfo(
 );
 
 TripState _stateFor(TripPhase phase, {RideDriverInfo? driver}) => TripState(
-      phase: phase,
-      driver: driver,
-      etaSecondsRemaining: phase == TripPhase.driverEnRoute ? 120 : null,
-      error: phase == TripPhase.error ? 'We could not load this trip.' : null,
-    );
+  phase: phase,
+  driver: driver,
+  etaSecondsRemaining: phase == TripPhase.driverEnRoute ? 120 : null,
+  error: phase == TripPhase.error ? 'We could not load this trip.' : null,
+);
 
 /// Mounts TripScreen with a fixed-phase stub interactor (map pinned hidden).
 Future<void> _bootStub(WidgetTester tester, TripState state) async {
-  final container = ProviderContainer(overrides: [
-    mapInteractorProvider.overrideWith2((_) => _HiddenMapStub()),
-    tripInteractorProvider.overrideWith2((_) => _StubTripInteractor(state)),
-  ]);
+  final container = ProviderContainer(
+    overrides: [
+      mapInteractorProvider.overrideWith2((_) => _HiddenMapStub()),
+      tripInteractorProvider.overrideWith2((_) => _StubTripInteractor(state)),
+    ],
+  );
   addTearDown(container.dispose);
 
   final router = GoRouter(
     initialLocation: '/trip/stub',
     routes: [
       GoRoute(
-          path: '/',
-          builder: (_, _) => const Scaffold(body: Text('home-stub'))),
+        path: '/',
+        builder: (_, _) => const Scaffold(body: Text('home-stub')),
+      ),
       GoRoute(
         path: '/trip/:id',
         builder: (_, state) => TripScreen(rideId: state.pathParameters['id']!),
@@ -629,10 +768,12 @@ Future<void> _bootStub(WidgetTester tester, TripState state) async {
     ],
   );
 
-  await tester.pumpWidget(UncontrolledProviderScope(
-    container: container,
-    child: MaterialApp.router(theme: _light, routerConfig: router),
-  ));
+  await tester.pumpWidget(
+    UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp.router(theme: _light, routerConfig: router),
+    ),
+  );
   await tester.pump(const Duration(milliseconds: 100));
   await tester.pump(const Duration(milliseconds: 400));
 }
@@ -655,18 +796,22 @@ Future<_Harness> _boot(
     seed: DemoSeed.seed,
     store: InMemorySnapshotStore(),
   )..restoreOrSeed();
-  final container = ProviderContainer(overrides: [
-    ...riderDemoOverrides(world),
-    // Pin the map riblet to the hidden rung: this suite proves the trip
-    // CONTENT in the map-less layout (MAP-03's live-mode rung, still a
-    // first-class production state) — map-mode composition is proven in
-    // test/features/trip/map/map_view_test.dart.
-    mapInteractorProvider.overrideWith2((_) => _HiddenMapStub()),
-  ]);
+  final container = ProviderContainer(
+    overrides: [
+      ...riderDemoOverrides(world),
+      // Pin the map riblet to the hidden rung: this suite proves the trip
+      // CONTENT in the map-less layout (MAP-03's live-mode rung, still a
+      // first-class production state) — map-mode composition is proven in
+      // test/features/trip/map/map_view_test.dart.
+      mapInteractorProvider.overrideWith2((_) => _HiddenMapStub()),
+    ],
+  );
 
   // The cancel path needs a signed-in userId; the demo auth accepts the
   // seeded credentials outright.
-  await container.read(authServiceProvider).signInWithPassword(
+  await container
+      .read(authServiceProvider)
+      .signInWithPassword(
         email: DemoSeed.riderCredentials.email,
         password: DemoSeed.riderCredentials.password,
       );
@@ -688,43 +833,48 @@ Future<_Harness> _boot(
     initialLocation: '/trip/$rideId',
     routes: [
       GoRoute(
-          path: '/', builder: (_, _) => const Scaffold(body: Text('home-stub'))),
+        path: '/',
+        builder: (_, _) => const Scaffold(body: Text('home-stub')),
+      ),
       GoRoute(
-          path: '/book',
-          builder: (_, _) => const Scaffold(body: Text('book-stub'))),
+        path: '/book',
+        builder: (_, _) => const Scaffold(body: Text('book-stub')),
+      ),
       GoRoute(
-          path: '/safety',
-          builder: (_, _) => const Scaffold(body: Text('safety-stub'))),
+        path: '/safety',
+        builder: (_, _) => const Scaffold(body: Text('safety-stub')),
+      ),
       GoRoute(
         path: '/trip/:id',
-        builder: (_, state) =>
-            TripScreen(rideId: state.pathParameters['id']!),
+        builder: (_, state) => TripScreen(rideId: state.pathParameters['id']!),
         routes: [
           GoRoute(
-              path: 'receipt',
-              builder: (_, _) => const Scaffold(body: Text('receipt-stub'))),
+            path: 'receipt',
+            builder: (_, _) => const Scaffold(body: Text('receipt-stub')),
+          ),
           GoRoute(
-              path: 'chat',
-              builder: (_, _) => const Scaffold(body: Text('chat-stub'))),
+            path: 'chat',
+            builder: (_, _) => const Scaffold(body: Text('chat-stub')),
+          ),
           // PHASE 11: the #45 call route. A STUB leaf, deliberately — this
           // suite proves the trip screen ROUTES to call (and never to chat);
           // call_screen_test.dart proves the surface itself is inert and
           // never dials.
           GoRoute(
-              path: 'call',
-              builder: (_, _) => const Scaffold(body: Text('call-stub'))),
+            path: 'call',
+            builder: (_, _) => const Scaffold(body: Text('call-stub')),
+          ),
         ],
       ),
     ],
   );
 
-  await tester.pumpWidget(UncontrolledProviderScope(
-    container: container,
-    child: MaterialApp.router(
-      theme: theme ?? _light,
-      routerConfig: router,
+  await tester.pumpWidget(
+    UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp.router(theme: theme ?? _light, routerConfig: router),
     ),
-  ));
+  );
   await tester.pump(const Duration(milliseconds: 100));
   await tester.pump(const Duration(milliseconds: 400)); // switcher settles
 
@@ -732,7 +882,11 @@ Future<_Harness> _boot(
 }
 
 class _Harness {
-  _Harness({required this.world, required this.container, required this.rideId});
+  _Harness({
+    required this.world,
+    required this.container,
+    required this.rideId,
+  });
 
   final DemoWorld world;
   final ProviderContainer container;

@@ -45,13 +45,12 @@ class FakeRidesRepository implements RidesRepository {
     required double dropoffLat,
     required double dropoffLng,
     String? vehicleCategoryId,
-  }) async =>
-      _world.estimateFor(
-        pickupLat: pickupLat,
-        pickupLng: pickupLng,
-        dropoffLat: dropoffLat,
-        dropoffLng: dropoffLng,
-      );
+  }) async => _world.estimateFor(
+    pickupLat: pickupLat,
+    pickupLng: pickupLng,
+    dropoffLat: dropoffLat,
+    dropoffLng: dropoffLng,
+  );
 
   @override
   Future<String> requestRide({
@@ -60,13 +59,12 @@ class FakeRidesRepository implements RidesRepository {
     required double dropoffLat,
     required double dropoffLng,
     String? vehicleCategoryId,
-  }) async =>
-      _world.submitRideRequest(
-        pickupLat: pickupLat,
-        pickupLng: pickupLng,
-        dropoffLat: dropoffLat,
-        dropoffLng: dropoffLng,
-      );
+  }) async => _world.submitRideRequest(
+    pickupLat: pickupLat,
+    pickupLng: pickupLng,
+    dropoffLat: dropoffLat,
+    dropoffLng: dropoffLng,
+  );
 
   @override
   Future<Ride> getRide(String id) async => _world.rideById(id);
@@ -76,27 +74,27 @@ class FakeRidesRepository implements RidesRepository {
   /// (pick a no-penalty rider reason) rather than a special-cased one.
   @override
   Future<List<CancellationReasonOption>> cancellationReasons() async => [
-        // Seeded ids — DemoWorld.cancelRide validates against
-        // DemoSeed.cancellationReasonIds and 422s on anything else.
-        CancellationReasonOption(
-          id: DemoSeed.cancellationReasonIds[0],
-          reasonText: 'Changed my mind',
-          appliesPenaltyFee: false,
-          actorType: 'rider',
-        ),
-        CancellationReasonOption(
-          id: DemoSeed.cancellationReasonIds[1],
-          reasonText: 'Waiting too long',
-          appliesPenaltyFee: false,
-          actorType: 'rider',
-        ),
-        CancellationReasonOption(
-          id: DemoSeed.cancellationReasonIds[2],
-          reasonText: 'driver_declined',
-          appliesPenaltyFee: false,
-          actorType: 'driver',
-        ),
-      ];
+    // Seeded ids — DemoWorld.cancelRide validates against
+    // DemoSeed.cancellationReasonIds and 422s on anything else.
+    CancellationReasonOption(
+      id: DemoSeed.cancellationReasonIds[0],
+      reasonText: 'Changed my mind',
+      appliesPenaltyFee: false,
+      actorType: 'rider',
+    ),
+    CancellationReasonOption(
+      id: DemoSeed.cancellationReasonIds[1],
+      reasonText: 'Waiting too long',
+      appliesPenaltyFee: false,
+      actorType: 'rider',
+    ),
+    CancellationReasonOption(
+      id: DemoSeed.cancellationReasonIds[2],
+      reasonText: 'driver_declined',
+      appliesPenaltyFee: false,
+      actorType: 'driver',
+    ),
+  ];
 
   /// Names a dropped pin. The live path asks Nominatim; the demo answers a
   /// stable Wolverhampton-shaped label so the picker's confirm bar is never
@@ -106,11 +104,12 @@ class FakeRidesRepository implements RidesRepository {
     double lat,
     double lng,
   ) async => (
-        label: 'Pinned location, Wolverhampton '
-            '(${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)})',
-        lat: lat,
-        lng: lng,
-      );
+    label:
+        'Pinned location, Wolverhampton '
+        '(${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)})',
+    lat: lat,
+    lng: lng,
+  );
 
   /// Demo autocomplete. The demo runs with no network, so this stands in for
   /// Photon by matching the rider's own saved places plus a small set of
@@ -185,38 +184,38 @@ class FakeRidesRepository implements RidesRepository {
   /// and gets PROMO_NOT_FOUND. Every offer shown here really applies.
   @override
   Future<List<PromoOffer>> promotions() async => const [
-        PromoOffer(
-          promoCode: DemoSeed.promoCode,
-          title: 'Welcome to Hoppin',
-          description: '20% off your next trip.',
-          discountType: 'percentage',
-          discountValue: 20,
-        ),
-      ];
+    PromoOffer(
+      promoCode: DemoSeed.promoCode,
+      title: 'Welcome to Hoppin',
+      description: '20% off your next trip.',
+      discountType: 'percentage',
+      discountValue: 20,
+    ),
+  ];
 
   /// The operator's real contact details. Ofcom's reserved fictional ranges
   /// (`+44 7700 900xxx` / `020 7946 0xxx`), so a demo tap can never dial or
   /// email a real person.
   @override
   Future<PlatformContacts> contacts() async => const PlatformContacts(
-        supportEmail: 'help@hoppin.app',
-        supportPhone: '+44 20 7946 0000',
-        emergencyPhone: '+44 20 7946 0999',
-        whatsappNumber: '+44 7700 900000',
-      );
+    supportEmail: 'help@hoppin.app',
+    supportPhone: '+44 20 7946 0000',
+    emergencyPhone: '+44 20 7946 0999',
+    whatsappNumber: '+44 7700 900000',
+  );
 
   /// The bookable vehicle classes. The demo world prices one class, so exactly
   /// one is offered — a picker listing classes the fare engine cannot quote
   /// would 400 on submit.
   @override
   Future<List<VehicleType>> vehicleTypes() async => const [
-        VehicleType(
-          id: 'b1000000-0000-4000-8000-000000000001',
-          name: 'Standard',
-          seats: 4,
-          bags: 2,
-        ),
-      ];
+    VehicleType(
+      id: 'b1000000-0000-4000-8000-000000000001',
+      name: 'Standard',
+      seats: 4,
+      bags: 2,
+    ),
+  ];
 
   /// Wolverhampton is in the demo service area; anywhere else is not, matching
   /// the single licensed area the seed models.
@@ -230,8 +229,7 @@ class FakeRidesRepository implements RidesRepository {
   Future<AppStatus> appStatus({
     required String platform,
     required String version,
-  }) async =>
-      AppStatus.unknown;
+  }) async => AppStatus.unknown;
 
   @override
   Future<List<Ride>> history({int limit = 50}) async =>
@@ -240,31 +238,28 @@ class FakeRidesRepository implements RidesRepository {
   @override
   Future<void> cancel({
     required String rideId,
-    required String reasonId,
+    String? reasonId,
     required String canceledByUserId,
     required String actorType,
-  }) async =>
-      _world.cancelRide(
-        rideId: rideId,
-        reasonId: reasonId,
-        canceledByUserId: canceledByUserId,
-        actorType: actorType,
-      );
+  }) async => _world.cancelRide(
+    rideId: rideId,
+    reasonId: reasonId,
+    canceledByUserId: canceledByUserId,
+    actorType: actorType,
+  );
 
   @override
   Future<void> rate({
     required String rideId,
     required int score,
     String? comments,
-  }) async =>
-      _world.rateRide(rideId: rideId, score: score, comments: comments);
+  }) async => _world.rateRide(rideId: rideId, score: score, comments: comments);
 
   @override
   Future<PromoResult> applyPromo({
     required String rideId,
     required String promoCode,
-  }) async =>
-      _world.applyPromoCode(rideId: rideId, promoCode: promoCode);
+  }) async => _world.applyPromoCode(rideId: rideId, promoCode: promoCode);
 
   @override
   Future<Receipt> receipt(String rideId) async => _world.receiptFor(rideId);
@@ -291,7 +286,8 @@ class FakeRidesRepository implements RidesRepository {
     }
     _scheduledIdCounter++;
     final scheduled = ScheduledRide(
-      id: 'e1000000-0000-4000-8000-'
+      id:
+          'e1000000-0000-4000-8000-'
           '${_scheduledIdCounter.toRadixString(16).padLeft(12, '0')}',
       riderId: DemoSeed.riderId,
       requestedPickupTime: requestedPickupTime,
@@ -353,6 +349,5 @@ class FakeRidesRepository implements RidesRepository {
   Future<RideMessage> sendMessage({
     required String rideId,
     required String body,
-  }) =>
-      throw UnsupportedError('Not part of the demo');
+  }) => throw UnsupportedError('Not part of the demo');
 }

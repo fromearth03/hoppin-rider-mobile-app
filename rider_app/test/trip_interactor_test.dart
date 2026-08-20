@@ -49,36 +49,38 @@ void main() {
     });
   });
 
-  test('ETA deadline re-syncs each poll, ticks 1Hz, and never goes negative',
-      () {
-    FakeAsync().run((async) {
-      final h = _Harness(async);
-      final first = h.state.etaSecondsRemaining!;
-      expect(first, greaterThan(0));
+  test(
+    'ETA deadline re-syncs each poll, ticks 1Hz, and never goes negative',
+    () {
+      FakeAsync().run((async) {
+        final h = _Harness(async);
+        final first = h.state.etaSecondsRemaining!;
+        expect(first, greaterThan(0));
 
-      async.elapse(const Duration(seconds: 1));
-      final afterOne = h.state.etaSecondsRemaining!;
-      expect(afterOne, first - 1);
+        async.elapse(const Duration(seconds: 1));
+        final afterOne = h.state.etaSecondsRemaining!;
+        expect(afterOne, first - 1);
 
-      async.elapse(const Duration(seconds: 1));
-      expect(h.state.etaSecondsRemaining, first - 2);
+        async.elapse(const Duration(seconds: 1));
+        expect(h.state.etaSecondsRemaining, first - 2);
 
-      // A 10s jump (throttled-tab shape): the 1Hz tick recomputes from the
-      // deadline and the next poll re-syncs to the world's truth — the value
-      // snaps to reality instead of drifting by tick count.
-      async.elapse(const Duration(seconds: 10));
-      final worldRemaining = h.world.etaSecondsRemaining!;
-      expect(h.state.etaSecondsRemaining, isNotNull);
-      expect(
-        (h.state.etaSecondsRemaining! - worldRemaining).abs(),
-        lessThanOrEqualTo(1),
-        reason: 'interactor ETA must track the world clock-delta, not ticks',
-      );
-      expect(h.state.etaSecondsRemaining, greaterThanOrEqualTo(0));
+        // A 10s jump (throttled-tab shape): the 1Hz tick recomputes from the
+        // deadline and the next poll re-syncs to the world's truth — the value
+        // snaps to reality instead of drifting by tick count.
+        async.elapse(const Duration(seconds: 10));
+        final worldRemaining = h.world.etaSecondsRemaining!;
+        expect(h.state.etaSecondsRemaining, isNotNull);
+        expect(
+          (h.state.etaSecondsRemaining! - worldRemaining).abs(),
+          lessThanOrEqualTo(1),
+          reason: 'interactor ETA must track the world clock-delta, not ticks',
+        );
+        expect(h.state.etaSecondsRemaining, greaterThanOrEqualTo(0));
 
-      h.dispose();
-    });
-  });
+        h.dispose();
+      });
+    },
+  );
 
   test('driver info populates from the seam once accepted', () {
     FakeAsync().run((async) {
@@ -92,34 +94,37 @@ void main() {
     });
   });
 
-  test('null driver info (pre-assignment / live seam) never crashes the phase',
-      () {
-    FakeAsync().run((async) {
-      final repo = _StubRepo(
-        ride: const Ride(
-          id: 'ride-x',
-          riderId: 'rider-x',
-          status: RideStatus.matching,
-        ),
-      );
-      final container = ProviderContainer(overrides: [
-        ridesRepositoryProvider.overrideWithValue(repo),
-      ]);
-      final sub =
-          container.listen(tripInteractorProvider('ride-x'), (_, _) {});
-      async.flushMicrotasks();
+  test(
+    'null driver info (pre-assignment / live seam) never crashes the phase',
+    () {
+      FakeAsync().run((async) {
+        final repo = _StubRepo(
+          ride: const Ride(
+            id: 'ride-x',
+            riderId: 'rider-x',
+            status: RideStatus.matching,
+          ),
+        );
+        final container = ProviderContainer(
+          overrides: [ridesRepositoryProvider.overrideWithValue(repo)],
+        );
+        final sub = container.listen(
+          tripInteractorProvider('ride-x'),
+          (_, _) {},
+        );
+        async.flushMicrotasks();
 
-      final state = container.read(tripInteractorProvider('ride-x'));
-      expect(state.phase, TripPhase.finding);
-      expect(state.driver, isNull);
+        final state = container.read(tripInteractorProvider('ride-x'));
+        expect(state.phase, TripPhase.finding);
+        expect(state.driver, isNull);
 
-      sub.close();
-      container.dispose();
-    });
-  });
+        sub.close();
+        container.dispose();
+      });
+    },
+  );
 
-  test('strip progress is monotonic on-road and snaps to 1.0 on completed',
-      () {
+  test('strip progress is monotonic on-road and snaps to 1.0 on completed', () {
     FakeAsync().run((async) {
       final h = _Harness(async)..driveToOnRoad(async);
 
@@ -128,8 +133,11 @@ void main() {
       for (var i = 0; i < 6; i++) {
         async.elapse(const Duration(seconds: 5));
         final next = h.state.stripProgress;
-        expect(next, greaterThanOrEqualTo(last),
-            reason: 'the strip must only ever fill forwards');
+        expect(
+          next,
+          greaterThanOrEqualTo(last),
+          reason: 'the strip must only ever fill forwards',
+        );
         expect(next, lessThan(1.0));
         last = next;
       }
@@ -151,11 +159,15 @@ void main() {
       expect(h.state.activeWaypoint, 'Leaving the city centre');
 
       h.pumpUntil(
-          async, () => h.state.activeWaypoint != 'Leaving the city centre');
+        async,
+        () => h.state.activeWaypoint != 'Leaving the city centre',
+      );
       expect(h.state.activeWaypoint, 'Along Wednesfield Road');
 
       h.pumpUntil(
-          async, () => h.state.activeWaypoint != 'Along Wednesfield Road');
+        async,
+        () => h.state.activeWaypoint != 'Along Wednesfield Road',
+      );
       expect(h.state.activeWaypoint, 'Passing Heath Town');
 
       h.dispose();
@@ -199,10 +211,16 @@ void main() {
       unawaited(h.interactor.applyPromo('BOGUS99'));
       async.flushMicrotasks();
       expect(h.state.promoError, 'Promo code not found');
-      expect(h.state.phase, TripPhase.onRoad,
-          reason: 'a promo failure must never disturb the trip phase');
-      expect(h.state.appliedPromo, isNotNull,
-          reason: 'the earlier successful promo survives a failed retry');
+      expect(
+        h.state.phase,
+        TripPhase.onRoad,
+        reason: 'a promo failure must never disturb the trip phase',
+      );
+      expect(
+        h.state.appliedPromo,
+        isNotNull,
+        reason: 'the earlier successful promo survives a failed retry',
+      );
 
       h.dispose();
     });
@@ -214,16 +232,36 @@ void main() {
       expect(h.state.phase, TripPhase.driverEnRoute);
 
       bool? result;
-      unawaited(
-          h.interactor.cancelWithDefaultReason().then((v) => result = v));
+      unawaited(h.interactor.cancelWithDefaultReason().then((v) => result = v));
       async.flushMicrotasks();
 
       // The world rejects non-seeded reason ids with VALIDATION_FAILED, so a
       // recorded cancellation proves the seeded default id was sent.
       expect(result, isTrue);
       expect(h.world.eventLog, contains('accepted>rideCancelled>idle'));
-      expect(h.state.phase, TripPhase.cancelled,
-          reason: 'cancel must force an immediate re-poll');
+      expect(
+        h.state.phase,
+        TripPhase.cancelled,
+        reason: 'cancel must force an immediate re-poll',
+      );
+      expect(h.state.ride!.status, RideStatus.cancelled);
+
+      h.dispose();
+    });
+  });
+
+  test('started rider trip can cancel and exits the live-trip phase', () {
+    FakeAsync().run((async) {
+      final h = _Harness(async)..signIn(async);
+      h.driveToOnRoad(async);
+
+      bool? result;
+      unawaited(h.interactor.cancelWithDefaultReason().then((v) => result = v));
+      async.flushMicrotasks();
+
+      expect(result, isTrue);
+      expect(h.world.eventLog, contains('inTrip>rideCancelled>idle'));
+      expect(h.state.phase, TripPhase.cancelled);
       expect(h.state.ride!.status, RideStatus.cancelled);
 
       h.dispose();
@@ -237,9 +275,9 @@ void main() {
       async.elapse(const Duration(milliseconds: 3100));
 
       bool? result;
-      unawaited(h.interactor
-          .submitRating(5, 'Lovely ride')
-          .then((v) => result = v));
+      unawaited(
+        h.interactor.submitRating(5, 'Lovely ride').then((v) => result = v),
+      );
       async.flushMicrotasks();
       expect(result, isTrue);
       expect(h.world.eventLog.any((e) => e.contains('rideRated')), isTrue);
@@ -275,13 +313,18 @@ void main() {
       h.sub.close();
       final callsAtDispose = h.counting.getRideCalls;
       async.elapse(const Duration(seconds: 10));
-      expect(h.counting.getRideCalls, callsAtDispose,
-          reason: 'disposal must cancel the poll loop outright');
+      expect(
+        h.counting.getRideCalls,
+        callsAtDispose,
+        reason: 'disposal must cancel the poll loop outright',
+      );
 
       // Re-create: the family builds a fresh interactor whose state was not
       // clobbered by anything left over from the disposed generation.
-      final sub2 =
-          h.container.listen(tripInteractorProvider(h.rideId), (_, _) {});
+      final sub2 = h.container.listen(
+        tripInteractorProvider(h.rideId),
+        (_, _) {},
+      );
       async.flushMicrotasks();
       expect(h.state.phase, TripPhase.driverEnRoute);
       sub2.close();
@@ -290,16 +333,14 @@ void main() {
     });
   });
 
-  test('completion invalidates the history cache so home rows stay fresh',
-      () {
+  test('completion invalidates the history cache so home rows stay fresh', () {
     FakeAsync().run((async) {
       final h = _Harness(async);
       // Home keeps historyProvider alive all session — model that with a
       // persistent listener whose fetch lands while the ride is live.
       final histSub = h.container.listen(historyProvider, (_, _) {});
       async.flushMicrotasks();
-      final before =
-          h.container.read(historyProvider).value ?? const <Ride>[];
+      final before = h.container.read(historyProvider).value ?? const <Ride>[];
       expect(before.where((r) => r.status.isActive), isNotEmpty);
 
       h.world.markArrived(h.rideId);
@@ -311,12 +352,12 @@ void main() {
       expect(h.state.phase, TripPhase.completed);
 
       async.flushMicrotasks(); // let the invalidated provider refetch
-      final after =
-          h.container.read(historyProvider).value ?? const <Ride>[];
+      final after = h.container.read(historyProvider).value ?? const <Ride>[];
       expect(
         after.where((r) => r.status.isActive),
         isEmpty,
-        reason: 'the completed ride must not read as live on home — the '
+        reason:
+            'the completed ride must not read as live on home — the '
             'terminal beat refreshes the session-long history cache',
       );
 
@@ -341,8 +382,9 @@ void main() {
   // introduce the dependency.
   group('PHASE 11: the 3s poll is the correctness floor', () {
     test('trip_interactor.dart NEVER reads the FCM gateway', () {
-      final source =
-          File('lib/features/trip/trip_interactor.dart').readAsStringSync();
+      final source = File(
+        'lib/features/trip/trip_interactor.dart',
+      ).readAsStringSync();
 
       expect(
         source.contains('fcmGatewayProvider'),
@@ -385,10 +427,12 @@ class _Harness {
 
     counting = _CountingRepo(FakeRidesRepository(world));
     auth = DemoAuthService(persona: DemoPersonas.rider, world: world);
-    container = ProviderContainer(overrides: [
-      ridesRepositoryProvider.overrideWithValue(counting),
-      authServiceProvider.overrideWithValue(auth),
-    ]);
+    container = ProviderContainer(
+      overrides: [
+        ridesRepositoryProvider.overrideWithValue(counting),
+        authServiceProvider.overrideWithValue(auth),
+      ],
+    );
     // Keep the interactor actively listened (the view's ref.watch in
     // production) — Riverpod 3 pauses an unlistened provider.
     sub = container.listen(tripInteractorProvider(rideId), (_, _) {});
@@ -409,10 +453,12 @@ class _Harness {
 
   /// Signs the demo rider in so `userId` is non-null for cancel calls.
   void signIn(FakeAsync async) {
-    unawaited(auth.signInWithPassword(
-      email: DemoSeed.riderCredentials.email,
-      password: DemoSeed.riderCredentials.password,
-    ));
+    unawaited(
+      auth.signInWithPassword(
+        email: DemoSeed.riderCredentials.email,
+        password: DemoSeed.riderCredentials.password,
+      ),
+    );
     async.flushMicrotasks();
   }
 
@@ -465,32 +511,33 @@ class _CountingRepo implements RidesRepository {
       _inner.driverInfo(rideId);
 
   @override
-  Future<List<Ride>> history({int limit = 50}) =>
-      _inner.history(limit: limit);
+  Future<List<Ride>> history({int limit = 50}) => _inner.history(limit: limit);
 
   @override
   Future<void> cancel({
     required String rideId,
-    required String reasonId,
+    String? reasonId,
     required String canceledByUserId,
     required String actorType,
-  }) =>
-      _inner.cancel(
-        rideId: rideId,
-        reasonId: reasonId,
-        canceledByUserId: canceledByUserId,
-        actorType: actorType,
-      );
+  }) => _inner.cancel(
+    rideId: rideId,
+    reasonId: reasonId,
+    canceledByUserId: canceledByUserId,
+    actorType: actorType,
+  );
 
   @override
-  Future<void> rate({required String rideId, required int score,
-          String? comments}) =>
-      _inner.rate(rideId: rideId, score: score, comments: comments);
+  Future<void> rate({
+    required String rideId,
+    required int score,
+    String? comments,
+  }) => _inner.rate(rideId: rideId, score: score, comments: comments);
 
   @override
-  Future<PromoResult> applyPromo(
-          {required String rideId, required String promoCode}) =>
-      _inner.applyPromo(rideId: rideId, promoCode: promoCode);
+  Future<PromoResult> applyPromo({
+    required String rideId,
+    required String promoCode,
+  }) => _inner.applyPromo(rideId: rideId, promoCode: promoCode);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

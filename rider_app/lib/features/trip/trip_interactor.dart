@@ -384,31 +384,40 @@ class TripInteractor extends Notifier<TripState> {
       state = state.copyWith(error: 'You need to be signed in to cancel.');
       return false;
     }
-    // Fetch the REAL seeded reasons from the backend and pick a rider-actor
-    // one. Prefer a no-penalty rider reason; never fall back to a driver
-    // reason or a fabricated id. The server validates both activity and actor
-    // type, so selecting anything else turns a valid cancellation into a
-    // guaranteed 400.
+    // Fetch active reasons from the backend and select by lifecycle event. A
+    // started ride must use rider_mid_trip; selecting the first generic rider
+    // reason would silently skip the configured partial-fare rule. If that
+    // event is not configured, send no reason and cancel plainly.
     String? reasonId;
     try {
       final reasons = await _rides.cancellationReasons();
       final riderReasons = reasons
           .where((r) => r.actorType == 'rider')
           .toList();
-      if (riderReasons.isEmpty) {
-        // No active admin reason is a valid configuration state. The backend
-        // still cancels the ride, but records no reason and applies no rule.
-        reasonId = null;
-      } else {
-        final pick = riderReasons.firstWhere(
-          (r) => !r.appliesPenaltyFee,
-          orElse: () => riderReasons.first,
+      final midTrip = state.phase == TripPhase.onRoad;
+      final eventReason = riderReasons.where(
+        (r) => r.event == (midTrip ? 'rider_mid_trip' : 'rider_cancel'),
+      );
+      if (eventReason.isNotEmpty) {
+        final candidates = eventReason.toList();
+        final pick = candidates.firstWhere(
+          (r) => r.appliesPenaltyFee,
+          orElse: () => candidates.first,
         );
         reasonId = pick.id;
+      } else if (!midTrip) {
+        // Older deployments may still have plain rider labels without an
+        // event. They are valid cancellation records and never charge.
+        final labels = riderReasons.where((r) => r.event == null).toList();
+        reasonId = labels.isEmpty ? null : labels.first.id;
+      } else {
+        // No active mid-trip rule is a valid configuration state. The server
+        // still cancels the ride and applies no fee/event.
+        reasonId = null;
       }
     } on Exception {
       // A reason-list outage must never strand a rider in an active trip. A
-      // reasonless cancellation is the safe fallback; only an active reason
+      // reasonless cancellation is the safe fallback; only an active event
       // supplied by the server can trigger a configured fee/event.
       reasonId = null;
     }
@@ -424,9 +433,7 @@ class TripInteractor extends Notifier<TripState> {
       return true;
     } on ApiException catch (e) {
       if (gen != _generation) return false;
-      state = state.copyWith(
-        error: friendlyErrorMessage(e),
-      );
+      state = state.copyWith(error: friendlyErrorMessage(e));
       return false;
     } on Exception catch (e) {
       if (gen != _generation) return false;

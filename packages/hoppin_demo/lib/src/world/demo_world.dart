@@ -136,7 +136,7 @@ class DemoWorld {
   /// snapshot (codec unchanged): after a reload the seam degrades to
   /// identity-only, exactly the pre-existing contract.
   final Map<String, ({String? origin, String? destination})>
-      _sessionJourneyLabels = {};
+  _sessionJourneyLabels = {};
   final Map<String, ({int score, String? comments})> _ratings = {};
   List<SavedLocation> _savedLocations = [];
 
@@ -207,6 +207,7 @@ class DemoWorld {
     (WorldPhase.accepted, WorldEventType.rideCancelled): WorldPhase.idle,
     (WorldPhase.arrivingHold, WorldEventType.rideCancelled): WorldPhase.idle,
     (WorldPhase.arrived, WorldEventType.rideCancelled): WorldPhase.idle,
+    (WorldPhase.inTrip, WorldEventType.rideCancelled): WorldPhase.idle,
   };
 
   /// Data-only events: no phase change, armed timers stay untouched.
@@ -353,11 +354,12 @@ class DemoWorld {
   /// anything else is rejected with the live API's VALIDATION_FAILED shape.
   void cancelRide({
     required String rideId,
-    required String reasonId,
+    required String? reasonId,
     required String canceledByUserId,
     required String actorType,
   }) {
-    if (!DemoSeed.cancellationReasonIds.contains(reasonId)) {
+    if (reasonId != null &&
+        !DemoSeed.cancellationReasonIds.contains(reasonId)) {
       throw const ApiException(
         statusCode: 422,
         message: 'Cancellation reason not found or inactive.',
@@ -540,20 +542,19 @@ class DemoWorld {
     int? etaSeconds,
     String? originLabel,
     String? destinationLabel,
-  }) =>
-      RideDriverInfo(
-        fullName: persona.fullName,
-        rating: persona.rating,
-        ratingCount: persona.tripsCount > 0 ? 12 : 0,
-        tripsCount: persona.tripsCount,
-        vehicleMake: vehicle.make,
-        vehicleModel: vehicle.model,
-        vehicleColour: vehicle.colour,
-        plate: vehicle.plate,
-        etaSeconds: etaSeconds,
-        originLabel: originLabel,
-        destinationLabel: destinationLabel,
-      );
+  }) => RideDriverInfo(
+    fullName: persona.fullName,
+    rating: persona.rating,
+    ratingCount: persona.tripsCount > 0 ? 12 : 0,
+    tripsCount: persona.tripsCount,
+    vehicleMake: vehicle.make,
+    vehicleModel: vehicle.model,
+    vehicleColour: vehicle.colour,
+    plate: vehicle.plate,
+    etaSeconds: etaSeconds,
+    originLabel: originLabel,
+    destinationLabel: destinationLabel,
+  );
 
   // ---- Driver-facing -------------------------------------------------------
 
@@ -764,7 +765,7 @@ class DemoWorld {
         final t = started == null
             ? 0.0
             : _virtualNow.difference(started).inMilliseconds /
-                (_script.inTripSeconds * 1000);
+                  (_script.inTripSeconds * 1000);
         return _positionAlong(GeoTrack.trip, t);
       case WorldPhase.completed:
         if (_liveRide?.id != rideId) return null;

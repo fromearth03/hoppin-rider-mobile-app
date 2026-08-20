@@ -64,8 +64,8 @@ class TripScreen extends ConsumerWidget {
         onPopInvokedWithResult: locked
             ? (_, _) {}
             : (_, _) => ref
-                .read(tripInteractorProvider(rideId).notifier)
-                .requestHome(),
+                  .read(tripInteractorProvider(rideId).notifier)
+                  .requestHome(),
         child: Scaffold(
           body: TripNavigationHost(
             rideId: rideId,
@@ -85,8 +85,8 @@ class TripScreen extends ConsumerWidget {
                     onBack: locked
                         ? null
                         : () => ref
-                            .read(tripInteractorProvider(rideId).notifier)
-                            .requestHome(),
+                              .read(tripInteractorProvider(rideId).notifier)
+                              .requestHome(),
                   ),
                   Expanded(child: TripFlowContent(rideId: rideId)),
                 ],
@@ -110,9 +110,8 @@ class TripScreen extends ConsumerWidget {
       canPop: false,
       onPopInvokedWithResult: locked
           ? (_, _) {}
-          : (_, _) => ref
-              .read(tripInteractorProvider(rideId).notifier)
-              .requestHome(),
+          : (_, _) =>
+                ref.read(tripInteractorProvider(rideId).notifier).requestHome(),
       child: Scaffold(
         body: TripNavigationHost(
           rideId: rideId,
@@ -684,6 +683,15 @@ class _Body extends ConsumerWidget {
             ),
             SizedBox(height: hoppin.spacing.md),
             _PromoSection(rideId: rideId),
+            SizedBox(height: hoppin.spacing.sm),
+            TextButton(
+              onPressed: () => showCancelIntercept(context, rideId: rideId),
+              style: TextButton.styleFrom(
+                foregroundColor: hoppin.colors.error,
+                minimumSize: const Size.fromHeight(44),
+              ),
+              child: const Text('Cancel trip'),
+            ),
           ],
         );
 

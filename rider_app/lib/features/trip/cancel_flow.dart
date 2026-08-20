@@ -6,7 +6,7 @@ import 'package:hoppin_ui/hoppin_ui.dart';
 import '../booking/widgets/fee_disclosure.dart';
 import 'cancellation_reasons.dart';
 import 'trip_builder.dart';
-import 'widgets/cancellation_unavailable_state.dart';
+import 'trip_state.dart';
 
 /// The two-stage cancel-intercept (RIDER-06).
 ///
@@ -15,29 +15,11 @@ import 'widgets/cancellation_unavailable_state.dart';
 /// primary action. Stage 2 — the reason survey — comes only AFTER the
 /// cancellation resolved, and is prominently skippable.
 ///
-/// Why the cancel call itself carries a reason: the locked decision wants
-/// reasons asked post-cancel, but `PATCH /rides/:id/cancel` REQUIRES a
-/// valid `reason_id` at cancel time — the interactor sends the default id,
-/// which is what the API asks for, while this survey satisfies the rider.
-///
-/// 🔴 **AND THAT DEFAULT ID IS FABRICATED — cancellation is BROKEN on live
-/// (backend gap #1, P0).** The reasons are seeded on the admin API's
-/// `/config`, and `:8080` exposes no endpoint the rider app can read them
-/// through, so the id we send is not in the database and the server rejects
-/// it with `VALIDATION_FAILED`. Every rider cancellation fails, 100% of the
-/// time. See `cancellation_reasons.dart` and
-/// `DOCS/backend-gaps/p0-cancellation-reasons-BROKEN.md`.
-///
-/// That was known — and disclosed ONLY in a source comment, which is a
-/// surface no rider will ever read. Over it, this sheet shipped a confident
-/// destructive confirm; the rider found out from a post-hoc error, AFTER
-/// committing, while the ride kept running and kept charging.
-///
-/// So [CancellationUnavailableState] now stands ABOVE every action on stage
-/// 1: the rider is told BEFORE they can rely on the button, and is handed the
-/// route that genuinely works — a real support ticket for this exact ride.
-/// The cancel attempt is still made and still fails honestly; the button is
-/// NOT disabled, because a dead control is its own lie.
+/// The cancel call resolves an active server-side reason at confirmation time.
+/// Pre-trip cancellations use `rider_cancel`; a started trip uses
+/// `rider_mid_trip`, whose configured fee floor and time/distance grace are
+/// evaluated by the ride service. If no active rule exists, the ride still
+/// cancels without a penalty.
 Future<void> showCancelIntercept(
   BuildContext context, {
   required String rideId,
@@ -171,14 +153,33 @@ class _InterceptSheetState extends ConsumerState<_InterceptSheet> {
                     ],
                   ),
                   SizedBox(height: hoppin.spacing.sm),
-                  // The cancellation-fee reminder at the point of cancelling
-                  // (Figma: "Cancellation fee may apply £X"). Sourced from the
-                  // same config-stub schedule the pre-booking disclosure
-                  // renders (SL-9) — the number is shown, disclosed indicative,
-                  // never hidden. This mirrors §4.1's "penalty rules clearly
-                  // displayed" at the decisive moment too.
+                  // A started trip uses a different billing rule: the server
+                  // computes the metered partial fare and applies the active
+                  // rider_mid_trip fee floor only after its time/distance grace
+                  // is evaluated. Do not show the generic pre-trip £5 example
+                  // here; it is not the amount that will be charged.
                   Builder(
                     builder: (context) {
+                      if (state.phase == TripPhase.onRoad) {
+                        return Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              size: 16,
+                              color: colors.textMid,
+                            ),
+                            SizedBox(width: hoppin.spacing.xs),
+                            Expanded(
+                              child: Text(
+                                'A partial fare may apply based on time and distance travelled.',
+                                style: type.metaSmall.copyWith(
+                                  color: colors.textMid,
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      }
                       final schedule = ref.watch(
                         cancellationFeeScheduleProvider,
                       );
@@ -214,9 +215,7 @@ class _InterceptSheetState extends ConsumerState<_InterceptSheet> {
           // is the WORKING route, but "keep the ride" is still the safe default.
           HopButton.primary(
             label: 'No, keep my ride',
-            onPressed: _busy
-                ? null
-                : () => Navigator.of(context).pop(false),
+            onPressed: _busy ? null : () => Navigator.of(context).pop(false),
           ),
           SizedBox(height: hoppin.spacing.xs),
           // In-app cancel is live and bound (gap #1 closed). On the rare live
