@@ -154,6 +154,24 @@ void main() {
       });
     });
 
+    test('cancel calls the scheduled cancellation endpoint and refreshes', () {
+      final repo = _RecordingScheduledRepo();
+      final container = ProviderContainer(overrides: [
+        ridesRepositoryProvider.overrideWithValue(repo),
+      ]);
+      addTearDown(container.dispose);
+      final sub = container.listen(scheduledInteractorProvider, (_, _) {});
+      addTearDown(sub.close);
+
+      final interactor =
+          container.read(scheduledInteractorProvider.notifier);
+      return interactor.cancel('sched-seed-1').then((_) {
+        expect(repo.cancelledIds, ['sched-seed-1']);
+        expect(container.read(scheduledInteractorProvider).phase,
+            ScheduledPhase.ready);
+      });
+    });
+
     test('a not-found lookup surfaces via friendlyErrorMessage, not a raw 500',
         () {
       final repo = _RecordingScheduledRepo();
@@ -209,6 +227,7 @@ void main() {
 /// one scripted scheduled ride, and throws the gap-#22 not-found shape.
 class _RecordingScheduledRepo implements RidesRepository {
   final List<DateTime> createdTimes = [];
+  final List<String> cancelledIds = [];
 
   static final _seed = ScheduledRide(
     id: 'sched-seed-1',
@@ -235,6 +254,11 @@ class _RecordingScheduledRepo implements RidesRepository {
 
   @override
   Future<List<ScheduledRide>> scheduledRides() async => [_seed];
+
+  @override
+  Future<void> cancelScheduledRide(String id) async {
+    cancelledIds.add(id);
+  }
 
   @override
   Future<ScheduledRide> scheduledRide(String id) async {

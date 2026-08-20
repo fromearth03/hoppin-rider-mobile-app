@@ -22,6 +22,8 @@ String routeForPush(PushMessage m) {
   final link = m.deepLink;
   if (link != null && isAllowlistedPushTarget(link)) return link;
 
+  if (m.type == PushType.scheduledRide) return '/scheduled';
+
   final id = m.rideId;
   if (id == null || id.isEmpty) return kNotificationCentreRoute;
 
@@ -34,7 +36,8 @@ String routeForPush(PushMessage m) {
     PushType.tripStarted ||
     PushType.tripCancelled =>
       '/trip/$id',
-    PushType.promo || PushType.unknown => kNotificationCentreRoute,
+    PushType.promo || PushType.scheduledRide || PushType.unknown =>
+      kNotificationCentreRoute,
   };
 }
 
@@ -51,6 +54,7 @@ const List<String> _allowedPushPrefixes = <String>[
   '/payments',
   '/support',
   '/profile',
+  '/scheduled',
 ];
 
 /// True only for a target we recognise as an in-app path.

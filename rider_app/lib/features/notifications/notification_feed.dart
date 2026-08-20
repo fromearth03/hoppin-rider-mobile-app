@@ -92,6 +92,7 @@ class AppNotification {
     PushType.tripCancelled => 'Your trip was cancelled',
     PushType.newMessage => 'New message from your driver',
     PushType.promo => 'Hoppin',
+    PushType.scheduledRide => 'Scheduled ride update',
     PushType.unknown => 'Hoppin',
   };
 }

@@ -108,6 +108,25 @@ class ScheduledInteractor extends Notifier<ScheduledState> {
     }
   }
 
+  /// `DELETE /scheduled-rides/:id` — cancel while the row is pending or being
+  /// matched. The server rejects converted rows with a 409 so an active ride
+  /// cannot be silently removed from the rider's trip history.
+  Future<void> cancel(String id) async {
+    final gen = ++_generation;
+    state = state.copyWith(phase: ScheduledPhase.loading, error: null);
+    try {
+      await _rides.cancelScheduledRide(id);
+      if (gen != _generation) return;
+      await load();
+    } on Exception catch (e) {
+      if (gen != _generation) return;
+      state = state.copyWith(
+        phase: ScheduledPhase.error,
+        error: _scheduledCancelMessage(e),
+      );
+    }
+  }
+
   /// Gap #22 guard: a not-found scheduled ride surfaces as a raw `500 INTERNAL`
   /// on live whose body ("INTERNAL") must never reach the rider. Map the
   /// known not-found shapes (404, or the mis-typed 500) to honest copy; defer
@@ -120,6 +139,16 @@ class ScheduledInteractor extends Notifier<ScheduledState> {
             e.code == 'INTERNAL')) {
       return "We couldn't find that scheduled ride. It may have been "
           'cancelled or already started.';
+    }
+    return friendlyErrorMessage(e);
+  }
+
+  String _scheduledCancelMessage(Object e) {
+    if (e is ApiException && e.statusCode == 409) {
+      return 'This scheduled ride has already started. Open the active trip to cancel it.';
+    }
+    if (e is ApiException && e.statusCode == 404) {
+      return 'That scheduled ride is no longer available.';
     }
     return friendlyErrorMessage(e);
   }

@@ -139,6 +139,9 @@ enum PushType {
   /// A marketing/promotional message.
   promo,
 
+  /// A scheduled ride was activated, matched, or changed.
+  scheduledRide,
+
   /// Anything the backend sends that this client does not know. Routes to the
   /// centre so the rider still SEES it.
   unknown,
@@ -154,6 +157,7 @@ const Map<String, PushType> _pushTypeWire = <String, PushType>{
   'trip_cancelled': PushType.tripCancelled,
   'new_message': PushType.newMessage,
   'promo': PushType.promo,
+  'scheduled_ride': PushType.scheduledRide,
 };
 
 /// Parses the wire `type` string. A value we do not recognise — including

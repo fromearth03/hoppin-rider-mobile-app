@@ -455,6 +455,12 @@ class RidesRepository {
     return ScheduledRide.fromJson(res.data!);
   }
 
+  /// `DELETE /scheduled-rides/:id` — cancel before dispatch converts it to an
+  /// active ride. `[rider]`
+  Future<void> cancelScheduledRide(String id) async {
+    await _api.delete<void>('/scheduled-rides/$id');
+  }
+
   // ── Capability seam (DEMO-07 pattern) ─────────────────────────────────────
 
   /// `GET /rides/:id/driver-info` — the matched driver's identity, vehicle, and

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -27,6 +29,8 @@ class ScheduledScreen extends ConsumerStatefulWidget {
 }
 
 class _ScheduledScreenState extends ConsumerState<ScheduledScreen> {
+  Timer? _refreshTimer;
+
   @override
   void initState() {
     super.initState();
@@ -36,6 +40,15 @@ class _ScheduledScreenState extends ConsumerState<ScheduledScreen> {
       if (!mounted) return;
       ref.read(scheduledInteractorProvider.notifier).load();
     });
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) ref.read(scheduledInteractorProvider.notifier).load();
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -129,6 +142,31 @@ class _ScheduledScreenState extends ConsumerState<ScheduledScreen> {
     );
   }
 
+  Future<void> _confirmCancel(BuildContext context, ScheduledRide ride) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Cancel scheduled ride?'),
+        content: const Text(
+          'This only cancels the future booking. Once a driver has been matched, '
+          'you must cancel the active trip from the trip screen.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Keep ride'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Cancel ride'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await ref.read(scheduledInteractorProvider.notifier).cancel(ride.id);
+  }
+
   Widget _body(
     BuildContext context,
     ScheduledState state,
@@ -188,7 +226,15 @@ class _ScheduledScreenState extends ConsumerState<ScheduledScreen> {
           vertical: hoppin.spacing.md,
         ),
         itemCount: state.rides.length,
-        itemBuilder: (context, i) => _ScheduledRow(ride: state.rides[i]),
+        itemBuilder: (context, i) {
+          final ride = state.rides[i];
+          final canCancel = ride.status == 'pending' ||
+              ride.status == 'searching_for_driver';
+          return _ScheduledRow(
+            ride: ride,
+            onCancel: canCancel ? () => _confirmCancel(context, ride) : null,
+          );
+        },
       ),
     );
   }
@@ -197,9 +243,10 @@ class _ScheduledScreenState extends ConsumerState<ScheduledScreen> {
 /// One scheduled ride — the upcoming pickup time as the title, the status as
 /// a trailing pill. Booked-for time is the money detail here.
 class _ScheduledRow extends StatelessWidget {
-  const _ScheduledRow({required this.ride});
+  const _ScheduledRow({required this.ride, this.onCancel});
 
   final ScheduledRide ride;
+  final VoidCallback? onCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -210,6 +257,7 @@ class _ScheduledRow extends StatelessWidget {
     final (label, tone) = switch (ride.status) {
       'converted_to_active_ride' => ('On its way', PillTone.accent),
       'searching_for_driver' => ('Finding driver', PillTone.accent),
+      'cancelled' => ('Cancelled', PillTone.error),
       _ => ('Scheduled', PillTone.success),
     };
 
@@ -244,6 +292,14 @@ class _ScheduledRow extends StatelessWidget {
             ),
             SizedBox(width: hoppin.spacing.md),
             StatusPill(label: label, tone: tone),
+            if (onCancel != null) ...[
+              SizedBox(width: hoppin.spacing.xs),
+              IconButton(
+                onPressed: onCancel,
+                tooltip: 'Cancel scheduled ride',
+                icon: const Icon(Icons.cancel_outlined),
+              ),
+            ],
           ],
         ),
       ),
