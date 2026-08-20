@@ -33,7 +33,9 @@ import 'url_strategy_stub.dart'
 Future<void> main() async {
   hoppinCaptureAuthLink();
   WidgetsFlutterBinding.ensureInitialized();
-  Env.assertConfigured();
+  // Assertions are removed from release APKs; enforce auth configuration in
+  // production so a bad build fails clearly instead of looking offline.
+  Env.requireConfigured();
 
   // Supabase must be initialised before any provider touches the client.
   await Supabase.initialize(

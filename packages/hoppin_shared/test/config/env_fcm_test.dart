@@ -65,5 +65,9 @@ void main() {
             'soft, honest GATED state, not a boot failure.',
       );
     });
+
+    test('requireConfigured remains a release-safe Supabase guard', () {
+      expect(Env.requireConfigured, throwsStateError);
+    });
   });
 }

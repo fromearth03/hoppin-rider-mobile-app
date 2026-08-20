@@ -96,4 +96,15 @@ class Env {
       'See packages/hoppin_shared/lib/src/config/env.dart.',
     );
   }
+
+  /// Enforces the same production requirement in release builds, where Dart
+  /// assertions are stripped and [assertConfigured] cannot protect the app.
+  static void requireConfigured() {
+    if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
+      throw StateError(
+        'Missing SUPABASE_URL / SUPABASE_ANON_KEY. '
+        'Build with the production define file.',
+      );
+    }
+  }
 }
