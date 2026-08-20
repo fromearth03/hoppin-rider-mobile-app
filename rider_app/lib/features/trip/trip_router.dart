@@ -30,6 +30,14 @@ class TripNavigationHost extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.listen(tripInteractorProvider(rideId), (previous, next) {
+      // Cancellation is terminal. Leave the live-trip route as soon as the
+      // server confirms it, so a rider is never trapped in the old arrival
+      // card waiting for a manual back action.
+      if (next.phase == TripPhase.cancelled &&
+          previous?.phase != TripPhase.cancelled) {
+        context.go('/book');
+        return;
+      }
       // Read the CURRENT state, not the notification snapshot: with two
       // hosts alive at once (receipt pushed over the trip screen), the
       // first listener consumes the intent and the second must see null —

@@ -147,11 +147,24 @@ class SupportScreen extends ConsumerWidget {
                 hoppin.spacing.gutter,
                 hoppin.spacing.md,
               ),
-              child: HopButton.primary(
-                label: 'New ticket',
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  HopButton.primary(
+                label: 'File a complaint',
                 icon: Icons.add,
                 expand: true,
-                onPressed: () => _showNewTicketSheet(context),
+                onPressed: () => _showNewTicketSheet(context, complaint: true),
+                  ),
+                  SizedBox(height: hoppin.spacing.sm),
+                  HopButton.secondary(
+                    label: 'New support ticket',
+                    icon: Icons.support_agent_outlined,
+                    expand: true,
+                    onPressed: () => _showNewTicketSheet(context),
+                  ),
+                ],
               ),
             ),
           ],
@@ -160,7 +173,7 @@ class SupportScreen extends ConsumerWidget {
     );
   }
 
-  void _showNewTicketSheet(BuildContext context) {
+  void _showNewTicketSheet(BuildContext context, {bool complaint = false}) {
     final colors = context.hoppin.colors;
     showModalBottomSheet<void>(
       context: context,
@@ -169,7 +182,7 @@ class SupportScreen extends ConsumerWidget {
       elevation: 0,
       backgroundColor: Colors.transparent,
       barrierColor: colors.scrim,
-      builder: (_) => const HopSheet(child: _NewTicketSheet()),
+      builder: (_) => HopSheet(child: _NewTicketSheet(complaint: complaint)),
     );
   }
 }
@@ -229,7 +242,9 @@ class _TicketCard extends StatelessWidget {
 }
 
 class _NewTicketSheet extends ConsumerStatefulWidget {
-  const _NewTicketSheet();
+  const _NewTicketSheet({this.complaint = false});
+
+  final bool complaint;
 
   @override
   ConsumerState<_NewTicketSheet> createState() => _NewTicketSheetState();
@@ -317,7 +332,7 @@ class _NewTicketSheetState extends ConsumerState<_NewTicketSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'New support ticket',
+            widget.complaint ? 'File a complaint' : 'New support ticket',
             style: hoppin.type.section.copyWith(color: colors.textHi),
           ),
           SizedBox(height: hoppin.spacing.md),
@@ -368,7 +383,7 @@ class _NewTicketSheetState extends ConsumerState<_NewTicketSheet> {
           SizedBox(height: hoppin.spacing.md),
           HopButton.primary(
             key: const Key('support.newTicket.submit'),
-            label: 'Open ticket',
+            label: widget.complaint ? 'Submit complaint' : 'Open ticket',
             expand: true,
             busy: _busy,
             onPressed: _busy ? null : _submit,

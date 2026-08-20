@@ -384,29 +384,28 @@ class TripInteractor extends Notifier<TripState> {
     // reason or a fabricated id. The server validates both activity and actor
     // type, so selecting anything else turns a valid cancellation into a
     // guaranteed 400.
-    final String reasonId;
+    String? reasonId;
     try {
       final reasons = await _rides.cancellationReasons();
       final riderReasons = reasons
           .where((r) => r.actorType == 'rider')
           .toList();
       if (riderReasons.isEmpty) {
-        if (gen != _generation) return false;
-        state = state.copyWith(
-          error:
-              'Cancellation is unavailable because no active rider reason is configured.',
+        // No active admin reason is a valid configuration state. The backend
+        // still cancels the ride, but records no reason and applies no rule.
+        reasonId = null;
+      } else {
+        final pick = riderReasons.firstWhere(
+          (r) => !r.appliesPenaltyFee,
+          orElse: () => riderReasons.first,
         );
-        return false;
+        reasonId = pick.id;
       }
-      final pick = riderReasons.firstWhere(
-        (r) => !r.appliesPenaltyFee,
-        orElse: () => riderReasons.first,
-      );
-      reasonId = pick.id;
-    } on Exception catch (e) {
-      if (gen != _generation) return false;
-      state = state.copyWith(error: friendlyErrorMessage(e));
-      return false;
+    } on Exception {
+      // A reason-list outage must never strand a rider in an active trip. A
+      // reasonless cancellation is the safe fallback; only an active reason
+      // supplied by the server can trigger a configured fee/event.
+      reasonId = null;
     }
     try {
       await _rides.cancel(
@@ -420,19 +419,8 @@ class TripInteractor extends Notifier<TripState> {
       return true;
     } on ApiException catch (e) {
       if (gen != _generation) return false;
-      // WAVE-0: on live this is the EXPECTED path, not the exceptional one.
-      // The reason_id we send is a fabricated placeholder (no endpoint lists
-      // the real ones — gap #1), so the server rejects it with
-      // VALIDATION_FAILED and cancellation fails 100% of the time. A generic
-      // "something went wrong" leaves the rider trapped in a ride they are
-      // being charged for, with no idea what to do. Name the failure and give
-      // them a way out that actually works.
-      final rejectedReason = e.code == 'VALIDATION_FAILED';
       state = state.copyWith(
-        error: rejectedReason
-            ? "We couldn't cancel this ride — cancellation isn't working yet. "
-                  'Please contact support and we will sort it out for you.'
-            : friendlyErrorMessage(e),
+        error: friendlyErrorMessage(e),
       );
       return false;
     } on Exception catch (e) {

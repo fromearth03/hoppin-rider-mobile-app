@@ -120,6 +120,11 @@ class ProfileScreen extends ConsumerWidget {
         onTap: () => context.push('/profile/help'),
       ),
       _ProfileRow(
+        Icons.sos_outlined,
+        'Safety & emergency',
+        onTap: () => context.push('/safety'),
+      ),
+      _ProfileRow(
         Icons.settings,
         'Settings',
         onTap: () => context.push('/profile/settings'),

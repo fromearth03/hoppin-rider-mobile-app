@@ -92,14 +92,14 @@ class RidesRepository {
   /// `actorType` must be "rider" or "driver" and match the caller.
   Future<void> cancel({
     required String rideId,
-    required String reasonId,
+    String? reasonId,
     required String canceledByUserId,
     required String actorType,
   }) async {
     await _api.patch<Map<String, dynamic>>(
       '/rides/$rideId/cancel',
       body: {
-        'reason_id': reasonId,
+        'reason_id': ?reasonId,
         'canceled_by_user_id': canceledByUserId,
         'actor_type': actorType,
       },
