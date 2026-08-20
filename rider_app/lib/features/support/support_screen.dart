@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hoppin_shared/hoppin_shared.dart';
 import 'package:hoppin_ui/hoppin_ui.dart';
 
+import '../../providers.dart';
 import 'support_categories.dart';
 
 /// My tickets — `GET /me/support-tickets`.
@@ -254,6 +255,7 @@ class _NewTicketSheetState extends ConsumerState<_NewTicketSheet> {
   final _subjectCtrl = TextEditingController();
   final _bodyCtrl = TextEditingController();
   String? _typeCode;
+  String? _rideId;
 
   /// The picked category — ALWAYS a value from the single-source taxonomy.
   /// The five-value map that used to live inline here is gone: it is now
@@ -301,6 +303,7 @@ class _NewTicketSheetState extends ConsumerState<_NewTicketSheet> {
             subject: subject,
             category: _category,
             typeCode: _typeCode,
+            rideId: _rideId,
             body: body.isEmpty ? null : body,
           );
       ref.invalidate(ticketsProvider);
@@ -361,6 +364,12 @@ class _NewTicketSheetState extends ConsumerState<_NewTicketSheet> {
             ),
           ],
           SizedBox(height: hoppin.spacing.sm),
+          _RideAttachmentField(
+            selected: _rideId,
+            rides: ref.watch(historyProvider).value ?? const <Ride>[],
+            onChanged: _busy ? null : (value) => setState(() => _rideId = value),
+          ),
+          SizedBox(height: hoppin.spacing.sm),
           TextField(
             key: const Key('support.newTicket.body'),
             controller: _bodyCtrl,
@@ -390,6 +399,39 @@ class _NewTicketSheetState extends ConsumerState<_NewTicketSheet> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _RideAttachmentField extends StatelessWidget {
+  const _RideAttachmentField({
+    required this.selected,
+    required this.rides,
+    required this.onChanged,
+  });
+
+  final String? selected;
+  final List<Ride> rides;
+  final ValueChanged<String?>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    if (rides.isEmpty) return const SizedBox.shrink();
+    return DropdownButtonFormField<String>(
+      value: selected,
+      decoration: const InputDecoration(labelText: 'Attach a ride (optional)'),
+      items: [
+        const DropdownMenuItem<String>(
+          value: null,
+          child: Text('No ride attached'),
+        ),
+        for (final ride in rides.take(20))
+          DropdownMenuItem(
+            value: ride.id,
+            child: Text('${ride.status.name} · ${ride.id.substring(0, 8)}'),
+          ),
+      ],
+      onChanged: onChanged,
     );
   }
 }
