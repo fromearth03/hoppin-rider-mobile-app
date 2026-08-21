@@ -1,10 +1,12 @@
 import 'dart:convert';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'current_uri_stub.dart'
     if (dart.library.html) 'current_uri_web.dart';
+import '../config/env.dart';
 
 /// The app role stamped into every Supabase JWT as the top-level `user_role`
 /// claim by the custom access-token hook (docs/04 · Authentication §3).
@@ -146,13 +148,25 @@ class AuthService {
 
   /// Rider/driver forgot-password. Do NOT use recover/resetPasswordForEmail —
   /// that hits the project-wide Reset Password template, which is the admin
-  /// OTP email. Magic-link is a separate template (a URL). [emailRedirectTo]
-  /// lands on THIS app's `/reset`, not the Supabase Site URL (admin/invite).
-  Future<void> sendPasswordReset(String email) {
-    return _auth.signInWithOtp(
-      email: email,
-      shouldCreateUser: false,
-      emailRedirectTo: hoppinPasswordResetRedirect(),
+  /// OTP email. Magic-link is a separate template (a URL). This request
+  /// intentionally bypasses the SDK's PKCE generation because the reset email
+  /// may be opened in a browser while the request started in the native APK.
+  Future<void> sendPasswordReset(String email) async {
+    final base = Env.supabaseUrl.replaceFirst(RegExp(r'\/$'), '');
+    await Dio().post<void>(
+      '$base/auth/v1/otp',
+      queryParameters: {'redirect_to': hoppinPasswordResetRedirect()},
+      options: Options(
+        headers: {
+          'apikey': Env.supabaseAnonKey,
+          'Content-Type': 'application/json',
+        },
+      ),
+      data: {
+        'email': email,
+        'create_user': false,
+        'data': <String, dynamic>{},
+      },
     );
   }
 
