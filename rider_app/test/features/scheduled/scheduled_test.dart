@@ -130,10 +130,13 @@ void main() {
         dropoffLat: 52.6046,
         dropoffLng: -2.0930,
         requestedPickupTime: when,
+        vehicleCategoryId: 'category-xl',
       )
           .then((_) {
         expect(repo.createdTimes, [when],
             reason: 'the create flow binds to createScheduledRide');
+        expect(repo.createdCategories, ['category-xl'],
+            reason: 'the selected vehicle class reaches the scheduled request');
         final state = container.read(scheduledInteractorProvider);
         expect(state.phase, ScheduledPhase.ready);
       });
@@ -263,6 +266,7 @@ class _SeedBookingInteractor extends BookingInteractor {
 /// one scripted scheduled ride, and throws the gap-#22 not-found shape.
 class _RecordingScheduledRepo implements RidesRepository {
   final List<DateTime> createdTimes = [];
+  final List<String?> createdCategories = [];
   final List<String> cancelledIds = [];
 
   static final _seed = ScheduledRide(
@@ -279,8 +283,10 @@ class _RecordingScheduledRepo implements RidesRepository {
     required double dropoffLng,
     required DateTime requestedPickupTime,
     String? estimatedFareId,
+    String? vehicleCategoryId,
   }) async {
     createdTimes.add(requestedPickupTime);
+    createdCategories.add(vehicleCategoryId);
     return ScheduledRide(
       id: 'sched-new-1',
       riderId: 'rider-x',

@@ -8,6 +8,7 @@ import 'package:hoppin_ui/hoppin_ui.dart';
 
 import '../booking/booking_builder.dart';
 import '../booking/location_picker_screen.dart';
+import '../booking/widgets/ride_type_selector.dart';
 import 'schedule_picker.dart';
 import 'scheduled_builder.dart';
 import 'scheduled_state.dart';
@@ -55,6 +56,10 @@ class _ScheduledScreenState extends ConsumerState<ScheduledScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(scheduledInteractorProvider);
+    final vehicleTypes = switch (ref.watch(vehicleTypesProvider)) {
+      AsyncValue(hasValue: true, :final value?) => value,
+      _ => const <VehicleType>[],
+    };
     final hoppin = context.hoppin;
 
     return Scaffold(
@@ -81,7 +86,7 @@ class _ScheduledScreenState extends ConsumerState<ScheduledScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openPicker(context),
+        onPressed: () => _openPicker(context, vehicleTypes),
         icon: const Icon(Icons.add),
         label: const Text('Schedule a ride'),
       ),
@@ -94,7 +99,10 @@ class _ScheduledScreenState extends ConsumerState<ScheduledScreen> {
   /// the Book screen) — with pickup/dropoff already chosen a future ride is
   /// created; without them the rider is told to pick locations first (honest,
   /// never a silent no-op).
-  Future<void> _openPicker(BuildContext context) async {
+  Future<void> _openPicker(
+    BuildContext context,
+    List<VehicleType> vehicleTypes,
+  ) async {
     final booking = ref.read(bookingInteractorProvider);
     var pickup = booking.pickup;
     var dropoff = booking.dropoff;
@@ -103,10 +111,7 @@ class _ScheduledScreenState extends ConsumerState<ScheduledScreen> {
     // surface directly, collect any missing locations instead of showing a
     // transient message and leaving the button apparently broken.
     if (pickup == null) {
-      pickup = await LocationPickerScreen.pick(
-        context,
-        title: 'Choose pickup',
-      );
+      pickup = await LocationPickerScreen.pick(context, title: 'Choose pickup');
       if (!mounted || pickup == null) return;
     }
     if (dropoff == null) {
@@ -120,6 +125,11 @@ class _ScheduledScreenState extends ConsumerState<ScheduledScreen> {
     final selectedDropoff = dropoff;
     if (selectedPickup == null || selectedDropoff == null) return;
     final colors = context.hoppin.colors;
+    var selectedCategory = booking.selectedCategory;
+    if (selectedCategory != null &&
+        !vehicleTypes.any((type) => type.id == selectedCategory)) {
+      selectedCategory = null;
+    }
 
     await showModalBottomSheet<void>(
       context: context,
@@ -128,24 +138,66 @@ class _ScheduledScreenState extends ConsumerState<ScheduledScreen> {
       elevation: 0,
       backgroundColor: Colors.transparent,
       barrierColor: colors.scrim,
-      builder: (_) => HopSheet(
-        child: SchedulePicker(
-          onConfirm: (when) {
-            Navigator.of(context).pop();
-            ref
-                .read(scheduledInteractorProvider.notifier)
-                .create(
-                  pickupLat: selectedPickup.lat,
-                  pickupLng: selectedPickup.lng,
-                  dropoffLat: selectedDropoff.lat,
-                  dropoffLng: selectedDropoff.lng,
-                  requestedPickupTime: when,
-                  // No client-held estimate id on the FareEstimate model — the
-                  // server prices the scheduled ride at pickup time. Left null
-                  // until an estimate-id is carried on the contract.
-                  estimatedFareId: null,
-                );
-          },
+      builder: (_) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) => HopSheet(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (vehicleTypes.isNotEmpty) ...[
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      context.hoppin.spacing.gutter,
+                      context.hoppin.spacing.gutter,
+                      context.hoppin.spacing.gutter,
+                      0,
+                    ),
+                    child: DropdownButtonFormField<String>(
+                      value: selectedCategory ?? '',
+                      decoration: const InputDecoration(
+                        labelText: 'Vehicle type',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        const DropdownMenuItem<String>(
+                          value: '',
+                          child: Text('Standard (default)'),
+                        ),
+                        ...vehicleTypes.map(
+                          (type) => DropdownMenuItem<String>(
+                            value: type.id,
+                            child: Text(type.name),
+                          ),
+                        ),
+                      ],
+                      onChanged: (value) => setSheetState(
+                        () => selectedCategory = value?.isEmpty == true
+                            ? null
+                            : value,
+                      ),
+                    ),
+                  ),
+                ],
+                SchedulePicker(
+                  onConfirm: (when) {
+                    Navigator.of(sheetContext).pop();
+                    ref
+                        .read(scheduledInteractorProvider.notifier)
+                        .create(
+                          pickupLat: selectedPickup.lat,
+                          pickupLng: selectedPickup.lng,
+                          dropoffLat: selectedDropoff.lat,
+                          dropoffLng: selectedDropoff.lng,
+                          requestedPickupTime: when,
+                          estimatedFareId: null,
+                          vehicleCategoryId: selectedCategory,
+                        );
+                  },
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -237,8 +289,8 @@ class _ScheduledScreenState extends ConsumerState<ScheduledScreen> {
         itemCount: state.rides.length,
         itemBuilder: (context, i) {
           final ride = state.rides[i];
-          final canCancel = ride.status == 'pending' ||
-              ride.status == 'searching_for_driver';
+          final canCancel =
+              ride.status == 'pending' || ride.status == 'searching_for_driver';
           return _ScheduledRow(
             ride: ride,
             onCancel: canCancel ? () => _confirmCancel(context, ride) : null,

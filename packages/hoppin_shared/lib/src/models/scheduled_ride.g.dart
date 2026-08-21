@@ -14,6 +14,7 @@ _ScheduledRide _$ScheduledRideFromJson(Map<String, dynamic> json) =>
         json['requested_pickup_time'] as String,
       ),
       estimatedFareId: json['estimated_fare_id'] as String?,
+      vehicleCategoryId: json['vehicle_category_id'] as String?,
       status: json['status'] as String? ?? 'pending',
       activeRideId: json['active_ride_id'] as String?,
     );
@@ -24,6 +25,7 @@ Map<String, dynamic> _$ScheduledRideToJson(_ScheduledRide instance) =>
       'rider_id': instance.riderId,
       'requested_pickup_time': instance.requestedPickupTime.toIso8601String(),
       'estimated_fare_id': instance.estimatedFareId,
+      'vehicle_category_id': instance.vehicleCategoryId,
       'status': instance.status,
       'active_ride_id': instance.activeRideId,
     };

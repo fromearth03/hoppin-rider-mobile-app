@@ -11,8 +11,10 @@ abstract class ScheduledRide with _$ScheduledRide {
   const factory ScheduledRide({
     required String id,
     @JsonKey(name: 'rider_id') String? riderId,
-    @JsonKey(name: 'requested_pickup_time') required DateTime requestedPickupTime,
+    @JsonKey(name: 'requested_pickup_time')
+    required DateTime requestedPickupTime,
     @JsonKey(name: 'estimated_fare_id') String? estimatedFareId,
+    @JsonKey(name: 'vehicle_category_id') String? vehicleCategoryId,
     @Default('pending') String status,
     @JsonKey(name: 'active_ride_id') String? activeRideId,
   }) = _ScheduledRide;

@@ -7,7 +7,7 @@ import 'package:hoppin_shared/hoppin_shared.dart';
 /// public barrel (this file imports it from `package:hoppin_shared` alone)
 /// and round-trips the exact `POST/GET /scheduled-rides` shape docs/04
 /// documents — `{ id, rider_id, requested_pickup_time, estimated_fare_id,
-/// status, active_ride_id }`.
+/// vehicle_category_id, status, active_ride_id }`.
 void main() {
   group('ScheduledRide', () {
     const fullJson = <String, dynamic>{
@@ -15,6 +15,7 @@ void main() {
       'rider_id': 'rider-1',
       'requested_pickup_time': '2026-07-01T08:30:00.000',
       'estimated_fare_id': 'fare-1',
+      'vehicle_category_id': null,
       'status': 'pending',
       'active_ride_id': 'ride-1',
     };
@@ -37,6 +38,7 @@ void main() {
         'rider_id': null,
         'requested_pickup_time': '2026-07-01T08:30:00.000',
         'estimated_fare_id': null,
+        'vehicle_category_id': null,
         'status': 'pending',
         'active_ride_id': null,
       });

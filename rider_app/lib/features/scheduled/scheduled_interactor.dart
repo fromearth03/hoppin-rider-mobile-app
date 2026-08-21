@@ -52,6 +52,7 @@ class ScheduledInteractor extends Notifier<ScheduledState> {
     required double dropoffLng,
     required DateTime requestedPickupTime,
     String? estimatedFareId,
+    String? vehicleCategoryId,
   }) async {
     final gen = ++_generation;
     state = state.copyWith(phase: ScheduledPhase.loading, error: null);
@@ -63,6 +64,7 @@ class ScheduledInteractor extends Notifier<ScheduledState> {
         dropoffLng: dropoffLng,
         requestedPickupTime: requestedPickupTime,
         estimatedFareId: estimatedFareId,
+        vehicleCategoryId: vehicleCategoryId,
       );
       if (gen != _generation) return;
       // Merge the new ride in without a second round-trip; a subsequent

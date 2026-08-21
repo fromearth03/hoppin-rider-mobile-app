@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ScheduledRide {
 
- String get id;@JsonKey(name: 'rider_id') String? get riderId;@JsonKey(name: 'requested_pickup_time') DateTime get requestedPickupTime;@JsonKey(name: 'estimated_fare_id') String? get estimatedFareId; String get status;@JsonKey(name: 'active_ride_id') String? get activeRideId;
+ String get id;@JsonKey(name: 'rider_id') String? get riderId;@JsonKey(name: 'requested_pickup_time') DateTime get requestedPickupTime;@JsonKey(name: 'estimated_fare_id') String? get estimatedFareId;@JsonKey(name: 'vehicle_category_id') String? get vehicleCategoryId; String get status;@JsonKey(name: 'active_ride_id') String? get activeRideId;
 /// Create a copy of ScheduledRide
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $ScheduledRideCopyWith<ScheduledRide> get copyWith => _$ScheduledRideCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ScheduledRide&&(identical(other.id, id) || other.id == id)&&(identical(other.riderId, riderId) || other.riderId == riderId)&&(identical(other.requestedPickupTime, requestedPickupTime) || other.requestedPickupTime == requestedPickupTime)&&(identical(other.estimatedFareId, estimatedFareId) || other.estimatedFareId == estimatedFareId)&&(identical(other.status, status) || other.status == status)&&(identical(other.activeRideId, activeRideId) || other.activeRideId == activeRideId));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ScheduledRide&&(identical(other.id, id) || other.id == id)&&(identical(other.riderId, riderId) || other.riderId == riderId)&&(identical(other.requestedPickupTime, requestedPickupTime) || other.requestedPickupTime == requestedPickupTime)&&(identical(other.estimatedFareId, estimatedFareId) || other.estimatedFareId == estimatedFareId)&&(identical(other.vehicleCategoryId, vehicleCategoryId) || other.vehicleCategoryId == vehicleCategoryId)&&(identical(other.status, status) || other.status == status)&&(identical(other.activeRideId, activeRideId) || other.activeRideId == activeRideId));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,riderId,requestedPickupTime,estimatedFareId,status,activeRideId);
+int get hashCode => Object.hash(runtimeType,id,riderId,requestedPickupTime,estimatedFareId,vehicleCategoryId,status,activeRideId);
 
 @override
 String toString() {
-  return 'ScheduledRide(id: $id, riderId: $riderId, requestedPickupTime: $requestedPickupTime, estimatedFareId: $estimatedFareId, status: $status, activeRideId: $activeRideId)';
+  return 'ScheduledRide(id: $id, riderId: $riderId, requestedPickupTime: $requestedPickupTime, estimatedFareId: $estimatedFareId, vehicleCategoryId: $vehicleCategoryId, status: $status, activeRideId: $activeRideId)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $ScheduledRideCopyWith<$Res>  {
   factory $ScheduledRideCopyWith(ScheduledRide value, $Res Function(ScheduledRide) _then) = _$ScheduledRideCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'rider_id') String? riderId,@JsonKey(name: 'requested_pickup_time') DateTime requestedPickupTime,@JsonKey(name: 'estimated_fare_id') String? estimatedFareId, String status,@JsonKey(name: 'active_ride_id') String? activeRideId
+ String id,@JsonKey(name: 'rider_id') String? riderId,@JsonKey(name: 'requested_pickup_time') DateTime requestedPickupTime,@JsonKey(name: 'estimated_fare_id') String? estimatedFareId,@JsonKey(name: 'vehicle_category_id') String? vehicleCategoryId, String status,@JsonKey(name: 'active_ride_id') String? activeRideId
 });
 
 
@@ -65,12 +65,13 @@ class _$ScheduledRideCopyWithImpl<$Res>
 
 /// Create a copy of ScheduledRide
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? riderId = freezed,Object? requestedPickupTime = null,Object? estimatedFareId = freezed,Object? status = null,Object? activeRideId = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? riderId = freezed,Object? requestedPickupTime = null,Object? estimatedFareId = freezed,Object? vehicleCategoryId = freezed,Object? status = null,Object? activeRideId = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,riderId: freezed == riderId ? _self.riderId : riderId // ignore: cast_nullable_to_non_nullable
 as String?,requestedPickupTime: null == requestedPickupTime ? _self.requestedPickupTime : requestedPickupTime // ignore: cast_nullable_to_non_nullable
 as DateTime,estimatedFareId: freezed == estimatedFareId ? _self.estimatedFareId : estimatedFareId // ignore: cast_nullable_to_non_nullable
+as String?,vehicleCategoryId: freezed == vehicleCategoryId ? _self.vehicleCategoryId : vehicleCategoryId // ignore: cast_nullable_to_non_nullable
 as String?,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String,activeRideId: freezed == activeRideId ? _self.activeRideId : activeRideId // ignore: cast_nullable_to_non_nullable
 as String?,
@@ -158,10 +159,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'rider_id')  String? riderId, @JsonKey(name: 'requested_pickup_time')  DateTime requestedPickupTime, @JsonKey(name: 'estimated_fare_id')  String? estimatedFareId,  String status, @JsonKey(name: 'active_ride_id')  String? activeRideId)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'rider_id')  String? riderId, @JsonKey(name: 'requested_pickup_time')  DateTime requestedPickupTime, @JsonKey(name: 'estimated_fare_id')  String? estimatedFareId, @JsonKey(name: 'vehicle_category_id')  String? vehicleCategoryId,  String status, @JsonKey(name: 'active_ride_id')  String? activeRideId)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ScheduledRide() when $default != null:
-return $default(_that.id,_that.riderId,_that.requestedPickupTime,_that.estimatedFareId,_that.status,_that.activeRideId);case _:
+return $default(_that.id,_that.riderId,_that.requestedPickupTime,_that.estimatedFareId,_that.vehicleCategoryId,_that.status,_that.activeRideId);case _:
   return orElse();
 
 }
@@ -179,10 +180,10 @@ return $default(_that.id,_that.riderId,_that.requestedPickupTime,_that.estimated
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'rider_id')  String? riderId, @JsonKey(name: 'requested_pickup_time')  DateTime requestedPickupTime, @JsonKey(name: 'estimated_fare_id')  String? estimatedFareId,  String status, @JsonKey(name: 'active_ride_id')  String? activeRideId)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'rider_id')  String? riderId, @JsonKey(name: 'requested_pickup_time')  DateTime requestedPickupTime, @JsonKey(name: 'estimated_fare_id')  String? estimatedFareId, @JsonKey(name: 'vehicle_category_id')  String? vehicleCategoryId,  String status, @JsonKey(name: 'active_ride_id')  String? activeRideId)  $default,) {final _that = this;
 switch (_that) {
 case _ScheduledRide():
-return $default(_that.id,_that.riderId,_that.requestedPickupTime,_that.estimatedFareId,_that.status,_that.activeRideId);case _:
+return $default(_that.id,_that.riderId,_that.requestedPickupTime,_that.estimatedFareId,_that.vehicleCategoryId,_that.status,_that.activeRideId);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -199,10 +200,10 @@ return $default(_that.id,_that.riderId,_that.requestedPickupTime,_that.estimated
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'rider_id')  String? riderId, @JsonKey(name: 'requested_pickup_time')  DateTime requestedPickupTime, @JsonKey(name: 'estimated_fare_id')  String? estimatedFareId,  String status, @JsonKey(name: 'active_ride_id')  String? activeRideId)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'rider_id')  String? riderId, @JsonKey(name: 'requested_pickup_time')  DateTime requestedPickupTime, @JsonKey(name: 'estimated_fare_id')  String? estimatedFareId, @JsonKey(name: 'vehicle_category_id')  String? vehicleCategoryId,  String status, @JsonKey(name: 'active_ride_id')  String? activeRideId)?  $default,) {final _that = this;
 switch (_that) {
 case _ScheduledRide() when $default != null:
-return $default(_that.id,_that.riderId,_that.requestedPickupTime,_that.estimatedFareId,_that.status,_that.activeRideId);case _:
+return $default(_that.id,_that.riderId,_that.requestedPickupTime,_that.estimatedFareId,_that.vehicleCategoryId,_that.status,_that.activeRideId);case _:
   return null;
 
 }
@@ -214,13 +215,14 @@ return $default(_that.id,_that.riderId,_that.requestedPickupTime,_that.estimated
 @JsonSerializable()
 
 class _ScheduledRide implements ScheduledRide {
-  const _ScheduledRide({required this.id, @JsonKey(name: 'rider_id') this.riderId, @JsonKey(name: 'requested_pickup_time') required this.requestedPickupTime, @JsonKey(name: 'estimated_fare_id') this.estimatedFareId, this.status = 'pending', @JsonKey(name: 'active_ride_id') this.activeRideId});
+  const _ScheduledRide({required this.id, @JsonKey(name: 'rider_id') this.riderId, @JsonKey(name: 'requested_pickup_time') required this.requestedPickupTime, @JsonKey(name: 'estimated_fare_id') this.estimatedFareId, @JsonKey(name: 'vehicle_category_id') this.vehicleCategoryId, this.status = 'pending', @JsonKey(name: 'active_ride_id') this.activeRideId});
   factory _ScheduledRide.fromJson(Map<String, dynamic> json) => _$ScheduledRideFromJson(json);
 
 @override final  String id;
 @override@JsonKey(name: 'rider_id') final  String? riderId;
 @override@JsonKey(name: 'requested_pickup_time') final  DateTime requestedPickupTime;
 @override@JsonKey(name: 'estimated_fare_id') final  String? estimatedFareId;
+@override@JsonKey(name: 'vehicle_category_id') final  String? vehicleCategoryId;
 @override@JsonKey() final  String status;
 @override@JsonKey(name: 'active_ride_id') final  String? activeRideId;
 
@@ -237,16 +239,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ScheduledRide&&(identical(other.id, id) || other.id == id)&&(identical(other.riderId, riderId) || other.riderId == riderId)&&(identical(other.requestedPickupTime, requestedPickupTime) || other.requestedPickupTime == requestedPickupTime)&&(identical(other.estimatedFareId, estimatedFareId) || other.estimatedFareId == estimatedFareId)&&(identical(other.status, status) || other.status == status)&&(identical(other.activeRideId, activeRideId) || other.activeRideId == activeRideId));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ScheduledRide&&(identical(other.id, id) || other.id == id)&&(identical(other.riderId, riderId) || other.riderId == riderId)&&(identical(other.requestedPickupTime, requestedPickupTime) || other.requestedPickupTime == requestedPickupTime)&&(identical(other.estimatedFareId, estimatedFareId) || other.estimatedFareId == estimatedFareId)&&(identical(other.vehicleCategoryId, vehicleCategoryId) || other.vehicleCategoryId == vehicleCategoryId)&&(identical(other.status, status) || other.status == status)&&(identical(other.activeRideId, activeRideId) || other.activeRideId == activeRideId));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,riderId,requestedPickupTime,estimatedFareId,status,activeRideId);
+int get hashCode => Object.hash(runtimeType,id,riderId,requestedPickupTime,estimatedFareId,vehicleCategoryId,status,activeRideId);
 
 @override
 String toString() {
-  return 'ScheduledRide(id: $id, riderId: $riderId, requestedPickupTime: $requestedPickupTime, estimatedFareId: $estimatedFareId, status: $status, activeRideId: $activeRideId)';
+  return 'ScheduledRide(id: $id, riderId: $riderId, requestedPickupTime: $requestedPickupTime, estimatedFareId: $estimatedFareId, vehicleCategoryId: $vehicleCategoryId, status: $status, activeRideId: $activeRideId)';
 }
 
 
@@ -257,7 +259,7 @@ abstract mixin class _$ScheduledRideCopyWith<$Res> implements $ScheduledRideCopy
   factory _$ScheduledRideCopyWith(_ScheduledRide value, $Res Function(_ScheduledRide) _then) = __$ScheduledRideCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'rider_id') String? riderId,@JsonKey(name: 'requested_pickup_time') DateTime requestedPickupTime,@JsonKey(name: 'estimated_fare_id') String? estimatedFareId, String status,@JsonKey(name: 'active_ride_id') String? activeRideId
+ String id,@JsonKey(name: 'rider_id') String? riderId,@JsonKey(name: 'requested_pickup_time') DateTime requestedPickupTime,@JsonKey(name: 'estimated_fare_id') String? estimatedFareId,@JsonKey(name: 'vehicle_category_id') String? vehicleCategoryId, String status,@JsonKey(name: 'active_ride_id') String? activeRideId
 });
 
 
@@ -274,12 +276,13 @@ class __$ScheduledRideCopyWithImpl<$Res>
 
 /// Create a copy of ScheduledRide
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? riderId = freezed,Object? requestedPickupTime = null,Object? estimatedFareId = freezed,Object? status = null,Object? activeRideId = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? riderId = freezed,Object? requestedPickupTime = null,Object? estimatedFareId = freezed,Object? vehicleCategoryId = freezed,Object? status = null,Object? activeRideId = freezed,}) {
   return _then(_ScheduledRide(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,riderId: freezed == riderId ? _self.riderId : riderId // ignore: cast_nullable_to_non_nullable
 as String?,requestedPickupTime: null == requestedPickupTime ? _self.requestedPickupTime : requestedPickupTime // ignore: cast_nullable_to_non_nullable
 as DateTime,estimatedFareId: freezed == estimatedFareId ? _self.estimatedFareId : estimatedFareId // ignore: cast_nullable_to_non_nullable
+as String?,vehicleCategoryId: freezed == vehicleCategoryId ? _self.vehicleCategoryId : vehicleCategoryId // ignore: cast_nullable_to_non_nullable
 as String?,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String,activeRideId: freezed == activeRideId ? _self.activeRideId : activeRideId // ignore: cast_nullable_to_non_nullable
 as String?,

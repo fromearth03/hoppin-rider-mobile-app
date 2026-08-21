@@ -425,6 +425,7 @@ class RidesRepository {
     required double dropoffLng,
     required DateTime requestedPickupTime,
     String? estimatedFareId,
+    String? vehicleCategoryId,
   }) async {
     final res = await _api.post<Map<String, dynamic>>(
       '/scheduled-rides',
@@ -435,6 +436,7 @@ class RidesRepository {
         'dropoff_lng': dropoffLng,
         'requested_pickup_time': requestedPickupTime.toUtc().toIso8601String(),
         'estimated_fare_id': ?estimatedFareId,
+        'vehicle_category_id': ?vehicleCategoryId,
       },
     );
     return ScheduledRide.fromJson(res.data!);
