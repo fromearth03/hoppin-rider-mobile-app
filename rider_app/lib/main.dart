@@ -41,6 +41,13 @@ Future<void> main() async {
   await Supabase.initialize(
     url: Env.supabaseUrl,
     publishableKey: Env.supabaseAnonKey,
+    // Password-reset links are opened in a browser and may be opened from a
+    // different tab/device than the one that requested them. PKCE stores its
+    // verifier locally, so use the token-bearing implicit callback for web;
+    // native builds keep PKCE for their in-app auth flows.
+    authOptions: FlutterAuthClientOptions(
+      authFlowType: kIsWeb ? AuthFlowType.implicit : AuthFlowType.pkce,
+    ),
   );
   // After GoTrue has read `#access_token=` / `?code=` from the bar.
   hoppinUsePathUrlStrategy();
