@@ -131,6 +131,42 @@ tracked nowhere. SOS remains as the real safety control in milestone 1.
 
 Rating prompt follows on the same screen → `POST /rides/:id/rating`.
 
+### Trip in progress — `Start Ride.png`
+
+Route line, driver position, destination bar, driver identity, Cancel Ride.
+
+| Drawn | Building | Why |
+|---|---|---|
+| "Take left after 1.5 mi" banner | **Deferred — backend ask R1** | No endpoint returns turn instructions; `/rides/:id` gives a polyline only. Ismail asked for it to be raised with backend rather than dropped. Until it lands the banner space carries trip status and ETA. *2026-08-30* |
+
+---
+
+## Payment — `Select Payment Method.png`
+
+| Drawn | Building | Why |
+|---|---|---|
+| Visa Classic · **PayPal** · **Cash** | **Cards only** | Neither PayPal nor cash exists anywhere in the ride service or the payment service — searched both. Stripe cards are the only path money takes. *2026-08-30* |
+| "Select Payment Method", presented as a booking step | **"Payment cards" — card management** | There is no per-ride payment selection in the API. Booking always charges the default card, so this was never a step in the booking flow; it is where a rider manages cards and sets a default. Wording must not imply a choice that does not exist. *2026-08-30* |
+| Card number / CVV fields *(elsewhere in the pack)* | **Stripe SDK card element** | `setup-intent` → `clientSecret` → the SDK collects the card. A raw PAN in a `TextField` we control puts the app in PCI SAQ A-EP; the SDK element keeps it at SAQ A. |
+
+`402 NO_PAYMENT_METHOD` blocks booking outright when no card is on file, so an
+add-card path must exist inside the booking flow, not only in the drawer.
+
+---
+
+## Side navigation — `Side Nav Bar.png`
+
+Profile header, eight destinations, logout.
+
+| Drawn | Building | Why |
+|---|---|---|
+| Rider's own rating (4.31, 150) | **Deferred — backend ask R2** | `/me/profile` returns `full_name`, `phone_number`, `email`, `avatar_url`, `date_of_birth` and nothing else. Ismail asked for it to be raised with backend. Header shows name and avatar until it lands. *2026-08-30* |
+| Eight destinations | **All eight rendered; out-of-scope ones disabled** | Seven are outside milestone 1. Showing them disabled keeps the app's real shape visible without pretending they work, and each becomes a self-contained addition later. *2026-08-30* |
+
+In milestone 1: Logout, and the trip flow the drawer sits over.
+Disabled until later: Personal Information · Schedule Rides · Promotional ·
+Ride History · Payments · Notifications · Help & Support · Settings.
+
 ---
 
 ## Chat — `Conversation.png`
