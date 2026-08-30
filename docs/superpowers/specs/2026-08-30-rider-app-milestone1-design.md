@@ -308,7 +308,7 @@ signup is therefore a compliance decision, not a UI one. *Open item — see §10
 `PROMO_NOT_FOUND` 404 · `PROMO_INACTIVE` 400 · `PROMO_EXHAUSTED` 409 ·
 `PROMO_USED` 409 · `PROMO_INELIGIBLE` 400 · `PROMO_NOT_FOR_RIDERS` 400 ·
 `PROMO_NO_FARE` 409 · `PROMO_MIN_RIDE` 400 · `PROMO_NEW_USERS_ONLY` 400 ·
-`PROMO_BUDGET_EXHAUSTED` 409.
+`PROMO_BUDGET_EXHAUSTED` 409 · `PROMO_WRONG_ZONE` 400.
 
 ### 6.3 Global
 
@@ -433,6 +433,22 @@ cancellation policy and the ETA tier — in one response.
 
 **Surge:** admin-set multiplier, real, rendered as designed. There is no demand
 map for riders — `GET /demand-heatmap` exists but is a driver-facing overlay.
+
+**Zone discount** (2026-08-30). An admin can set an automatic percentage discount
+on a zone; a ride is "in" a zone by its **pickup**. Applied inside the shared fare
+engine, so estimate, charge, driver earnings and dispatch offer all reflect it
+identically — **totals are correct with no app change**.
+
+Optionally displayable: the `estimate` breakdown carries `gross`, `discount_pct`,
+`discount` and `total`, so a "Zone discount −£2.40 (20%)" line is possible.
+`discount_pct: 0` means none. Zone discounts **stack** with promo codes — the
+discount is baked into the fare, a promo is subtracted on top.
+
+**Promo codes can be zone-scoped**, which adds an eleventh promo error:
+`400 PROMO_WRONG_ZONE`. Note the ordering trap: **`GET /promotions/validate` has
+no pickup context**, so a code can validate successfully and still fail with
+`PROMO_WRONG_ZONE` when applied to a ride. Both paths need handling; a successful
+validate is not a guarantee.
 
 ### 7.2 Active ride
 

@@ -37,6 +37,9 @@ class RiderErrorCopy {
     'PROMO_MIN_RIDE': "This ride is below the promo's minimum fare.",
     'PROMO_NEW_USERS_ONLY': 'That promo is for new riders only.',
     'PROMO_BUDGET_EXHAUSTED': 'That promo campaign has ended.',
+    // A code can be scoped to a zone. /promotions/validate has no pickup
+    // context, so a code may validate and still fail here — handle both.
+    'PROMO_WRONG_ZONE': "This code isn't available in your pickup area.",
 
     // Live map — a rider hits these while watching a trip
     'NO_DRIVER_ASSIGNED': 'Still finding you a driver.',

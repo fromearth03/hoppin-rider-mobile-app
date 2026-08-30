@@ -121,6 +121,30 @@ up to five the rider cannot guess.
 | 4 categories, hardcoded seats/bags | **All 6 from `/vehicle-types`, live values** | Three of the four drawn are wrong (Estate 4/4 vs live 5/4, MPV 6/4 vs 7/5, Minibus 16/12 vs 8/6) and MiniCar + MiniTruck are bookable but undrawn. Rendering the API means the screen is right today and survives an admin adding a seventh category. *2026-08-30* |
 | Custom illustration per card | **Drawn art for the four, generic vehicle for the rest** | The API has no image field. Assets are keyed by category `name` with a designed fallback — required anyway, since categories are admin-editable. Two illustrations requested from the designer. *2026-08-30* |
 
+**Contract** — `GET /api/v1/vehicle-types`, JWT-authed like every `/api/v1` route.
+Verified in both services: `app_catalog_repo.go:225-236` (rider) and
+`hoppin_admin/internal/api/vehicle_types.go:30-40` (admin). Same table, same five
+columns, same `ORDER BY price_multiplier, name`.
+
+```jsonc
+{ "vehicle_types": [
+    { "id": "uuid", "name": "Standard", "seats": 4, "bags": 2,
+      "price_multiplier": 1.0 } ] }
+```
+
+**What the admin panel confirms:**
+
+- **The Minibus discrepancy is an admin edit**, not a code change. Someone with
+  `vehicles:write` corrects the row — no migration, no release. See §10.1.
+- **The generic-artwork fallback is load-bearing, not defensive.**
+  `createVehicleType` accepts any name, so a category with no illustration can
+  appear at any moment without an app release.
+- There is **no image field on the admin write path either**, so artwork can only
+  live in the app.
+- Admin distinguishes `vehicle_categories` (physical car classes — seats, bags,
+  multiplier) from `ride_categories` (pricing tiers). **Do not conflate them.**
+  The vehicle picker reads the former.
+
 ### Fare / driver selection — `Pricing Details.png`, `Choose your driver.png`
 
 **The cards are vehicle categories, not drivers.** Decision *2026-08-30*.
