@@ -1,0 +1,412 @@
+# Hoppin Rider App — Milestone 1 Design Spec
+
+**Date:** 2026-08-30 · **Status:** awaiting review
+**Platform:** Flutter (iOS · Android) · **State:** Riverpod
+**Backend:** `Go_ride_service` at `https://api.hoppin.tech`, routes under `/api/v1`
+
+---
+
+## 1. What this document is
+
+The design authority for milestone 1 of the rider app. The Figma pack
+(`passenger view Super FINAL`, 29 boards, 430×932) is a visual reference that this
+spec supersedes where the two disagree.
+
+Every screen below is bound to an endpoint verified by reading merged handlers in
+`Go_ride_service`, not by trusting handover docs. This distinction is load-bearing:
+the handover docs and `SCREEN-API-MATRIX.md` were found wrong on eight counts
+during this design (see §9).
+
+### Standing rules
+
+1. **The backend is the source of truth.** A screen with no endpoint behind it is
+   not built. A *row* whose field the API does not return is not rendered — not
+   filled with a zero, a placeholder, or a guess.
+2. **Figma values are placeholders.** Bind them to real fields. Only rows with no
+   backing field at all are dropped.
+3. **Server-owned copy is rendered verbatim.** Anything stating a charge, a refusal
+   or its reason is printed as received, never synthesised. This is not stylistic —
+   `ACCOUNT_NOT_ELIGIBLE` carries two unrelated meanings distinguished only by the
+   server's message (§6.1).
+4. **Money is never a `double`.** A `Pence` value type wrapping `int`, formatted
+   only at render.
+5. **Models mirror Go structs exactly.** If the Go struct has no field, the Dart
+   class has no field — the compiler enforces rule 1.
+6. **No fakeness.** Nothing stubbed, mocked or faked. A screen that cannot be
+   finished properly is out of the milestone, not shipped hollow.
+
+---
+
+## 2. Scope
+
+Production build. Milestone 1 is the **ride loop end to end**, at production
+quality. Later milestones add remaining screens without rewriting anything.
+
+### In — 19 screens
+
+| Group | Screens |
+|---|---|
+| Auth | Login · Sign Up |
+| Booking | Home map · Route entry · Vehicle select · Fare details · Default card · Confirm booking |
+| Active ride | Matching · Driver assigned · Driver arriving · Trip in progress · Trip complete + receipt · Rate driver |
+| Support | Cancel ride · Chat · SOS |
+| States | Booking refusals (§6.1), force-update / maintenance |
+
+### Out — later milestones
+
+Ride history · notifications centre · promotions · settings · help & support ·
+saved locations · scheduled rides · activity feed (`/me/activity`) · personal
+information · delete account.
+
+### Cut entirely — no backend
+
+Wallet (no in-app wallet exists; refunds return to the card) · PayPal · choose-your-driver
+(dispatch returns one match) · in-app password reset (stays on the email side) ·
+chat attachments, voice notes, presence, typing indicators · turn-by-turn
+instruction banner · tipping · referrals · per-ride payment method choice ·
+City field on personal info.
+
+---
+
+## 3. Architecture
+
+Feature-first: a feature's screen, state and data live together, so a change is
+local rather than spread across layer folders. Matches the driver app's house style.
+
+```
+lib/
+├── main.dart
+├── app.dart                        # MaterialApp, router, theme
+│
+├── core/
+│   ├── api/
+│   │   ├── api_client.dart         # Dio + auth + device-id interceptors, envelope parsing
+│   │   ├── api_exception.dart      # {code, error, …extras} → typed failure
+│   │   └── error_codes.dart        # rider-reachable codes → copy (§6)
+│   ├── auth/
+│   │   ├── auth_repository.dart    # Supabase GoTrue, session claim, refresh
+│   │   ├── auth_state.dart
+│   │   └── token_store.dart        # secure storage
+│   ├── push/
+│   │   ├── fcm_service.dart        # token registration, foreground/background
+│   │   └── push_payload.dart       # typed ride_update payload
+│   ├── device/device_id.dart       # stable X-Hoppin-Device-ID
+│   ├── money.dart                  # Pence value type
+│   ├── result.dart                 # Result<T> = Ok | Err
+│   └── theme/                      # colors, typography — light AND dark
+│
+├── features/
+│   ├── auth/                       # login, signup
+│   ├── booking/                    # map, route, vehicle, fare, card, confirm
+│   ├── trip/                       # live-trip engine + trip screens
+│   ├── chat/                       # in-ride messaging
+│   └── safety/                     # SOS, emergency contacts, share link
+│
+└── shared/
+    ├── nav/                        # go_router config
+    └── widgets/
+```
+
+**Stack:** `flutter_riverpod` ^2.5.1 · `dio` ^5.4.0 · `go_router` ^14.2.0 ·
+`supabase_flutter` ^2.8.0 · `intl` ^0.19.0 · `google_maps_flutter` ·
+`flutter_stripe` · `firebase_messaging` · `sentry_flutter`.
+Dev: `flutter_lints` ^4.0.0 · `mocktail` ^1.0.3.
+
+### 3.1 API client
+
+`Result<T>` rather than exceptions, so callers handle failure where it happens.
+Non-2xx passes through Dio so the `{error, code}` envelope parses rather than
+throwing; extra top-level keys (`reason`, `blockers`, `seconds`) are preserved on
+the exception.
+
+Two interceptors, both mandatory:
+- `Authorization: Bearer <jwt>` from the token store
+- `X-Hoppin-Device-ID` — a stable per-install identifier. **The device blacklist
+  gate is skipped entirely when this header is absent**, so omitting it silently
+  disables a security control.
+
+Base URL `https://api.hoppin.tech/api/v1`.
+
+---
+
+## 4. Auth
+
+Supabase `supabase_flutter` calls GoTrue directly. `Go_ride_service` has no auth
+routes — it only verifies the JWT. A DB trigger mirrors `auth.users` into
+`public.users` + `rider_profiles`.
+
+**Screens:** Login (`signInWithPassword`), Sign Up (`signUp` with `full_name`;
+phone optional). Password reset fires `resetPasswordForEmail` and ends at
+"check your inbox" — the reset itself happens in the browser. Reset is out of
+milestone 1.
+
+### 4.1 Three backend behaviours the app must respect
+
+**Single session.** `SingleSessionGate` keeps one live session per rider. After
+login the app **must** `POST /me/session` to claim it; otherwise a previously
+signed-in device keeps winning. Any request carrying a superseded session gets
+`401 SESSION_REPLACED` — the app signs out cleanly and returns to login. It must
+not attempt a token refresh loop.
+
+**Device blacklist.** `DeviceBlacklistGate` checks `X-Hoppin-Device-ID` against
+`device_fingerprints`. Returns `403 DEVICE_BLACKLISTED` when blocked, and
+`503 DEVICE_STATUS_UNAVAILABLE` when the lookup itself fails — both need real
+states. Fail-open on a missing header, fail-closed on a DB error.
+
+**Account status.** `AccountStatusGate` rejects banned/suspended users on a
+still-valid JWT, so a suspension takes effect immediately rather than at expiry.
+
+### 4.2 Launch sequence
+
+1. `GET /api/v1/app-status` — **public, before login.** Force-update and
+   maintenance screens. Honoured on every cold start.
+2. Restore session from secure storage.
+3. `POST /me/device` — device check-in.
+4. `POST /me/session` — claim the single session.
+5. `POST /me/device-tokens` — register FCM token.
+6. `GET /me/active-ride` — if a ride is live, route straight to the trip screen.
+
+### 4.3 The role claim
+
+The Supabase `custom_access_token_hook` is now **enabled**, so riders carry
+`user_role` in the JWT. `riderOnly()` on the backend rejects only
+`role == "driver"`. The app still branches on nothing client-side — being signed
+in is the only auth state the UI needs.
+
+---
+
+## 5. The live-trip engine
+
+The one genuinely hard component. Isolated as its own unit under `features/trip/`,
+owning transport, the state machine and the map marker. Everything else in the app
+is CRUD by comparison.
+
+### 5.1 Three transports, three jobs
+
+These are not alternatives. The backend implements all three and each carries
+different data.
+
+| Transport | Carries | Endpoint |
+|---|---|---|
+| **FCM push** | ride *status* changes | `ride_update` payload `{type, ride_id, deep_link, status, notification_id}` |
+| **SSE** | driver *position* | `GET /api/v1/rides/:id/driver-location/stream` |
+| **Poll (~1 Hz)** | driver *position*, fallback | `GET /api/v1/rides/:id/driver-location` |
+
+**FCM** carries `status` in the payload, so a status-only change needs no re-fetch.
+Works while backgrounded. Push is best-effort — failures are logged only — so it is
+an enhancement, never the sole source of truth.
+
+**SSE** is NATS-backed, sends one immediate fix on connect so the marker draws
+without waiting, and emits a 25 s keepalive comment. It emits the **identical**
+`DriverLocationView` shape as the poll, so one parser serves both. Not under the
+header-auth group: `EventSource` cannot set headers, so the JWT goes as `?token=`
+and is verified in the handler, which then applies the same participant check.
+
+**Poll** is the documented reconnect fallback. If NATS is unavailable the SSE hub
+stays empty and clients degrade to polling — which is why the poll is not optional.
+
+Reconnect policy: exponential backoff on the stream; fall back to the poll while
+disconnected; resume the stream when it recovers. Suspend both while backgrounded.
+
+### 5.2 State machine
+
+`matching → accepted → arriving → started → completed`, plus `cancelled` from any
+non-completed state. `requested` and `assigned` are dead states, never written —
+no UI for them.
+
+`driver` is `null` while matching. That is the searching state, **not** an error.
+
+### 5.3 One call renders the trip screen
+
+`GET /api/v1/rides/:id` returns everything: existing ride keys plus `ref`, `geo`
+(pickup, dropoff, readable waypoints, real OSRM road polyline), `driver` (identity,
+rating, trips count, vehicle, live OSRM `eta_seconds`), `fare`, `timestamps`, and
+`chat_unread`. Verified in `rider_ride_detail.go:70-80`.
+
+No fan-out to `/geo` + `/driver-info`. No client-side aggregate.
+
+---
+
+## 6. Errors
+
+Envelope is `{"error": "<message>", "code": "<CODE>"}`. **Map on `code`; display
+the server's `error` string.** There is no rider error-code reference from the
+backend — the table below was derived by reading handlers.
+
+### 6.1 Booking refusals — `ride_handler.go:830-844`
+
+| Code | HTTP | Server copy | Screen action |
+|---|---|---|---|
+| `ACCOUNT_NOT_ELIGIBLE` | 403 | "account is not active" | Contact support |
+| `ACCOUNT_NOT_ELIGIBLE` | 403 | "riders must be 13 or older" | Age gate |
+| `ACTIVE_TRIP_EXISTS` | 409 | "you already have an active trip" | Route to the live trip |
+| `OUTSIDE_SERVICE_AREA` | 422 | "Hoppin is not available at this pickup location" | Move the pin |
+| `NO_PAYMENT_METHOD` | 402 | "add a payment card to book a ride" | Add-card flow |
+| `NO_ZONE` | 422 | "pickup is outside every configured pricing zone" | Move the pin |
+| `NO_TARIFF` | 422 | "this zone has no active tariff configured" | Try again later |
+| `IDEMPOTENT_REPLAY` | 409 | "idempotency key already used" | Treat as success |
+
+> **`ACCOUNT_NOT_ELIGIBLE` is overloaded** — one code, two unrelated meanings,
+> separable only by the server's message. This is why rule 3 exists.
+
+**Age gate:** riders under 13 cannot book. `date_of_birth` is nullable and **no DOB
+means allowed** — the gate only bites once the app collects it. Collecting DOB at
+signup is therefore a compliance decision, not a UI one. *Open item — see §10.*
+
+### 6.2 Promotions — `chat_handler.go:227-248`
+
+`PROMO_NOT_FOUND` 404 · `PROMO_INACTIVE` 400 · `PROMO_EXHAUSTED` 409 ·
+`PROMO_USED` 409 · `PROMO_INELIGIBLE` 400 · `PROMO_NOT_FOR_RIDERS` 400 ·
+`PROMO_NO_FARE` 409 · `PROMO_MIN_RIDE` 400 · `PROMO_NEW_USERS_ONLY` 400 ·
+`PROMO_BUDGET_EXHAUSTED` 409.
+
+### 6.3 Global
+
+`VALIDATION_FAILED` 400 · `FORBIDDEN` 403 · `RIDE_NOT_FOUND` 404 ·
+`INTERNAL` 500 (retry with backoff) · `SESSION_REPLACED` 401 ·
+`DEVICE_BLACKLISTED` 403 · `DEVICE_STATUS_UNAVAILABLE` 503 ·
+`ACCOUNT_SUSPENDED` / `ACCOUNT_BANNED` 403.
+
+Live-map: `NO_DRIVER_ASSIGNED` 409 (still matching — not an error) ·
+`RIDE_NOT_ACTIVE` 409 · `POSITION_UNAVAILABLE` 409 (retry later) ·
+`SHARE_LINK_INVALID` 404.
+
+`VEHICLE_CATEGORY_MISMATCH` is **driver-reachable only** — it fires on accept and
+arrive. A rider JWT cannot reach it, despite the driver doc listing it as rider-only.
+
+---
+
+## 7. Screens → endpoints
+
+### 7.1 Booking
+
+| Screen | Endpoints |
+|---|---|
+| Home map | `GET /service-areas`, `GET /vehicle-types` |
+| Route entry | `GET /geocode/search?q=` (saved places rank above map hits), `GET /geocode/reverse`, `GET /me/saved-locations` |
+| Vehicle select | `GET /vehicle-types` — render `seats`/`bags` from the API, never Figma |
+| Fare details | `POST /rides/estimate`; richer breakdown from `POST :8081/quote` |
+| Default card | `GET /me/payment-methods`, `POST /me/payment-methods/setup-intent`, `POST /me/payment-methods/:pmId/default` |
+| Confirm booking | `POST /rides/request` → `202 {request_id}` |
+
+**Per-ride payment choice does not exist.** Booking always charges the default
+card, so this screen is *"set your default card"* and must be worded that way.
+
+**Surge:** admin-set multiplier, real, rendered as designed. There is no demand
+map for riders — `GET /demand-heatmap` exists but is a driver-facing overlay.
+
+### 7.2 Active ride
+
+| Screen | Endpoints |
+|---|---|
+| Matching | `GET /rides/:id` (`driver: null`) |
+| Driver assigned / arriving / in progress | `GET /rides/:id` + SSE stream + poll fallback |
+| Cancel | `GET /cancellation-policy`, `GET /rides/:id/waiting-policy`, `GET /cancellation-reasons`, `PATCH /rides/:id/cancel` |
+| Complete + receipt | `GET /rides/:id/receipt` |
+| Rate driver | `POST /rides/:id/rating` |
+
+Receipt returns `ride_id, ride_category, fare_pence, waiting_pence, total_pence,
+currency, status, distance_miles, pickup_time, dropoff_time, provider_payment_id`.
+`platform_commission_pence` was **removed** — it leaked the platform/driver split.
+Do not render it.
+
+Show `ref` (`R-1042`), never the UUID.
+
+### 7.3 Chat
+
+`POST /rides/:id/messages` (accepts `reply_to_id`) · `GET /rides/:id/messages?since=`.
+Each message carries `status` on your own messages (`sent` → `read`) and a
+`reply_to` preview when it is a reply. Opening the thread marks read and clears
+`chat_unread` on `GET /rides/:id`.
+
+Text only. Polling with a `since=` cursor. Scoped to an active ride — not a
+standalone inbox.
+
+### 7.4 Safety
+
+`POST /me/sos` · `GET /me/sos` · `GET|POST|DELETE /me/emergency-contacts` ·
+`POST|DELETE /rides/:id/share-link`. Support and emergency numbers come from
+`GET /contacts` (public, admin-editable live, so a number change needs no release).
+
+> **SOS is real.** It writes a row and surfaces on the admin safety dashboard.
+> Firing it in a demo raises a genuine alert. Confirmed acceptable by the product
+> owner, 2026-08-30.
+
+---
+
+## 8. External services
+
+| Service | Use | Notes |
+|---|---|---|
+| **Google Maps** | **Rendering only** — map, route polyline, driver marker | Geocoding stays on the backend's Photon/Nominatim. Needs a Maps SDK key per platform with billing enabled. |
+| **Stripe** | Card management, test mode | SDK card element via `setup-intent` → `clientSecret`. **Never raw card fields** — that is the difference between PCI SAQ A and SAQ A-EP. Publishable key ships as a `--dart-define`. |
+| **Supabase** | Auth only | Client SDK direct to GoTrue. |
+| **FCM** | Ride status push | Token registered after login. |
+| **Sentry** | Crash and error reporting | From day one. |
+
+Payment DTOs are **camelCase** (`{paymentMethodId, brand, last4, expMonth,
+expYear, isDefault}`) while the rest of the API is snake_case — a deliberate
+one-off mapping.
+
+Card `brand`/`last4` **are** available (migration 117) on both
+`GET /me/payment-methods` and `GET /me/transactions`.
+
+---
+
+## 9. Corrections to prior documentation
+
+`SCREEN-API-MATRIX.md` and the 08-27 handover were verified wrong on these points.
+Recorded so the errors are not re-inherited.
+
+| Prior claim | Verified reality |
+|---|---|
+| "No WebSocket, no SSE — confirmed absent" | **SSE exists** — `ride_location_stream.go`, NATS-backed, built to replace the 1 Hz poll |
+| Trip screen needs 3 calls; build a client aggregate | One call — `rider_ride_detail.go:70-80` |
+| `/driver-info` returns 409 during matching | `driver: null`; a normal state |
+| FCM carries no status | Payload carries `status` |
+| Waypoints write-only, lost on reload | Readable |
+| Route is straight-line | Real OSRM road polyline; live OSRM ETA |
+| JWT role resolves to `"authenticated"` | Hook enabled; `user_role` present |
+| Under-18 age gate | **Under-13**, and only when DOB is collected |
+| Receipt carries `platform_commission_pence` | Removed |
+| Device gate is "the one fail-closed gate" | Fail-**open** on a missing header; fail-closed only on DB error |
+| Single-session behaviour | Not mentioned at all; `SESSION_REPLACED` must be handled |
+| `app-status`, `contacts` | Not mentioned; both are launch-path endpoints |
+| `VEHICLE_CATEGORY_MISMATCH` is rider-only | Driver-only |
+| No demand heatmap endpoint | `GET /demand-heatmap` exists (driver-facing) |
+
+---
+
+## 10. Open items
+
+1. **Minibus seats/bags** — live API says 8 seats / 6 bags; Figma draws 16/12.
+   The app renders API values, so it will contradict the design until someone
+   rules. Open since 2026-08-27, unanswered. *Needs a fleet decision.*
+2. **DOB collection at signup** — the under-13 gate cannot evaluate without it.
+   Collecting it is a compliance choice. *Needs a product decision.*
+3. **`/geocode/search` contradiction** — the endpoint exists and is described as
+   fronting Photon with saved places ranked first, but a neighbouring comment says
+   forward search is unavailable and the app should drop a pin instead. *Verify
+   behaviour against the live endpoint before building route entry.*
+
+## 11. Dependencies on the product owner
+
+Google Maps API key (billing enabled, per platform) · Stripe test publishable key ·
+Sentry project DSN · Apple Developer account (signing, TestFlight) · Play Console
+access · Supabase project facts as they arise.
+
+## 12. Production readiness
+
+In scope for milestone 1: Sentry · analytics (funnel events) · CI (tests and build
+artifacts on push) · store readiness (icons, splash, bundle IDs, signing,
+TestFlight / Play internal track).
+
+Light **and** dark mode from the start, per the standing design preference.
+
+## 13. Demo dependency
+
+The demo runs a real ride with a real driver on the driver app (under separate
+construction). This means: the driver app must be working on the day, and dispatch
+must match *that* driver rather than another who happens to be online. Controlling
+which drivers are online at demo time is a demo-day concern that needs an owner —
+it is not an app problem and cannot be solved in this codebase.

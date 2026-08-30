@@ -1,0 +1,12 @@
+# Change Log
+> Auto-maintained by session-exit hook. Last updated: 2026-08-30
+
+- **2026-08-30 16:16** [docs]. Understood, and that reframes things. Three answers plus three corrections: - **Real driver on the driver app** — no simulated taps - **Flutter + Google Maps** - **Stripe test mode** - **No demo faken
+- **2026-08-30 16:11** [docs]. Understood, and that reframes things. Three answers plus three corrections: - **Real driver on the driver app** — no simulated taps - **Flutter + Google Maps** - **Stripe test mode** - **No demo faken
+- **2026-08-30 16:09** [docs]. Stakeholders changes my read on both. Stakeholders don't stress-test flows — they watch a story and ask questions. The questions they reliably ask about a ride-hailing app are *"what if something goes
+- **2026-08-30 16:08** [docs]. Real end-to-end. That makes the driver side a hard dependency — noted, and I'll come back to how we drive it. **Question 3 — the screen list for the demo slice.** Reading A means the app must carry a 
+- **2026-08-30 16:08** [docs]. Demo-able slice it is. That's a tighter cut than the full ride loop — worth pinning down what "demo-able" means to you, because two readings give different builds. **Question 2 — what does the demo ha
+- **2026-08-30 16:06** [docs]. Good — this gives me the full screen inventory. Let me reconcile it against the round 4/5 reality before I ask you anything, so my questions are grounded in what's actually true today. **Matrix is sta
+- **2026-08-29 00:58** [docs]. Understood — driver error-codes doc dropped from scope. Rider app only. Also noted: you didn't answer the card question, so that stays open. Revised state, rider-only: **Live backend surface** (from `
+- **2026-08-27 15:54** [docs] — Changed: `SCREEN-API-MATRIX.md`, `BACKEND-CONTRACT-REQUEST.md`, `PAYMENTS-STRIPE.md`, `handoff\FOR-BACKEND.md`, `handoff\FOR-DESIGN.md`. Saved. When the backend docs come back: `superpowers:brainstorming` first, then `writing-plans` → `executing-plans`. No planning or code before the brainstorm. That's the right call for a specific rea
+- **2026-08-27 14:47** [docs] — Changed: `SCREEN-API-MATRIX.md`, `BACKEND-CONTRACT-REQUEST.md`, `PAYMENTS-STRIPE.md`, `handoff\FOR-BACKEND.md`, `handoff\FOR-DESIGN.md`. Done. Backend doc rewritten clean, contract doc merged in and deleted. **`docs/handoff/FOR-BACKEND.md`** — one doc now, rebuilt from verified facts rather than patched: 1. **Supabase JWT** — framed as
