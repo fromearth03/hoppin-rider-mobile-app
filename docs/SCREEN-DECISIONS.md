@@ -32,6 +32,26 @@ is created first and `PATCH /me/profile` follows. A failure between the two leav
 an account with a null DOB — which the booking guard treats as *allowed*. The app
 re-attempts the PATCH on launch until it lands. See spec §4.3.
 
+### Sign-up can succeed and still leave no profile
+
+Migration 124 (2026-08-30) fixed a typo in `assign_entity_ref()` that had broken
+**every new signup since migration 119**. The detail that matters for this screen
+is *how* it failed:
+
+> the signup trigger's EXCEPTION handler swallowed the error into a WARNING,
+> leaving the auth user with no `public.users`/profile row
+
+So Supabase returned success, the rider was signed in, and every authenticated
+call afterwards failed with `USER_NOT_FOUND`. The trigger is fixed, but **the
+exception handler that hid the failure is still there**, so the shape of this
+failure remains reachable if any future trigger change misbehaves.
+
+**Therefore signup does not trust Supabase's success alone.** The `PATCH
+/me/profile` that writes the DOB doubles as the verification step: a
+`404 USER_NOT_FOUND` there means the account exists in `auth.users` but has no
+profile. The app must surface that as a real failure and offer a retry, rather
+than dropping the rider into a signed-in app where nothing works. *2026-08-30*
+
 ### Login — `Login.png`
 
 | Drawn | Building | Why |
@@ -57,7 +77,42 @@ tabs are a filter on one response, not two calls: `/geocode/search` returns
 `source: "saved" | "map"` on every row.
 
 The `-1` variant adds a **`+` button** on the destination field — multi-stop.
-Waypoints became readable in round 4, so a multi-stop trip survives a reload.
+
+**Multi-stop is fully wired as of 2026-08-30** (`e77bb3e`, migration 121,
+documented in `BACKEND-MULTISTOP-MOBILE-2026-08-30.md`). Round 4 had said
+waypoints were *readable*; what nobody knew was that they were **silently dropped
+at booking**, so multi-stop had never worked end to end. That attach bug is fixed
+and three endpoints are new.
+
+| Endpoint | Use |
+|---|---|
+| `POST /rides/estimate` + `waypoints` | Per-leg fares. Returns `multi_stop`, `legs[]` with `to_label` and `fare_pence`, `total_pence`, and a stitched whole-journey polyline |
+| `POST /rides/request` + `waypoints` | Book with stops. **≤ 5 stops** |
+| `GET /rides/:id/stops` | Live breakdown incl. per-stop waiting |
+| `POST /rides/:id/stops` | Add a stop mid-trip; re-prices, pushes both parties |
+
+**The money model has to be explained, not just displayed.** Fare is the sum of
+per-leg fares plus per-stop waiting, and **platform deductions apply once on the
+grand total, never per leg**. A rider seeing three legs may reasonably fear being
+charged three times. Backend supplied copy for this and it should be used
+close to verbatim:
+
+> "Stops are priced per leg and added up. Fees are charged once on the total."
+
+**Waiting is not in the estimate.** It accrues live — 3 minutes free per stop,
+then 25p/min (configurable). The booking screen says waiting *may* apply; it must
+not show a number it cannot know. The live figure appears on `/rides/:id/stops`
+during the trip.
+
+**Errors:** `422 NO_ZONE` when a *stop* falls outside every pricing zone, and
+`422 NO_TARIFF`. The message must make clear which stop is the problem, since with
+up to five the rider cannot guess.
+
+> The backend's mobile checklist references `rides_repository.dart`,
+> `seam_registry.dart` and a `MultiStopUnavailableNotice` to retire. **None exist
+> here** — those belong to the previous rider app (`hoppin-rider-mobile-app/`).
+> This is a greenfield build, so there is no notice to remove and no seam to flip;
+> multi-stop is simply built correctly from the start.
 
 ### Vehicle select — `Select Vehicle.png`
 
@@ -160,7 +215,7 @@ Profile header, eight destinations, logout.
 
 | Drawn | Building | Why |
 |---|---|---|
-| Rider's own rating (4.31, 150) | **Deferred — backend ask R2** | `/me/profile` returns `full_name`, `phone_number`, `email`, `avatar_url`, `date_of_birth` and nothing else. Ismail asked for it to be raised with backend. Header shows name and avatar until it lands. *2026-08-30* |
+| Rider's own rating (4.31, 150) | **Build it — `GET /me/rating`** | Raised as ASK-2 R2 and **delivered the same day** (`b5f0f58`). Returns `average_rating` (null until at least one review), `rating_count`, and a 1–5 star `distribution` we did not ask for. Rendered as drawn. *2026-08-30* |
 | Eight destinations | **All eight rendered; out-of-scope ones disabled** | Seven are outside milestone 1. Showing them disabled keeps the app's real shape visible without pretending they work, and each becomes a self-contained addition later. *2026-08-30* |
 
 In milestone 1: Logout, and the trip flow the drawer sits over.

@@ -48,7 +48,22 @@ Until then the banner shows trip status and ETA, both of which we already have.
 
 ---
 
-## R2 · Rider's own rating on `/me/profile`
+## R2 · Rider's own rating — ✅ DELIVERED 2026-08-30
+
+Shipped as **`GET /me/rating`** (`b5f0f58`) rather than fields on `/me/profile`,
+which is the better shape — the side nav does not pay for a distribution query it
+will not render, and a future ratings screen uses the same endpoint.
+
+```jsonc
+{ "average_rating": 4.31,     // null until at least one review
+  "rating_count": 150,
+  "distribution": { "5": 120, "4": 20, "3": 6, "2": 3, "1": 1 } }
+```
+
+The null-not-defaulted point was honoured exactly (`rating_handler.go:40,44`), and
+a star distribution we did not ask for was added. Nothing further needed.
+
+*Original request follows for the record.*
 
 **Priority:** low.
 
@@ -105,4 +120,20 @@ Recorded so you know they were considered and deliberately left alone.
 |---|---|---|
 | ASK-1 | R1–R5 | ✅ delivered (rounds 1–5) |
 | ASK-2 | R1 turn-by-turn steps | open |
-| ASK-2 | R2 rider rating on `/me/profile` | open |
+| ASK-2 | R2 rider rating | ✅ delivered as `GET /me/rating` (`b5f0f58`) |
+
+---
+
+## Also landed 2026-08-30, unasked
+
+**Multi-stop rides are now fully wired** (`e77bb3e`, documented in
+`BACKEND-MULTISTOP-MOBILE-2026-08-30.md`). We had not raised this — the round-4
+note said waypoints were readable, and we did not know they were being **silently
+dropped at booking**, so multi-stop had never actually worked end to end.
+
+Now live: `waypoints` on `/rides/estimate` returning per-leg fares,
+`waypoints` on `/rides/request` (attach bug fixed), `GET /rides/:id/stops`,
+`POST /rides/:id/stops` to add a stop mid-trip, and driver-side per-stop
+arrive/depart for waiting.
+
+The `+` button on the route-entry screen is therefore buildable as drawn.
