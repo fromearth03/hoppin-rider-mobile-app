@@ -97,9 +97,28 @@ class AuthRepository {
     return const Ok(null);
   }
 
+  /// Prefers GoTrue's structured `code` field over matching English message
+  /// text: message strings are fragile — Supabase can reword them or the
+  /// project can enable localised auth errors, and either would silently
+  /// break a plain `contains(...)` check. `code` is null for some errors that
+  /// occur before a response is received (e.g. older tokens, transport
+  /// failures), so the message/status heuristics remain as a fallback.
   ApiException _map(AuthException e) {
     final status = int.tryParse(e.statusCode ?? '') ?? 0;
     final message = e.message.toLowerCase();
+
+    switch (e.code) {
+      case 'otp_expired':
+      case 'session_expired':
+        return ApiException('EXPIRED_LINK', e.message, status);
+      case 'email_exists':
+      case 'user_already_exists':
+        return ApiException('EMAIL_TAKEN', e.message, status);
+      case 'over_request_rate_limit':
+        return ApiException('TOO_MANY_ATTEMPTS', e.message, status);
+      case 'weak_password':
+        return ApiException('WEAK_PASSWORD', e.message, status);
+    }
 
     if (status == 429 || message.contains('rate limit')) {
       return ApiException('TOO_MANY_ATTEMPTS', e.message, status);

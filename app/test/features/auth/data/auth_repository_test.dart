@@ -146,6 +146,65 @@ void main() {
     });
   });
 
+  group('structured error code takes precedence over message text', () {
+    test('otp_expired code maps to EXPIRED_LINK', () async {
+      when(() => auth.signInWithPassword(
+              email: any(named: 'email'), password: any(named: 'password')))
+          .thenThrow(const AuthException('Token has expired or is invalid',
+              statusCode: '403', code: 'otp_expired'));
+
+      final result = await repo.signIn('a@b.com', 'pw');
+      final err = result as Err;
+
+      expect(err.error.code, 'EXPIRED_LINK');
+    });
+
+    test('email_exists code maps to EMAIL_TAKEN alongside the message-based '
+        'mapping', () async {
+      when(() => auth.signUp(
+            email: any(named: 'email'),
+            password: any(named: 'password'),
+            data: any(named: 'data'),
+          )).thenThrow(const AuthException('A user with this email address '
+              'has already been registered',
+              statusCode: '422', code: 'email_exists'));
+
+      final result =
+          await repo.signUp(email: 'a@b.com', password: 'pw', fullName: 'Ada');
+      final err = result as Err;
+
+      expect(err.error.code, 'EMAIL_TAKEN');
+    });
+
+    test('weak_password code maps to WEAK_PASSWORD', () async {
+      when(() => auth.signUp(
+            email: any(named: 'email'),
+            password: any(named: 'password'),
+            data: any(named: 'data'),
+          )).thenThrow(const AuthException('Password should be at least 6 '
+              'characters',
+              statusCode: '422', code: 'weak_password'));
+
+      final result = await repo.signUp(
+          email: 'a@b.com', password: 'pw', fullName: 'Ada');
+      final err = result as Err;
+
+      expect(err.error.code, 'WEAK_PASSWORD');
+    });
+
+    test('a null code falls back to the message heuristics', () async {
+      when(() => auth.signInWithPassword(
+              email: any(named: 'email'), password: any(named: 'password')))
+          .thenThrow(
+              const AuthException('Invalid login credentials', statusCode: '400'));
+
+      final result = await repo.signIn('a@b.com', 'wrong');
+      final err = result as Err;
+
+      expect(err.error.code, 'INVALID_CREDENTIALS');
+    });
+  });
+
   group('signOut', () {
     test('reports success even when the network call fails', () async {
       when(() => auth.signOut()).thenThrow(Exception('offline'));
