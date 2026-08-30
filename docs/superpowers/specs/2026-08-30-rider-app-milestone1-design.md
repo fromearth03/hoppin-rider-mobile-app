@@ -192,9 +192,19 @@ different data.
 | **SSE** | driver *position* | `GET /api/v1/rides/:id/driver-location/stream` |
 | **Poll (~1 Hz)** | driver *position*, fallback | `GET /api/v1/rides/:id/driver-location` |
 
-**FCM** carries `status` in the payload, so a status-only change needs no re-fetch.
-Works while backgrounded. Push is best-effort — failures are logged only — so it is
-an enhancement, never the sole source of truth.
+**FCM** works while backgrounded and is best-effort — failures are logged only — so
+it is an enhancement, never the sole source of truth.
+
+> **The push is a doorbell, not a delivery.** The payload carries `status`, and the
+> backend offers it so clients can skip a re-fetch. We do not take that offer.
+> A push can arrive late, duplicated, or out of order; rendering its `status` lets a
+> stale push walk the UI backwards through the state machine. The typed payload
+> therefore keeps **routing data only** — `type`, `ride_id`, `deep_link` — and every
+> push triggers a `GET /rides/:id`. The push says something happened; the endpoint
+> says what. This matches the driver app's `PushPayload` convention.
+>
+> The backend duplicates payload keys in both snake_case and camelCase.
+> **snake_case is canonical**; read camelCase only as a fallback.
 
 **SSE** is NATS-backed, sends one immediate fix on connect so the marker draws
 without waiting, and emits a 25 s keepalive comment. It emits the **identical**
@@ -401,7 +411,35 @@ In scope for milestone 1: Sentry · analytics (funnel events) · CI (tests and b
 artifacts on push) · store readiness (icons, splash, bundle IDs, signing,
 TestFlight / Play internal track).
 
-Light **and** dark mode from the start, per the standing design preference.
+### 12.1 Theme
+
+**Light and dark from the start**, per the standing design preference. This
+diverges from the driver app, which ships light only on the reasoning that drivers
+use it in a car in daylight — a rider is as often in a dark cab at night, so dark
+mode is not optional here. The backend also stores a `theme` preference
+(`system|light|dark`) on `/me/preferences`, so the choice is persisted server-side.
+
+**Shared brand tokens**, adopted from the driver app so both apps read as one
+product. Never write a raw `Color()` in a widget.
+
+| Token | Value | Use |
+|---|---|---|
+| `primary` | `#2E0B78` | deep indigo |
+| `primaryDark` | `#1E0550` | |
+| `accent` | `#F07A21` | orange, primary actions |
+| `background` | `#F5F5F7` | app ground |
+| `surface` | `#FFFFFF` | cards |
+| `border` | `#E3E3E8` | |
+| `textPrimary` | `#1A1A2E` | |
+| `textSecondary` | `#6B6B7B` | |
+| `textDisabled` | `#A0A0B0` | |
+| `positive` | `#2BA84A` | credits, active |
+| `negative` | `#D64545` | errors, cancelled |
+| `warning` | `#E8A33D` | pending |
+| `info` | `#3D7FE8` | |
+
+The dark palette is a second token set in the same file, not a second set of
+widgets. Both themes are tested visually before any screen is called done.
 
 ## 13. Demo dependency
 
