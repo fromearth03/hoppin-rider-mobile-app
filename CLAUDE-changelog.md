@@ -1,6 +1,7 @@
 # Change Log
 > Auto-maintained by session-exit hook. Last updated: 2026-08-30
 
+- **2026-08-30 17:40** [new-rider-app] — Changed: `docs\superpowers\specs\2026-08-30-rider-app-milestone1-design.md`, `.gitignore`. Committed. (The CRLF warning is normal Windows line-ending handling — harmless.) --- ## Where things stand **Repo initialised**, two commits on `main`. Nothing sensitive tracked — `.gitignore` covers 
 - **2026-08-30 16:57** [new-rider-app] — Changed: `docs\superpowers\specs\2026-08-30-rider-app-milestone1-design.md`. Both memory files corrected. `MEMORY.md`'s pointers still describe them accurately, so no change needed there. --- **Spec written and ready for review:** `docs/superpowers/specs/2026-08-30-rider-app-m
 - **2026-08-30 16:38** [new-rider-app]. Same conclusions, reached independently — including "checked by reading merged handlers, not by trusting handover docs", which is exactly the position I arrived at when I found the SSE endpoint. Its s
 - **2026-08-30 16:33** [new-rider-app]. Confirmed against the code — `GET /rides/:id` genuinely returns everything the trip screen needs in one call, including `ref`, `chat_unread`, geo with route, driver with vehicle and ETA, fare and time

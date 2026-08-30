@@ -136,9 +136,9 @@ routes — it only verifies the JWT. A DB trigger mirrors `auth.users` into
 `public.users` + `rider_profiles`.
 
 **Screens:** Login (`signInWithPassword`), Sign Up (`signUp` with `full_name`;
-phone optional). Password reset fires `resetPasswordForEmail` and ends at
-"check your inbox" — the reset itself happens in the browser. Reset is out of
-milestone 1.
+phone optional; **date of birth required** — see §4.4). Password reset fires
+`resetPasswordForEmail` and ends at "check your inbox" — the reset itself happens
+in the browser. Reset is out of milestone 1.
 
 ### 4.1 Three backend behaviours the app must respect
 
@@ -166,7 +166,45 @@ still-valid JWT, so a suspension takes effect immediately rather than at expiry.
 5. `POST /me/device-tokens` — register FCM token.
 6. `GET /me/active-ride` — if a ride is live, route straight to the trip screen.
 
-### 4.3 The role claim
+### 4.3 Date of birth at signup
+
+DOB is **required** on the sign-up form. Decision recorded 2026-08-30.
+
+**Why it has to be collected.** `users.date_of_birth` is nullable and the booking
+guard treats **no DOB as allowed** — so without collection the under-13 gate never
+fires and the age restriction is unenforced. Collecting it is what makes the gate
+real.
+
+**It is a two-step write, and the gap matters.** Supabase `signUp()` has no DOB
+field; `date_of_birth` lives on `PATCH /me/profile`. So:
+
+1. `supabase.auth.signUp(email, password, data: {full_name})` — the DB trigger
+   creates `public.users` + `rider_profiles`
+2. `PATCH /me/profile { "date_of_birth": "YYYY-MM-DD" }`
+
+If step 2 fails the account exists with a null DOB — and a null DOB books freely.
+The app therefore **retries the PATCH on next launch whenever `/me/profile`
+returns `date_of_birth: null`**, blocking entry to the app until it succeeds.
+An account is not considered fully registered until its DOB is stored.
+
+**Client-side age check.** The server accepts any valid past date at PATCH and only
+refuses at booking (`403 ACCOUNT_NOT_ELIGIBLE`, "riders must be 13 or older").
+The app rejects an under-13 date **at the signup form**, before creating the
+account. Letting someone register, add a card, then discover at booking that they
+cannot ride is a worse experience than telling them immediately. The server gate
+remains the authority — the client check is a courtesy, not a substitute.
+
+**Validation, mirroring the server** (`profile_handler.go:70-82`): format
+`YYYY-MM-DD`, must parse, must be in the past, year ≥ 1900. Plus the client-only
+rule: age ≥ 13. On a server rejection, render its message verbatim
+(`"date_of_birth must be a valid past date (YYYY-MM-DD)"`).
+
+**Input control:** a date picker, not a free-text field — it makes the format
+unrepresentable-if-wrong and avoids locale ambiguity between `DD/MM` and `MM/DD`.
+Default the picker to a plausible adult year rather than today, so reaching a real
+birth date is a short scroll.
+
+### 4.4 The role claim
 
 The Supabase `custom_access_token_hook` is now **enabled**, so riders carry
 `user_role` in the JWT. `riderOnly()` on the backend rejects only
@@ -294,10 +332,45 @@ arrive. A rider JWT cannot reach it, despite the driver doc listing it as rider-
 |---|---|
 | Home map | `GET /service-areas`, `GET /vehicle-types` |
 | Route entry | `GET /geocode/search?q=` (saved places rank above map hits), `GET /geocode/reverse`, `GET /me/saved-locations` |
-| Vehicle select | `GET /vehicle-types` — render `seats`/`bags` from the API, never Figma |
+| Vehicle select | `GET /vehicle-types` — see §7.1.1 |
 | Fare details | `POST /rides/estimate`; richer breakdown from `POST :8081/quote` |
 | Default card | `GET /me/payment-methods`, `POST /me/payment-methods/setup-intent`, `POST /me/payment-methods/:pmId/default` |
 | Confirm booking | `POST /rides/request` → `202 {request_id}` |
+
+#### 7.1.1 Vehicle categories
+
+`GET /api/v1/vehicle-types` → `{"vehicle_types": [...]}`. Verified at
+`app_catalog_repo.go:225-236`. **Five fields, and no more:**
+
+```jsonc
+{ "id": "uuid", "name": "Standard",
+  "seats": 4, "bags": 2,
+  "price_multiplier": 1.0 }
+```
+
+- Filtered on `is_active` — a deactivated category (e.g. the old `testop` row)
+  never appears. The client does no filtering of its own.
+- **Ordered by `price_multiplier`, then `name`** — cheapest first. Render in the
+  order received; never re-sort.
+- `price_multiplier` is how the picker conveys relative cost before the estimate
+  call resolves. Not previously documented anywhere.
+- `seats`/`bags` are `COALESCE`d to `0`. A category configured with neither shows
+  no seats/bags row rather than "0 Seats" (rule 1).
+
+**There is no image, icon or description field.** The Figma draws an illustration
+per category; the API cannot supply one. The app therefore ships **local assets
+keyed by category `name`**, with a generic vehicle fallback for any name it does
+not recognise — because categories are admin-editable, a new one can appear at any
+time without an app release. The fallback is a designed state, not a placeholder.
+
+**Live categories** (2026-08-27 verification): Standard 4s/2b · Estate 5s/4b ·
+MPV 7s/5b · Minibus 8s/6b · MiniCar 4s/2b · MiniTruck 7s/2b. Six real categories,
+where the Figma drew four. Figma disagrees on several counts (Estate 4/4, MPV 6/4,
+Minibus 16/12) and omits MiniCar and MiniTruck entirely.
+
+**Render API values, never Figma values.** Where the two disagree the data is
+authoritative for the app — and because `vehicle_categories` is admin-editable, a
+genuinely wrong row is fixed in the admin panel, not in this codebase. See §10.1.
 
 **Per-ride payment choice does not exist.** Booking always charges the default
 card, so this screen is *"set your default card"* and must be worded that way.
@@ -389,15 +462,37 @@ Recorded so the errors are not re-inherited.
 
 ## 10. Open items
 
-1. **Minibus seats/bags** — live API says 8 seats / 6 bags; Figma draws 16/12.
-   The app renders API values, so it will contradict the design until someone
-   rules. Open since 2026-08-27, unanswered. *Needs a fleet decision.*
-2. **DOB collection at signup** — the under-13 gate cannot evaluate without it.
-   Collecting it is a compliance choice. *Needs a product decision.*
-3. **`/geocode/search` contradiction** — the endpoint exists and is described as
-   fronting Photon with saved places ranked first, but a neighbouring comment says
-   forward search is unavailable and the app should drop a pin instead. *Verify
-   behaviour against the live endpoint before building route entry.*
+### 10.1 Minibus seats/bags — an ops fix, not a build decision
+
+Live API says Minibus is 8 seats / 6 bags; the Figma draws 16/12. Estate and MPV
+also disagree.
+
+**This does not block the build.** The app renders API values either way (rule 1),
+so it is correct with respect to its data at all times. `vehicle_categories` is
+**admin-editable**, so if a row is genuinely wrong the fix is one edit in the admin
+panel — no app release, no code change, no migration.
+
+What is needed is someone who knows the fleet confirming which numbers are true.
+Until then the app shows 8/6 and is not wrong to. Open since 2026-08-27.
+
+### 10.2 `/geocode/search` — contradiction in the source
+
+`GET /geocode/search` exists and is documented at `ride_handler.go:111-112` as
+fronting Photon with saved places ranked above map hits. A comment five lines
+earlier (`:104-105`) states forward search is *not* available because the import is
+reverse-only, and that the app should drop a pin instead.
+
+Both cannot be true. Route entry is designed differently depending on which is —
+a search field, or a map-pin picker with reverse geocoding.
+
+**Resolution: test the live endpoint before building route entry.** This is a
+five-minute check against `api.hoppin.tech`, not a question for anyone. Scheduled
+as the first task of the booking batch.
+
+### 10.3 Resolved
+
+- **DOB at signup** — resolved 2026-08-30: collect it, required, with a
+  client-side under-13 check. See §4.3.
 
 ## 11. Dependencies on the product owner
 
