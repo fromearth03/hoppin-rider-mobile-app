@@ -15,9 +15,12 @@ class RiderProfile {
   final String email;
   final String? avatarUrl;
 
-  /// `YYYY-MM-DD`, or null when never set. A null DOB is treated by the
-  /// booking guard as ALLOWED, so null here means the age gate is unenforced
-  /// for this rider — see [needsDateOfBirth].
+  /// `YYYY-MM-DD`, or null when never set.
+  ///
+  /// Null is not a benign "not filled in yet" — the backend's booking guard
+  /// treats a null DOB as ALLOWED, so a rider with no date of birth can book
+  /// without ever passing the age check. That is why [needsDateOfBirth] exists
+  /// and why the app must force collection rather than defer it.
   final String? dateOfBirth;
 
   /// Null until at least one driver has rated this rider. Never defaulted:
@@ -35,6 +38,9 @@ class RiderProfile {
     required this.ratingCount,
   });
 
+  /// True exactly when [dateOfBirth] is null — meaning the app must collect
+  /// a date of birth before this rider is usable, since the backend itself
+  /// will not block booking on the missing value.
   bool get needsDateOfBirth => dateOfBirth == null;
 
   static String? _orNull(Object? v) {
