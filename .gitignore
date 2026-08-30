@@ -9,6 +9,13 @@
 **/GoogleService-Info.plist
 **/firebase_options.dart
 
+# Build-time config — see config/README.md
+# example.json is committed and documents the keys; real values never are.
+config/*.json
+!config/example.json
+**/*.xcconfig
+!**/Flutter/*.xcconfig
+
 # Flutter / Dart
 .dart_tool/
 .packages

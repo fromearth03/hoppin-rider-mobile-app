@@ -1,0 +1,7 @@
+{
+  "SUPABASE_URL": "",
+  "SUPABASE_ANON_KEY": "",
+  "STRIPE_PUBLISHABLE_KEY": "",
+  "SENTRY_DSN": "",
+  "API_BASE_URL": "https://api.hoppin.tech/api/v1"
+}

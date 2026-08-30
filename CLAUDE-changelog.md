@@ -1,6 +1,7 @@
 # Change Log
 > Auto-maintained by session-exit hook. Last updated: 2026-08-30
 
+- **2026-08-30 17:50** [new-rider-app] — Changed: `docs\superpowers\specs\2026-08-30-rider-app-milestone1-design.md`, `.gitignore`. ## Geocode resolved — forward search works Reading the code settled it faster than testing would have. `service/geocode_search.go` is a complete implementation; the comment in `ride_handler.go` claimi
 - **2026-08-30 17:43** [new-rider-app] — Changed: `docs\superpowers\specs\2026-08-30-rider-app-milestone1-design.md`, `.gitignore`. Committed. Three commits on `main`. --- ## What changed **DOB at signup — added, and it's messier than it sounds.** Supabase's `signUp()` has no DOB field, so it's two writes: create the account, then
 - **2026-08-30 17:40** [new-rider-app] — Changed: `docs\superpowers\specs\2026-08-30-rider-app-milestone1-design.md`, `.gitignore`. Committed. (The CRLF warning is normal Windows line-ending handling — harmless.) --- ## Where things stand **Repo initialised**, two commits on `main`. Nothing sensitive tracked — `.gitignore` covers 
 - **2026-08-30 16:57** [new-rider-app] — Changed: `docs\superpowers\specs\2026-08-30-rider-app-milestone1-design.md`. Both memory files corrected. `MEMORY.md`'s pointers still describe them accurately, so no change needed there. --- **Spec written and ready for review:** `docs/superpowers/specs/2026-08-30-rider-app-m
