@@ -1,0 +1,34 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:hoppin_rider/core/theme/app_theme.dart';
+import 'package:hoppin_rider/shared/widgets/hoppin_text_field.dart';
+
+Widget _wrap(Widget child) =>
+    MaterialApp(theme: AppTheme.light, home: Scaffold(body: child));
+
+void main() {
+  group('HoppinTextField', () {
+    testWidgets('shows its label and reports changes', (tester) async {
+      String? seen;
+      await tester.pumpWidget(_wrap(
+          HoppinTextField(label: 'Email', onChanged: (v) => seen = v)));
+
+      expect(find.text('Email'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'a@b.com');
+      expect(seen, 'a@b.com');
+    });
+
+    testWidgets('obscures text when asked', (tester) async {
+      await tester.pumpWidget(
+          _wrap(const HoppinTextField(label: 'Password', obscure: true)));
+      expect(tester.widget<TextField>(find.byType(TextField)).obscureText,
+          isTrue);
+    });
+
+    testWidgets('shows an error message when given one', (tester) async {
+      await tester.pumpWidget(_wrap(const HoppinTextField(
+          label: 'Email', errorText: 'That email is already in use')));
+      expect(find.text('That email is already in use'), findsOneWidget);
+    });
+  });
+}
