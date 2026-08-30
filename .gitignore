@@ -58,3 +58,4 @@ NUL
 
 # Local tooling state
 .claude/settings.local.json
+.superpowers/
