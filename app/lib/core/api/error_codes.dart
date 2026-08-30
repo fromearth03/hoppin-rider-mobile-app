@@ -47,6 +47,14 @@ class RiderErrorCopy {
     'POSITION_UNAVAILABLE': "We cannot see the driver's position yet.",
     'SHARE_LINK_INVALID': 'This tracking link is no longer active.',
 
+    // Supabase auth — mapped from GoTrue's structured error codes
+    'WEAK_PASSWORD': 'Choose a stronger password.',
+    'EMAIL_TAKEN': 'An account with that email already exists.',
+    'INVALID_CREDENTIALS': 'That email or password is not right.',
+    'TOO_MANY_ATTEMPTS': 'Too many attempts. Wait a moment and try again.',
+    'EXPIRED_LINK': 'That link has expired. Request a new one.',
+    'AUTH_FAILED': 'We could not sign you in. Try again.',
+
     // Account / session — auth gates
     'SESSION_REPLACED': 'You signed in on another device.',
     'ACCOUNT_SUSPENDED': 'Your account is suspended. Contact support.',
