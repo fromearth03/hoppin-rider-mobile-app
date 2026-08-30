@@ -14,8 +14,10 @@ spec supersedes where the two disagree.
 
 Every screen below is bound to an endpoint verified by reading merged handlers in
 `Go_ride_service`, not by trusting handover docs. This distinction is load-bearing:
-the handover docs and `SCREEN-API-MATRIX.md` were found wrong on eight counts
-during this design (see §9).
+the handover docs and `SCREEN-API-MATRIX.md` were found wrong on fifteen counts
+during this design (see §9), and one of the backend's own source comments
+contradicts its implementation (§10.2). **Where a comment and an implementation
+disagree, read the implementation.**
 
 ### Standing rules
 
@@ -331,13 +333,56 @@ arrive. A rider JWT cannot reach it, despite the driver doc listing it as rider-
 | Screen | Endpoints |
 |---|---|
 | Home map | `GET /service-areas`, `GET /vehicle-types` |
-| Route entry | `GET /geocode/search?q=` (saved places rank above map hits), `GET /geocode/reverse`, `GET /me/saved-locations` |
-| Vehicle select | `GET /vehicle-types` — see §7.1.1 |
+| Route entry | `GET /geocode/search` — see §7.1.1 · `GET /geocode/reverse` · `GET /me/saved-locations` |
+| Vehicle select | `GET /vehicle-types` — see §7.1.2 |
 | Fare details | `POST /rides/estimate`; richer breakdown from `POST :8081/quote` |
 | Default card | `GET /me/payment-methods`, `POST /me/payment-methods/setup-intent`, `POST /me/payment-methods/:pmId/default` |
 | Confirm booking | `POST /rides/request` → `202 {request_id}` |
 
-#### 7.1.1 Vehicle categories
+#### 7.1.1 Route entry — address autocomplete
+
+**Forward search works.** Verified at `service/geocode_search.go:16-104`. A comment
+in `ride_handler.go:104-105` claims otherwise and is stale — see §10.2. Route entry
+is a **search field**, not a map-pin picker. The pin picker remains as a secondary
+way to set a point, backed by `/geocode/reverse`.
+
+`GET /api/v1/geocode/search?q=&lat=&lng=&limit=` →
+`{"results": [...], "query": "..."}`
+
+```jsonc
+{ "label": "Molineux Stadium, Waterloo Road, Wolverhampton",
+  "lat": 52.590, "lng": -2.130,
+  "postcode": "WV1 4QR",   // omitted when empty
+  "source": "saved" }      // "saved" | "map"
+```
+
+**Behaviour, and what the client must honour:**
+
+- **Minimum query is 2 characters.** Below that the server returns `[]` — not an
+  error. Do not call until the field holds 2+ characters.
+- **Maximum 8 results**, which is also the default. `limit` above 8 is clamped.
+- **`lat`/`lng` bias results, they do not bound them.** Pass the rider's position
+  when available. Bounding is explicitly rejected upstream: someone booking to
+  Birmingham Airport must not get zero results.
+- **`source` distinguishes a saved place from a map hit** — style them differently.
+  Saved places match first and always win; Photon fills the remainder.
+  Deduplicated on coordinates to 5 decimal places.
+- Debounce keystrokes (~250 ms). Photon carries a 4 s server-side timeout, so the
+  client timeout must exceed that or it will cancel work the server would have
+  completed.
+
+> **An empty result set is ambiguous.** If Photon is unreachable the server returns
+> the rider's saved places alone — silently, with no error and no flag. So `[]` can
+> mean "no such place" or "the geocoder is down". Copy must not assert that no
+> such place exists; "No matches — try a different search" is honest where
+> "That place doesn't exist" is not.
+
+Photon is used rather than Nominatim because Nominatim matches whole tokens, so
+"molin" returns nothing where Photon returns Molineux. The app never talks to
+Photon directly — the ride service fronts it, so the geocoder can be swapped
+without an app release.
+
+#### 7.1.2 Vehicle categories
 
 `GET /api/v1/vehicle-types` → `{"vehicle_types": [...]}`. Verified at
 `app_catalog_repo.go:225-236`. **Five fields, and no more:**
@@ -457,6 +502,8 @@ Recorded so the errors are not re-inherited.
 | `app-status`, `contacts` | Not mentioned; both are launch-path endpoints |
 | `VEHICLE_CATEGORY_MISMATCH` is rider-only | Driver-only |
 | No demand heatmap endpoint | `GET /demand-heatmap` exists (driver-facing) |
+| Forward geocode search unavailable; drop a pin instead | **Forward search works** — `geocode_search.go` fronts Photon for prefix matching. The contradicting comment is stale (§10.2) |
+| `/vehicle-types` returns seats and bags | Also returns `price_multiplier`, and results are ordered by it |
 
 ---
 
@@ -475,24 +522,14 @@ panel — no app release, no code change, no migration.
 What is needed is someone who knows the fleet confirming which numbers are true.
 Until then the app shows 8/6 and is not wrong to. Open since 2026-08-27.
 
-### 10.2 `/geocode/search` — contradiction in the source
-
-`GET /geocode/search` exists and is documented at `ride_handler.go:111-112` as
-fronting Photon with saved places ranked above map hits. A comment five lines
-earlier (`:104-105`) states forward search is *not* available because the import is
-reverse-only, and that the app should drop a pin instead.
-
-Both cannot be true. Route entry is designed differently depending on which is —
-a search field, or a map-pin picker with reverse geocoding.
-
-**Resolution: test the live endpoint before building route entry.** This is a
-five-minute check against `api.hoppin.tech`, not a question for anyone. Scheduled
-as the first task of the booking batch.
-
-### 10.3 Resolved
+### 10.2 Resolved
 
 - **DOB at signup** — resolved 2026-08-30: collect it, required, with a
   client-side under-13 check. See §4.3.
+- **`/geocode/search`** — resolved 2026-08-30 by reading
+  `service/geocode_search.go`. **Forward search works**; the contradicting comment
+  at `ride_handler.go:104-105` is stale. Route entry is a search field. Contract
+  and behaviour in §7.1.1.
 
 ## 11. Dependencies on the product owner
 
