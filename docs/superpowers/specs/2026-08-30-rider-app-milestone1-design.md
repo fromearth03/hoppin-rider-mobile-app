@@ -335,7 +335,7 @@ arrive. A rider JWT cannot reach it, despite the driver doc listing it as rider-
 | Home map | `GET /service-areas`, `GET /vehicle-types` |
 | Route entry | `GET /geocode/search` — see §7.1.1 · `GET /geocode/reverse` · `GET /me/saved-locations` |
 | Vehicle select | `GET /vehicle-types` — see §7.1.2 |
-| Fare details | `POST /rides/estimate`; richer breakdown from `POST :8081/quote` |
+| Fare details | `POST /rides/estimate` — one call, see below |
 | Default card | `GET /me/payment-methods`, `POST /me/payment-methods/setup-intent`, `POST /me/payment-methods/:pmId/default` |
 | Confirm booking | `POST /rides/request` → `202 {request_id}` |
 
@@ -419,6 +419,17 @@ genuinely wrong row is fixed in the admin panel, not in this codebase. See §10.
 
 **Per-ride payment choice does not exist.** Booking always charges the default
 card, so this screen is *"set your default card"* and must be worded that way.
+
+**`POST /rides/estimate` is the only pricing call.** It returns the fare
+breakdown, distance, duration, the road polyline for the preview map, the
+cancellation policy and the ETA tier — in one response.
+
+> **Never call the dispatch engine (`:8081`) from the app.** Its README states it
+> is not client-facing, and the ride service already asks it for the corrected
+> trip ETA internally so the quote and the eventual charge price off identical
+> numbers. Raw OSRM under-predicts local trips by ~40%, which previously showed
+> as a 7% gap between quote and offer. An earlier draft of this spec had the app
+> calling `:8081/quote` for a richer breakdown; that was wrong.
 
 **Surge:** admin-set multiplier, real, rendered as designed. There is no demand
 map for riders — `GET /demand-heatmap` exists but is a driver-facing overlay.
