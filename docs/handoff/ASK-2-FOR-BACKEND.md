@@ -1,4 +1,9 @@
-# ASK-2 — rider app
+# ASK-2 — rider app · ✅ CLOSED
+
+> **Both items delivered the same day** (`3e9c4a8`, `b5f0f58`). Reply:
+> `BACKEND-FOR-RIDER-APP-ASK2-REPLY-2026-08-30.md`. Verified against the merged
+> handlers, not just the reply. Kept for the record; nothing here is outstanding.
+
 
 **Date:** 2026-08-30 · **Service:** `Go_ride_service` (`api.hoppin.tech`)
 **From:** rider app · **Previous:** ASK-1 (`FOR-BACKEND.md`) — fully delivered,
@@ -12,7 +17,28 @@ Numbered R1, R2 so replies stay traceable.
 
 ---
 
-## R1 · Turn-by-turn steps for the rider's trip screen
+## R1 · Turn-by-turn steps — ✅ DELIVERED 2026-08-30
+
+Built despite our caveat. Their answer: *"it's cheap OSRM plumbing and the design
+calls for it, so it's built. Use it or ignore it."*
+
+`GET /rides/:id` → `geo.steps`, verified at `rider_ride_detail.go:34,164-170`:
+
+```jsonc
+"steps": [ { "instruction": "Turn left onto Waterloo Road",
+             "distance_meters": 2414, "maneuver": "turn-left" } ]
+```
+
+Two details better than what we asked for:
+
+- **`null` unless the trip is actively being driven** (`accepted`/`arriving`/
+  `started`), so a finished-trip poll does not pay for an OSRM steps call.
+- **`null`, never `[]`** — `[]` would mean "no turns", `null` means "unavailable".
+  The banner hides on null rather than rendering an empty state.
+- `maneuver` carries the raw OSRM type (`turn-left`, `arrive`, `roundabout`) as
+  well as composed prose, so we can write our own copy if theirs reads oddly.
+
+*Original request follows for the record.*
 
 **Priority:** low. Nice-to-have, not blocking.
 
@@ -50,18 +76,21 @@ Until then the banner shows trip status and ETA, both of which we already have.
 
 ## R2 · Rider's own rating — ✅ DELIVERED 2026-08-30
 
-Shipped as **`GET /me/rating`** (`b5f0f58`) rather than fields on `/me/profile`,
-which is the better shape — the side nav does not pay for a distribution query it
-will not render, and a future ratings screen uses the same endpoint.
+Shipped **both ways**, verified at `profile_handler.go:29-50`:
+
+**`GET /me/profile`** now carries the two fields exactly as asked — this is what
+the side nav uses, so the header costs no extra call:
 
 ```jsonc
-{ "average_rating": 4.31,     // null until at least one review
-  "rating_count": 150,
-  "distribution": { "5": 120, "4": 20, "3": 6, "2": 3, "1": 1 } }
+{ …, "rating": 4.31,      // null until rated at least once
+      "rating_count": 150 }
 ```
 
-The null-not-defaulted point was honoured exactly (`rating_handler.go:40,44`), and
-a star distribution we did not ask for was added. Nothing further needed.
+**`GET /me/rating`** additionally exists for a richer ratings screen, adding a
+1–5 star `distribution` we did not ask for.
+
+Both compute live from `reviews` rather than a cached column, so neither goes
+stale. The null-not-defaulted point was honoured in both.
 
 *Original request follows for the record.*
 
@@ -119,8 +148,10 @@ Recorded so you know they were considered and deliberately left alone.
 | Ask | Item | Status |
 |---|---|---|
 | ASK-1 | R1–R5 | ✅ delivered (rounds 1–5) |
-| ASK-2 | R1 turn-by-turn steps | open |
-| ASK-2 | R2 rider rating | ✅ delivered as `GET /me/rating` (`b5f0f58`) |
+| ASK-2 | R1 turn-by-turn steps | ✅ delivered (`3e9c4a8`) |
+| ASK-2 | R2 rider rating | ✅ delivered (`3e9c4a8` + `b5f0f58`) |
+
+**Nothing outstanding. Next ask is ASK-3.**
 
 ---
 

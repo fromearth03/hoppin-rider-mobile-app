@@ -192,7 +192,21 @@ Route line, driver position, destination bar, driver identity, Cancel Ride.
 
 | Drawn | Building | Why |
 |---|---|---|
-| "Take left after 1.5 mi" banner | **Deferred — backend ask R1** | No endpoint returns turn instructions; `/rides/:id` gives a polyline only. Ismail asked for it to be raised with backend rather than dropped. Until it lands the banner space carries trip status and ETA. *2026-08-30* |
+| "Take left after 1.5 mi" banner | **Build it — `geo.steps`** | Raised as ASK-2 R1 and **delivered the same day** (`3e9c4a8`), despite our caveat that a passenger cannot act on a turn instruction. Rendered as drawn. *2026-08-30* |
+
+**`geo.steps` semantics matter here.** It is `null` — never `[]` — outside the
+driving states (`accepted`/`arriving`/`started`), and also `null` when OSRM is
+slow or unavailable. So:
+
+- **Hide the banner on `null`.** It is not an empty state; it means "no
+  instructions available", and an empty banner would read as a broken one.
+- `[]` would mean "no turns remain" and is not what the API sends. Do not treat
+  the two the same.
+- The `route` polyline renders regardless, so a null `steps` degrades to a map
+  without a banner rather than a broken screen.
+- Each step carries `maneuver` (raw OSRM: `turn-left`, `arrive`, `roundabout`)
+  alongside composed `instruction` prose. Use the prose; keep `maneuver` for the
+  directional icon.
 
 ---
 
@@ -215,7 +229,7 @@ Profile header, eight destinations, logout.
 
 | Drawn | Building | Why |
 |---|---|---|
-| Rider's own rating (4.31, 150) | **Build it — `GET /me/rating`** | Raised as ASK-2 R2 and **delivered the same day** (`b5f0f58`). Returns `average_rating` (null until at least one review), `rating_count`, and a 1–5 star `distribution` we did not ask for. Rendered as drawn. *2026-08-30* |
+| Rider's own rating (4.31, 150) | **Build it — `rating` + `rating_count` on `/me/profile`** | Raised as ASK-2 R2 and **delivered the same day** (`3e9c4a8`). The header needs no extra call. `rating` is null until the rider has been rated at least once — show the name alone in that case, never a fabricated score. A richer `GET /me/rating` with a star distribution also exists for a future ratings screen. *2026-08-30* |
 | Eight destinations | **All eight rendered; out-of-scope ones disabled** | Seven are outside milestone 1. Showing them disabled keeps the app's real shape visible without pretending they work, and each becomes a self-contained addition later. *2026-08-30* |
 
 In milestone 1: Logout, and the trip flow the drawer sits over.
