@@ -38,10 +38,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final error = state.error;
 
     return AuthScaffold(
-      // Distinct from the button's "Login" label -- `find.text('Login')` in
-      // the widget test must resolve uniquely to the submit button, and a
-      // header reading "Login" too made the tap target ambiguous.
-      title: 'Log in',
+      title: 'Login',
       subtitle: 'Welcome back',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

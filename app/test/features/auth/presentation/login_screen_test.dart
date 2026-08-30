@@ -6,6 +6,7 @@ import 'package:hoppin_rider/core/theme/app_theme.dart';
 import 'package:hoppin_rider/features/auth/application/auth_controller.dart';
 import 'package:hoppin_rider/features/auth/domain/auth_state.dart';
 import 'package:hoppin_rider/features/auth/presentation/login_screen.dart';
+import 'package:hoppin_rider/shared/widgets/hoppin_button.dart';
 import 'package:mocktail/mocktail.dart';
 
 class _MockController extends Mock implements AuthController {}
@@ -67,7 +68,7 @@ void main() {
 
     await tester.enterText(find.byType(TextField).first, 'ada@example.com');
     await tester.enterText(find.byType(TextField).last, 'hunter2');
-    await tester.tap(find.text('Login'));
+    await tester.tap(find.widgetWithText(HoppinButton, 'Login'));
     await tester.pump();
 
     verify(() => controller.signIn('ada@example.com', 'hunter2')).called(1);
@@ -89,6 +90,6 @@ void main() {
   testWidgets('renders in dark mode', (tester) async {
     await tester.pumpWidget(_harness(controller, const AuthSnapshot(),
         brightness: Brightness.dark));
-    expect(find.text('Login'), findsWidgets);
+    expect(find.widgetWithText(HoppinButton, 'Login'), findsOneWidget);
   });
 }
