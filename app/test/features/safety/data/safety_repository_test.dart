@@ -16,6 +16,62 @@ void main() {
     repo = SafetyRepository(api);
   });
 
+  group('crash safety at the JSON boundary', () {
+    test('a non-object row does not take down the contact list', () async {
+      // List.cast() is lazy in Dart: it throws when map pulls the bad element,
+      // escaping a method whose signature promises a Result. ApiClient catches
+      // only DioException, so it would propagate to a caller that cannot see
+      // it coming - on the emergency contacts screen.
+      when(() => api.get<Map<String, dynamic>>(any()))
+          .thenAnswer((_) async => const Ok({
+                'contacts': [
+                  {'id': 'c1', 'name': 'Mum', 'phone': '+447700900123'},
+                  null,
+                  'not an object',
+                  {'id': 'c2', 'name': 'Dad', 'phone': '+447700900124'},
+                ],
+              }));
+
+      final result = await repo.listContacts();
+      final names =
+          (result as Ok<List<EmergencyContact>>).value.map((c) => c.name);
+
+      expect(names, ['Mum', 'Dad']);
+    });
+
+    test('a contact that cannot be rung is dropped, not rendered', () async {
+      // addContact refuses a blank number on the way in; nothing refused one
+      // on the way out. A contact with no phone renders as a tappable row
+      // whose call button does nothing - in an emergency, worse than absent.
+      when(() => api.get<Map<String, dynamic>>(any()))
+          .thenAnswer((_) async => const Ok({
+                'contacts': [
+                  {'id': 'c1', 'name': 'Mum', 'phone': '+447700900123'},
+                  {'id': 'c2', 'name': 'No phone', 'phone': ''},
+                  {'id': 'c3', 'name': '', 'phone': '+447700900125'},
+                  {'name': 'No id', 'phone': '+447700900126'},
+                ],
+              }));
+
+      final names = ((await repo.listContacts()) as Ok<List<EmergencyContact>>)
+          .value
+          .map((c) => c.name);
+
+      expect(names, ['Mum']);
+    });
+
+    test('a share link with no url is a failure, not a blank link', () async {
+      // A blank link handed to the share sheet lets the rider believe someone
+      // can follow their trip when nobody can.
+      when(() => api.post<Map<String, dynamic>>(any()))
+          .thenAnswer((_) async => const Ok({'token': 'tok-1', 'url': ''}));
+
+      final result = await repo.createShareLink('ride-1');
+
+      expect((result as Err).error.code, 'INTERNAL');
+    });
+  });
+
   group('raiseSos', () {
     test('sends position and ride when both are known', () async {
       when(() => api.post<Map<String, dynamic>>(any(),

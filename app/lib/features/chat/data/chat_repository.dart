@@ -40,20 +40,42 @@ class RideMessage {
 
   bool get isMine => senderRole == 'rider';
 
-  factory RideMessage.fromJson(Map<String, dynamic> json) {
-    final parent = (json['reply_to'] as Map?)?.cast<String, dynamic>();
+  /// Null for a message that cannot be placed in the thread.
+  ///
+  /// A message with an unparseable timestamp previously fell back to epoch
+  /// zero, which pins it to the top of the thread forever and - if the caller
+  /// derives the next `since` cursor from the newest message - silently
+  /// poisons the poll. Dropping it costs one message; keeping it breaks the
+  /// conversation.
+  static RideMessage? tryFromJson(Map<String, dynamic> json) {
+    final raw = json['created_at'];
+    final createdAt = raw is String ? DateTime.tryParse(raw)?.toUtc() : null;
+    if (createdAt == null) return null;
+
+    final senderRole = (json['sender_role'] as String?) ?? '';
+    final parent = switch (json['reply_to']) {
+      Map m => m.cast<String, dynamic>(),
+      _ => null,
+    };
+
     return RideMessage(
       id: (json['id'] as String?) ?? '',
       body: (json['body'] as String?) ?? '',
-      senderRole: (json['sender_role'] as String?) ?? '',
-      createdAt:
-          DateTime.tryParse((json['created_at'] as String?) ?? '')?.toUtc() ??
-              DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
-      status: json['status'] as String?,
+      senderRole: senderRole,
+      createdAt: createdAt,
+      // Enforced here rather than trusted from the server: a read tick on the
+      // driver's own message would claim the driver had read their own text.
+      status: senderRole == 'rider' ? json['status'] as String? : null,
       replyToId: json['reply_to_id'] as String?,
-      replyToPreview: parent?['body'] as String?,
+      replyToPreview: switch (parent?['body']) {
+        String s when s.isNotEmpty => s,
+        _ => null,
+      },
     );
   }
+
+  factory RideMessage.fromJson(Map<String, dynamic> json) =>
+      tryFromJson(json)!;
 }
 
 class ChatRepository {
@@ -79,9 +101,15 @@ class ChatRepository {
     );
 
     return switch (result) {
-      Ok(:final value) => Ok(((value['messages'] as List?) ?? [])
-          .cast<Map<String, dynamic>>()
-          .map(RideMessage.fromJson)
+      // `List.cast()` is lazy in Dart: it validates nothing at the call and
+      // throws later when `map` pulls an element, escaping a method whose
+      // signature promises a Result. Filtering by type first is safe.
+      Ok(:final value) => Ok((value['messages'] is List
+              ? value['messages'] as List
+              : const [])
+          .whereType<Map<String, dynamic>>()
+          .map(RideMessage.tryFromJson)
+          .whereType<RideMessage>()
           .toList(growable: false)),
       Err(:final error) => Err(error),
     };
@@ -99,7 +127,7 @@ class ChatRepository {
   }) async {
     final trimmed = body.trim();
     if (trimmed.isEmpty) {
-      return Err(ApiException(
+      return const Err(ApiException(
           'VALIDATION_FAILED', 'Type a message before sending.', 0));
     }
 

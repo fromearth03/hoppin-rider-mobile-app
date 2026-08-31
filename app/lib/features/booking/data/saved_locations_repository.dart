@@ -44,8 +44,12 @@ class SavedLocationsRepository {
     final result =
         await _api.get<Map<String, dynamic>>('/me/saved-locations');
     return switch (result) {
-      Ok(:final value) => Ok(((value['saved_locations'] as List?) ?? [])
-          .cast<Map<String, dynamic>>()
+      // `List.cast()` is lazy: it throws when `map` pulls a non-object element,
+      // escaping a method that promises a Result. Filter by type instead.
+      Ok(:final value) => Ok((value['saved_locations'] is List
+              ? value['saved_locations'] as List
+              : const [])
+          .whereType<Map<String, dynamic>>()
           .map(SavedLocation.tryFromJson)
           .whereType<SavedLocation>()
           .toList(growable: false)),
@@ -110,7 +114,7 @@ class SavedLocationsRepository {
   Result<SavedLocation> _fromValidJson(Map<String, dynamic> json) {
     final place = SavedLocation.tryFromJson(json);
     if (place == null) {
-      return Err(ApiException(
+      return const Err(ApiException(
           'INTERNAL', 'Saved place response was missing an id.', 0));
     }
     return Ok(place);

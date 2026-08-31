@@ -76,9 +76,54 @@ void main() {
       expect(m.replyToPreview, isNull,
           reason: 'the bubble shows no quote rather than an empty one');
     });
+
+    test("a read tick is stripped from a message that is not the rider's", () {
+      // Enforced here rather than trusted from the server: a tick on the
+      // driver's own message would claim the driver read their own text.
+      final m = RideMessage.fromJson(const {
+        'id': 'm6', 'body': 'On my way', 'sender_role': 'driver',
+        'created_at': '2026-08-31T09:05:00Z', 'status': 'read',
+      });
+
+      expect(m.status, isNull);
+    });
+
+    test('a message with an unparseable timestamp is dropped', () {
+      // It previously fell back to epoch zero, pinning it to the top of the
+      // thread forever - and if the caller derives the next `since` cursor
+      // from the newest message, silently poisoning the poll.
+      expect(
+        RideMessage.tryFromJson(const {
+          'id': 'm7', 'body': 'Broken', 'sender_role': 'driver',
+          'created_at': 'not a timestamp',
+        }),
+        isNull,
+      );
+    });
   });
 
   group('messages', () {
+    test('a non-object row does not take down the thread', () async {
+      // List.cast() is lazy: it throws when map pulls the bad element,
+      // escaping a method whose signature promises a Result.
+      when(() => api.get<Map<String, dynamic>>(any(),
+              query: any(named: 'query')))
+          .thenAnswer((_) async => const Ok({
+                'messages': [
+                  {'id': 'm1', 'body': 'Hi', 'sender_role': 'rider',
+                   'created_at': '2026-08-31T09:00:00Z'},
+                  null,
+                  'not an object',
+                ],
+              }));
+
+      final msgs =
+          ((await repo.messages('ride-1')) as Ok<List<RideMessage>>).value;
+
+      expect(msgs, hasLength(1));
+      expect(msgs.single.body, 'Hi');
+    });
+
     test('sends the since cursor as RFC3339 when given', () async {
       when(() => api.get<Map<String, dynamic>>(any(),
               query: any(named: 'query')))
