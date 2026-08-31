@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/colors.dart';
 import '../../../shared/nav/app_router.dart';
-import '../../booking/presentation/widgets/map_placeholder.dart';
+import '../../booking/presentation/widgets/rider_map.dart';
 import '../data/live_trip_source.dart';
 import 'widgets/driver_info_card.dart';
 import 'widgets/trip_status_banner.dart';
@@ -38,10 +38,10 @@ final liveTripInfoProvider =
 /// "finding your driver" state rather than inventing an endpoint call or
 /// fabricating a driver. See that file for the full explanation.
 ///
-/// The map is [MapPlaceholder], reused exactly as `HomeScreen` uses it --
-/// there is no Maps SDK key, so the route, waypoint pins and driver marker
-/// this design draws over the map are not rendered; only the placeholder
-/// surface and the chrome above it are.
+/// The map is [RiderMap], reused exactly as `HomeScreen` uses it -- live
+/// tiles on Android/iOS, the honest placeholder elsewhere. The route,
+/// waypoint pins and driver marker this design draws over the map are not
+/// rendered yet; they need the `GET /rides/:id` data this screen also lacks.
 class LiveTripScreen extends ConsumerWidget {
   final String rideId;
 
@@ -84,7 +84,7 @@ class _LiveTripBody extends StatelessWidget {
 
     return Stack(
       children: [
-        const Positioned.fill(child: MapPlaceholder()),
+        const Positioned.fill(child: RiderMap()),
         Positioned(
           top: topInset,
           left: 16,

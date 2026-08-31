@@ -7,7 +7,7 @@ import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
 import '../../../shared/nav/app_drawer.dart';
 import '../data/vehicle_repository.dart';
-import 'widgets/map_placeholder.dart';
+import 'widgets/rider_map.dart';
 import 'widgets/vehicle_card.dart';
 
 /// The categories the rider can book, cheapest first.
@@ -46,7 +46,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       drawer: const AppDrawer(),
       body: Stack(
         children: [
-          const Positioned.fill(child: MapPlaceholder()),
+          const Positioned.fill(child: RiderMap()),
           Positioned(
             top: MediaQuery.of(context).padding.top + 12,
             left: 16,
