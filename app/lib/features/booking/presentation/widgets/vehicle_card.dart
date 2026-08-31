@@ -62,6 +62,18 @@ class VehicleCard extends StatelessWidget {
                   ],
                 ),
               ),
+              // Selection is marked, not merely tinted. A background shade on
+              // its own carries no meaning to a rider who cannot distinguish
+              // it from the unselected surface.
+              if (selected)
+                const Padding(
+                  padding: EdgeInsets.only(left: 6),
+                  child: Icon(
+                    Icons.check_circle,
+                    size: 20,
+                    color: AppColors.primary,
+                  ),
+                ),
             ],
           ),
         ),

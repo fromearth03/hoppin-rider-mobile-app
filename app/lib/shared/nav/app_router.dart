@@ -9,6 +9,10 @@ import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/signup_screen.dart';
 import '../../features/booking/presentation/home_screen.dart';
 import '../../features/booking/presentation/route_entry_screen.dart';
+import '../../features/booking/presentation/select_vehicle_screen.dart';
+import '../../features/payments/presentation/payment_methods_screen.dart';
+import '../../features/payments/presentation/ride_complete_screen.dart';
+import '../../features/profile/presentation/personal_information_screen.dart';
 import '../../features/chat/presentation/chat_screen.dart';
 import '../../features/safety/presentation/safety_screen.dart';
 
@@ -107,6 +111,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.home,
         builder: (_, __) => const HomeScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.personalInformation,
+        builder: (_, __) => const PersonalInformationScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.paymentMethods,
+        builder: (_, __) => const PaymentMethodsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.selectVehicle,
+        builder: (_, __) => const SelectVehicleScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.rideComplete,
+        builder: (_, state) => RideCompleteScreen(
+          rideId: state.uri.queryParameters['ride'] ?? '',
+        ),
       ),
       GoRoute(
         path: AppRoutes.route,
