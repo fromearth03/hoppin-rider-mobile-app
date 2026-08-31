@@ -1,0 +1,7 @@
+{
+  "SUPABASE_URL": "https://buoreyyxpzvwnxvzpfea.supabase.co",
+  "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1b3JleXl4cHp2d254dnpwZmVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNDE1NzgsImV4cCI6MjA5MzgxNzU3OH0.tMijVgnFnp67wHHWTkZfCJl1vcR9SDOBDLfHFC-1PD4",
+  "STRIPE_PUBLISHABLE_KEY": "pk_test_51Th3BvEXs71EYRdITIJZKEPuOpN8Rs0kCuqzYVk62zItzzwaQuzEaUAPvP7OIGAUFFcDEzkSaL8N1Qbbp3WSYMrN00SlndliU0",
+  "SENTRY_DSN": "",
+  "API_BASE_URL": "https://api.hoppin.tech/api/v1"
+}

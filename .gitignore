@@ -10,9 +10,14 @@
 **/firebase_options.dart
 
 # Build-time config — see config/README.md
-# example.json is committed and documents the keys; real values never are.
+# example.json documents the keys. dev.json is committed DELIBERATELY: it
+# carries only client-safe publishable values (Supabase anon key, Stripe
+# pk_test, public URLs) that ship inside every app build anyway. Anything
+# actually secret — service keys, DB URLs, sk_ keys — must never be added
+# to it or to this repo.
 config/*.json
 !config/example.json
+!config/dev.json
 **/*.xcconfig
 !**/Flutter/*.xcconfig
 
