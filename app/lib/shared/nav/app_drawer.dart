@@ -9,10 +9,11 @@ import 'app_router.dart';
 
 /// The navigation drawer — `Side Nav Bar.png`.
 ///
-/// All eight destinations are rendered. The ones with nothing behind them —
-/// Schedule Rides and Ride History — are disabled rather than hidden: showing
-/// them keeps the app's real shape visible without pretending they work, and
-/// each becomes a self-contained addition later.
+/// All eight destinations are rendered and reachable. Where a screen's backend
+/// does not exist yet — scheduled rides and ride history are both recorded as
+/// later milestones — the screen itself says so honestly rather than the
+/// drawer hiding the destination or greying it out. `_Item` keeps its disabled
+/// state for whatever comes next.
 ///
 /// Destinations `push` rather than `go`. Every one of these screens has a back
 /// arrow, and `go` replaces the route instead of stacking it, so the arrow
@@ -51,9 +52,13 @@ class AppDrawer extends ConsumerWidget {
                       context.push(AppRoutes.personalInformation);
                     },
                   ),
-                  const _Item(
+                  _Item(
                     icon: Icons.calendar_today_outlined,
                     label: 'Schedule Rides',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      context.push(AppRoutes.scheduleRide);
+                    },
                   ),
                   _Item(
                     icon: Icons.campaign_outlined,
@@ -63,9 +68,13 @@ class AppDrawer extends ConsumerWidget {
                       context.push(AppRoutes.promotional);
                     },
                   ),
-                  const _Item(
+                  _Item(
                     icon: Icons.history,
                     label: 'Ride History',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      context.push(AppRoutes.rideHistory);
+                    },
                   ),
                   _Item(
                     icon: Icons.credit_card,

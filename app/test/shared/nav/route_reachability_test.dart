@@ -17,6 +17,8 @@ void main() {
     AppRoutes.promotional,
     AppRoutes.settings,
     AppRoutes.helpSupport,
+    AppRoutes.rideHistory,
+    AppRoutes.scheduleRide,
   ];
 
   const bookingFlow = <String>[
@@ -26,6 +28,7 @@ void main() {
     AppRoutes.rideComplete,
     AppRoutes.chat,
     AppRoutes.safety,
+    AppRoutes.tripDetails,
   ];
 
   group('a signed-in rider is left alone on', () {

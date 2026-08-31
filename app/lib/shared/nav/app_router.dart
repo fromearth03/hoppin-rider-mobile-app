@@ -10,11 +10,14 @@ import '../../features/auth/presentation/signup_screen.dart';
 import '../../features/booking/presentation/home_screen.dart';
 import '../../features/booking/presentation/route_entry_screen.dart';
 import '../../features/booking/presentation/select_vehicle_screen.dart';
+import '../../features/history/presentation/ride_history_screen.dart';
+import '../../features/history/presentation/trip_details_screen.dart';
 import '../../features/notifications/presentation/notifications_screen.dart';
 import '../../features/notifications/presentation/promotional_screen.dart';
 import '../../features/payments/presentation/payment_methods_screen.dart';
 import '../../features/payments/presentation/ride_complete_screen.dart';
 import '../../features/profile/presentation/personal_information_screen.dart';
+import '../../features/scheduling/presentation/schedule_ride_screen.dart';
 import '../../features/settings/presentation/help_support_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/chat/presentation/chat_screen.dart';
@@ -33,6 +36,9 @@ class AppRoutes {
   static const promotional = '/promotional';
   static const settings = '/settings';
   static const helpSupport = '/help-support';
+  static const rideHistory = '/ride-history';
+  static const tripDetails = '/trip-details';
+  static const scheduleRide = '/schedule-ride';
   static const home = '/home';
   static const route = '/route';
   static const safety = '/safety';
@@ -139,6 +145,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.settings,
         builder: (_, __) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.rideHistory,
+        builder: (_, __) => const RideHistoryScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.scheduleRide,
+        builder: (_, __) => const ScheduleRideScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.tripDetails,
+        builder: (_, state) => TripDetailsScreen(
+          rideId: state.uri.queryParameters['ride'] ?? '',
+        ),
       ),
       GoRoute(
         path: AppRoutes.helpSupport,
