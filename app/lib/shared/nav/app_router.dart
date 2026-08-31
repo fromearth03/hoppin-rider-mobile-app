@@ -10,6 +10,7 @@ import '../../features/auth/presentation/link_sent_screen.dart';
 import '../../features/auth/presentation/reset_password_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/signup_screen.dart';
+import '../../features/booking/presentation/fare_confirm_flow.dart';
 import '../../features/booking/presentation/fare_confirm_screen.dart';
 import '../../features/booking/presentation/home_screen.dart';
 import '../../features/booking/presentation/route_entry_screen.dart';
@@ -198,7 +199,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.fareConfirm,
-        builder: (_, __) => const FareConfirmScreen(),
+        builder: (_, state) {
+          // A deep link or refresh arrives with no route to price — the
+          // screen's empty state says so honestly.
+          final route = state.extra;
+          return route is ChosenRoute
+              ? FareConfirmFlow(route: route)
+              : const FareConfirmScreen();
+        },
       ),
       GoRoute(
         path: AppRoutes.transactions,
