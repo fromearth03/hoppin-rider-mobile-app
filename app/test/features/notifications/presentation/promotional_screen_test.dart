@@ -1,0 +1,98 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:hoppin_rider/core/theme/app_theme.dart';
+import 'package:hoppin_rider/features/notifications/data/promotions_source.dart';
+import 'package:hoppin_rider/features/notifications/domain/promotion_item.dart';
+import 'package:hoppin_rider/features/notifications/presentation/promotional_screen.dart';
+import 'package:mocktail/mocktail.dart';
+
+class _MockSource extends Mock implements PromotionsSource {}
+
+final _sampleItems = [
+  PromotionItem(
+    id: '1',
+    title: 'First Ride Discount',
+    description: "Get 10% off on your first ride with Hoppin'",
+    status: PromotionStatus.active,
+    validUntil: DateTime(2026, 9, 2),
+  ),
+  PromotionItem(
+    id: '2',
+    title: 'First Ride Discount',
+    description: "Get 10% off on your first ride with Hoppin'",
+    status: PromotionStatus.availed,
+    validUntil: DateTime(2026, 9, 2),
+  ),
+  PromotionItem(
+    id: '3',
+    title: 'First Ride Discount',
+    description: "Get 10% off on your first ride with Hoppin'",
+    status: PromotionStatus.expired,
+    validUntil: DateTime(2026, 9, 2),
+  ),
+];
+
+Widget _harness(PromotionsSource source,
+        {Brightness brightness = Brightness.light}) =>
+    ProviderScope(
+      overrides: [
+        promotionsSourceProvider.overrideWithValue(source),
+      ],
+      child: MaterialApp(
+        theme: brightness == Brightness.light ? AppTheme.light : AppTheme.dark,
+        home: const PromotionalScreen(),
+      ),
+    );
+
+void main() {
+  late _MockSource source;
+
+  setUp(() {
+    source = _MockSource();
+    when(() => source.list()).thenAnswer((_) async => const []);
+  });
+
+  testWidgets('has a const constructor taking only a key', (tester) async {
+    const screen = PromotionalScreen(key: Key('p'));
+    expect(screen.key, const Key('p'));
+  });
+
+  testWidgets('renders an honest empty state when the source has nothing',
+      (tester) async {
+    await tester.pumpWidget(_harness(source));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Promotional'), findsOneWidget);
+    expect(find.text('First Ride Discount'), findsNothing);
+    expect(find.textContaining('No promotions'), findsOneWidget);
+  });
+
+  testWidgets('renders each promotion with its status pill', (tester) async {
+    when(() => source.list()).thenAnswer((_) async => _sampleItems);
+
+    await tester.pumpWidget(_harness(source));
+    await tester.pumpAndSettle();
+
+    expect(find.text('First Ride Discount'), findsNWidgets(3));
+    expect(find.text('Active'), findsOneWidget);
+    expect(find.text('Availed'), findsOneWidget);
+    expect(find.text('Expire'), findsOneWidget);
+  });
+
+  testWidgets('renders the valid-until date', (tester) async {
+    when(() => source.list()).thenAnswer((_) async => [_sampleItems.first]);
+
+    await tester.pumpWidget(_harness(source));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Valid Until'), findsOneWidget);
+    expect(find.textContaining('02 September, 2026'), findsOneWidget);
+  });
+
+  testWidgets('renders in dark mode', (tester) async {
+    await tester.pumpWidget(_harness(source, brightness: Brightness.dark));
+    await tester.pumpAndSettle();
+    expect(find.text('Promotional'), findsOneWidget);
+  });
+}

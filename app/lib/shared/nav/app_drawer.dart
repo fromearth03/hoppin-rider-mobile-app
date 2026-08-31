@@ -9,11 +9,15 @@ import 'app_router.dart';
 
 /// The navigation drawer — `Side Nav Bar.png`.
 ///
-/// All eight destinations are rendered, but the seven outside milestone 1 are
-/// disabled rather than hidden. Showing them keeps the app's real shape
-/// visible without pretending they work, and each becomes a self-contained
-/// addition later. Hiding them would make the drawer look finished when it is
-/// not.
+/// All eight destinations are rendered. The ones with nothing behind them —
+/// Schedule Rides and Ride History — are disabled rather than hidden: showing
+/// them keeps the app's real shape visible without pretending they work, and
+/// each becomes a self-contained addition later.
+///
+/// Destinations `push` rather than `go`. Every one of these screens has a back
+/// arrow, and `go` replaces the route instead of stacking it, so the arrow
+/// would have nothing to pop and the browser's back button would leave the
+/// app.
 class AppDrawer extends ConsumerWidget {
   const AppDrawer({super.key});
 
@@ -44,16 +48,20 @@ class AppDrawer extends ConsumerWidget {
                     label: 'Personal Information',
                     onTap: () {
                       Navigator.of(context).pop();
-                      context.go(AppRoutes.personalInformation);
+                      context.push(AppRoutes.personalInformation);
                     },
                   ),
                   const _Item(
                     icon: Icons.calendar_today_outlined,
                     label: 'Schedule Rides',
                   ),
-                  const _Item(
+                  _Item(
                     icon: Icons.campaign_outlined,
                     label: 'Promotional',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      context.push(AppRoutes.promotional);
+                    },
                   ),
                   const _Item(
                     icon: Icons.history,
@@ -64,20 +72,32 @@ class AppDrawer extends ConsumerWidget {
                     label: 'Payments',
                     onTap: () {
                       Navigator.of(context).pop();
-                      context.go(AppRoutes.paymentMethods);
+                      context.push(AppRoutes.paymentMethods);
                     },
                   ),
-                  const _Item(
+                  _Item(
                     icon: Icons.notifications_none,
                     label: 'Notifications',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      context.push(AppRoutes.notifications);
+                    },
                   ),
-                  const _Item(
+                  _Item(
                     icon: Icons.support_agent_outlined,
                     label: 'Help & Support',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      context.push(AppRoutes.helpSupport);
+                    },
                   ),
-                  const _Item(
+                  _Item(
                     icon: Icons.settings_outlined,
                     label: 'Settings',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      context.push(AppRoutes.settings);
+                    },
                   ),
                 ],
               ),

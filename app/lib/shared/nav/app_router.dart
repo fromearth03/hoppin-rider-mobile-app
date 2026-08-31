@@ -10,9 +10,13 @@ import '../../features/auth/presentation/signup_screen.dart';
 import '../../features/booking/presentation/home_screen.dart';
 import '../../features/booking/presentation/route_entry_screen.dart';
 import '../../features/booking/presentation/select_vehicle_screen.dart';
+import '../../features/notifications/presentation/notifications_screen.dart';
+import '../../features/notifications/presentation/promotional_screen.dart';
 import '../../features/payments/presentation/payment_methods_screen.dart';
 import '../../features/payments/presentation/ride_complete_screen.dart';
 import '../../features/profile/presentation/personal_information_screen.dart';
+import '../../features/settings/presentation/help_support_screen.dart';
+import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/chat/presentation/chat_screen.dart';
 import '../../features/safety/presentation/safety_screen.dart';
 
@@ -25,6 +29,10 @@ class AppRoutes {
   static const paymentMethods = '/payment-methods';
   static const selectVehicle = '/select-vehicle';
   static const rideComplete = '/ride-complete';
+  static const notifications = '/notifications';
+  static const promotional = '/promotional';
+  static const settings = '/settings';
+  static const helpSupport = '/help-support';
   static const home = '/home';
   static const route = '/route';
   static const safety = '/safety';
@@ -123,6 +131,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.selectVehicle,
         builder: (_, __) => const SelectVehicleScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.notifications,
+        builder: (_, __) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.settings,
+        builder: (_, __) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.helpSupport,
+        builder: (_, __) => const HelpSupportScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.promotional,
+        builder: (_, __) => const PromotionalScreen(),
       ),
       GoRoute(
         path: AppRoutes.rideComplete,

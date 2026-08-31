@@ -414,3 +414,69 @@ Recorded so they are not silently lost.
 | Chat attachments | Object storage + a column on `ride_messages`. |
 | Chat voice notes | Same, plus audio capture and playback. |
 | Driver "Online" presence | Presence tracking that exists nowhere today. |
+| Add a card | The Stripe SDK card element and a `pk_test_` key. The setup-intent call is already wired; only collection is missing. |
+| Rider rating a ride | A ratings repository and `POST /rides/:id/rating`. Drawn on Ride Complete; no client exists yet. |
+| Notifications list | Any notifications endpoint. None exists in the API. |
+| Promotions list | Any promotions endpoint. None exists in the API. |
+
+---
+
+## Screens built 2026-08-31 — second wave
+
+Built against data layers that already existed, and wired into the router so
+each is reachable in the running app rather than merely compiling.
+
+### Payment cards — `Payment Methods.png`, `Select Payment Method.png`
+
+Card management, per the Payment section above — NOT a booking step, because the
+API has no per-ride payment selection. Adding a card calls the real
+setup-intent and then states plainly that the Stripe SDK step is not wired.
+**No raw PAN field**: collecting a card number in a widget we control moves the
+app from PCI SAQ A to SAQ A-EP, which the Payment section already forbids.
+
+### Personal Information — `Personal Information.png`
+
+| Drawn | Building | Why |
+|---|---|---|
+| First + Last name | **One "Full name"** | The backend stores one `full_name`, and a joined name cannot be reliably split back. Same reasoning as sign-up. |
+| Editable email | **Read-only** | `ProfileRepository.patch()` has no email parameter. An editable field would be a control that always fails. |
+| Phone as a chevron row into a sub-flow | **Inline field** | The constraint is expressible inline, and no sub-screen exists to navigate to. `409 PHONE_TAKEN` surfaces the server's own message — a phone is globally unique and cannot be cleared once set. |
+| "Verified — contact Support to change" notice | **Dropped** | Nothing in the API marks `full_name` as locked; it is an ordinary patchable field. Presenting it as immutable would misrepresent what the backend allows. |
+
+### Ride Complete — `Ride Complete.png`
+
+**A null total reads as "not charged yet", never as £0.00.** The receipt's money
+fields are all nullable and an uncharged ride has no total; rendering zero would
+state something false about money. A zero waiting charge hides its row entirely.
+
+| Drawn | Building | Why |
+|---|---|---|
+| "Your Driver" card with photo and rating | **Dropped** | `GET /rides/:id/receipt` returns no driver fields at all. |
+| "How was your ride?" rating prompt | **Not built** | No ratings repository exists. A tappable control that does nothing is worse than its absence — recorded above as phase 2. |
+| "13 min" duration | **Derived, and hidden when unknown** | The API has no duration field, only nullable timestamps. Computed from the difference when both are present. |
+
+### Select Vehicle — `Select Vehicle.png`
+
+Renders every category from `/vehicle-types` with live seats and bags, per the
+Vehicle select section. Selection is marked with a check as well as a background
+tint: a tint alone conveys nothing to a rider who cannot separate it from the
+unselected surface.
+
+Note `Select Vehicle.png` and `Ride Type.png` are the same frame — the pack has
+no distinct full-screen vehicle layout, so this is a faithful extension of the
+booking sheet's card language rather than a match of a drawn screen.
+
+### Notifications and Promotional — `Notifications.png`, `Promotional.png`
+
+**Neither has any backend.** Searched the whole API surface: there is no
+notifications endpoint and no promotions endpoint. Both screens are built
+faithfully to the design against a named placeholder source that returns an
+empty list, so each renders an honest empty state. Nothing invented is
+presented as real. A real repository drops in as a one-class change.
+
+### Navigation drawer — `Side Nav Bar.png`
+
+All eight destinations render; the ones with no backing are visibly disabled
+rather than hidden, so the app's real shape stays visible. The rider's rating is
+omitted entirely until a driver has actually rated them — a default 5.0 under a
+new rider's name would be a fabrication.
