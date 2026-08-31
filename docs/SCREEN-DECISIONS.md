@@ -401,6 +401,13 @@ Collected as they arise, to be sent in one batch rather than piecemeal.
    Deferred to phase 2 rather than removed.
 9. Receipt draws a fare breakdown the receipt endpoint does not return.
 10. Distances drawn in km; the API sends miles.
+11. **`Support.png` looks like a driver-app frame** — "Generate Payout" and
+    "Low Rating Appeal" are driver vocabulary. Is there a rider version of the
+    ticket flow, and is a ticket flow wanted for riders at all?
+12. The Logout dialog's body says "You've been signed out successfully" before
+    logout happens — pre-action dialog, post-action copy. Which is intended?
+13. Delete Account's Delete button is coral `#FB868B`, not the app's error red.
+    Deliberate, or should destructive actions share one red?
 
 ---
 
@@ -480,3 +487,66 @@ All eight destinations render; the ones with no backing are visibly disabled
 rather than hidden, so the app's real shape stays visible. The rider's rating is
 omitted entirely until a driver has actually rated them — a default 5.0 under a
 new rider's name would be a fabrication.
+
+---
+
+## Screens built 2026-08-31 — third wave (new design pack)
+
+Four frames landed in `docs/figma/Figma design.zip`: Help & Support, Support,
+Logout, Delete Account. All were render-verified against the frames (goldens
+beside the PNGs) before commit; the fidelity defects that pass found are fixed.
+
+### Help & Support — `Help & Support.png` (rebuilt)
+
+The first build predated the design and was laid out blind; rebuilt to the
+frame. Deviations:
+
+| Drawn | Building | Why |
+|---|---|---|
+| FAQ "What if any of my document expires?" | **Dropped** | Driver vocabulary — riders hold no documents this service tracks. |
+| "Open Ticket" card, live | **Disabled ("Soon")** | No support-ticket endpoint exists (ASK-3 R3). |
+| Legal rows as accordions | **Disabled ("Soon")** | No terms or privacy-policy documents exist to put inside them. |
+| Email card opens nothing | Plain text address | `url_launcher` is not a dependency; the address is shown verbatim. |
+| Open Ticket icon: doc + magnifier + warning triangle | Closest Material icon | No Material equivalent of the composite motif; a custom asset would need the designer's SVG. |
+
+Fidelity pass fixes: doubled card dividers removed (SettingsCard already
+inserts them), first FAQ opens by default as drawn, answers in the same navy
+as questions, chevrons in the frame's lighter grey, the live Email tile keeps
+its grey subtitle. An invented "How is my fare calculated?" FAQ was removed —
+FAQ copy is the designer's, not ours.
+
+### Logout — `Logout.png`
+
+A confirmation dialog shared by the drawer and Settings (`logout_confirm.dart`)
+— both logout surfaces confirm before ending the session. Centred title and
+body, Cancel and Logout as an equal-width pill pair spanning the card (grey
+fill / lavender fill), per the frame.
+
+| Drawn | Building | Why |
+|---|---|---|
+| "You've been signed out successfully." in the body | **Dropped** | Post-action copy inside a pre-action dialog — the design contradicts itself. Kept the question and the sign-off line. |
+| "See you Again!" car illustration | **Omitted** | Raster we have no asset for; approximating it would look worse than absence. |
+| X close button | Omitted | Cancel and the barrier both dismiss; a third dismissal affordance adds nothing at dialog size. |
+
+### Delete Account — `Delete Account.png` (new screen)
+
+Reachable from Settings → Delete Account (`/delete-account`). Copy is the
+design's verbatim, including "Temporarily Deletion". The card floats
+vertically centred, as drawn.
+
+**Both buttons are genuinely disabled** — no deactivate endpoint and no delete
+endpoint exists anywhere on the rider surface (ASK-3 R1/R2). A live-looking
+red Delete wired to nothing would be the worst control in the app; a footnote
+says deletion is coming and gives the support address instead.
+
+Colour note for whoever enables it: the frame's Delete button samples coral
+`#FB868B`, not `AppColors.negative` (`#D64545`). Today the disabled wash masks
+the difference; swap deliberately when the endpoint lands.
+
+### Support — `Support.png` — NOT BUILT
+
+The frame is titled "Help & Support" but draws a ticket-filing flow whose
+vocabulary is the **driver app's**: "Preferred Resolution: Generate Payout",
+"Low Rating Appeal". Riders have no payouts and no rating appeals, and no
+ticket endpoint exists in the rider API (ASK-3 R3). Recorded as designer
+question 11 rather than built wrong.

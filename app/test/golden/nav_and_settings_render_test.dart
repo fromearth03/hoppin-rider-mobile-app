@@ -99,4 +99,40 @@ void main() {
   testWidgets('settings light', (t) async {
     await shoot(t, const SettingsScreen(), 'settings_light');
   });
+
+  testWidgets('logout dialog light', (t) async {
+    // Same drawer host as above, but capture AFTER tapping Logout so the
+    // confirmation dialog (`Logout.png`) is what lands in the shot.
+    t.view.physicalSize = const Size(430, 932);
+    t.view.devicePixelRatio = 1.0;
+    addTearDown(t.view.reset);
+
+    await t.pumpWidget(
+      ProviderScope(
+        overrides: [authControllerProvider.overrideWith((_) => controller)],
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light,
+          home: Scaffold(
+            drawer: const AppDrawer(),
+            body: Builder(builder: (context) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                Scaffold.of(context).openDrawer();
+              });
+              return const SizedBox.shrink();
+            }),
+          ),
+        ),
+      ),
+    );
+    await t.pumpAndSettle();
+
+    await t.tap(find.text('Logout'));
+    await t.pumpAndSettle();
+
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('shots/logout_dialog_light.png'),
+    );
+  });
 }

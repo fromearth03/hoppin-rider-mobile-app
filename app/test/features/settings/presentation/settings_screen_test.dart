@@ -5,7 +5,10 @@ import 'package:hoppin_rider/core/theme/app_theme.dart';
 import 'package:hoppin_rider/core/theme/theme_mode_provider.dart';
 import 'package:hoppin_rider/features/auth/application/auth_controller.dart';
 import 'package:hoppin_rider/features/auth/domain/auth_state.dart';
+import 'package:go_router/go_router.dart';
+import 'package:hoppin_rider/features/settings/presentation/delete_account_screen.dart';
 import 'package:hoppin_rider/features/settings/presentation/settings_screen.dart';
+import 'package:hoppin_rider/shared/nav/app_router.dart';
 import 'package:mocktail/mocktail.dart';
 
 class _MockController extends Mock implements AuthController {}
@@ -92,11 +95,39 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('Distance Units'));
     await tester.pump();
-    await tester.tap(find.text('Delete Account'));
-    await tester.pump();
 
     // Still on the settings screen -- nothing navigated away or blew up.
     expect(find.text('Setting'), findsOneWidget);
+  });
+
+  testWidgets('tapping Delete Account navigates to the Delete Account screen',
+      (tester) async {
+    final router = GoRouter(
+      initialLocation: AppRoutes.settings,
+      routes: [
+        GoRoute(
+          path: AppRoutes.settings,
+          builder: (_, __) => const SettingsScreen(),
+        ),
+        GoRoute(
+          path: AppRoutes.deleteAccount,
+          builder: (_, __) => const DeleteAccountScreen(),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [authControllerProvider.overrideWith((ref) => controller)],
+        child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+      ),
+    );
+
+    await tester.tap(find.text('Delete Account'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Permanent Deletion'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Deactivate'), findsOneWidget);
   });
 
   testWidgets(
@@ -163,12 +194,31 @@ void main() {
     );
   });
 
-  testWidgets('tapping Logout calls signOut on the auth controller',
+  testWidgets('Logout confirms first, and Cancel does not sign out',
       (tester) async {
     await tester.pumpWidget(_harness(controller));
 
     await tester.tap(find.text('Logout'));
-    await tester.pump();
+    await tester.pumpAndSettle();
+
+    // The dialog from Logout.png, not an immediate sign-out.
+    expect(find.text('Are you logging out?'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Cancel'));
+    await tester.pumpAndSettle();
+
+    verifyNever(() => controller.signOut());
+    expect(find.text('Are you logging out?'), findsNothing);
+  });
+
+  testWidgets('confirming the Logout dialog calls signOut', (tester) async {
+    await tester.pumpWidget(_harness(controller));
+
+    await tester.tap(find.text('Logout'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Logout'));
+    await tester.pumpAndSettle();
 
     verify(() => controller.signOut()).called(1);
   });

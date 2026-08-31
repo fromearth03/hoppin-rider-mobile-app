@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../shared/nav/app_router.dart';
+import '../../../shared/nav/logout_confirm.dart';
 import '../../auth/application/auth_controller.dart';
 import 'widgets/appearance_picker_sheet.dart';
 import 'widgets/settings_card.dart';
@@ -96,14 +99,20 @@ class SettingsScreen extends ConsumerWidget {
               SettingsActionRow(
                 icon: Icons.logout,
                 label: 'Logout',
-                onTap: () =>
-                    ref.read(authControllerProvider.notifier).signOut(),
+                // Same confirm as the drawer — `Logout.png` applies to every
+                // logout surface, and this row otherwise ends the session on
+                // one stray tap.
+                onTap: () async {
+                  final confirmed = await confirmLogout(context);
+                  if (!confirmed || !context.mounted) return;
+                  ref.read(authControllerProvider.notifier).signOut();
+                },
               ),
-              const SettingsActionRow(
+              SettingsActionRow(
                 icon: Icons.delete_outline,
                 label: 'Delete Account',
                 destructive: true,
-                comingSoon: true,
+                onTap: () => context.push(AppRoutes.deleteAccount),
               ),
             ]),
           ],

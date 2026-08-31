@@ -25,6 +25,7 @@ import '../../features/payments/presentation/ride_complete_screen.dart';
 import '../../features/payments/presentation/transactions_screen.dart';
 import '../../features/profile/presentation/personal_information_screen.dart';
 import '../../features/scheduling/presentation/schedule_ride_screen.dart';
+import '../../features/settings/presentation/delete_account_screen.dart';
 import '../../features/settings/presentation/help_support_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/trip/presentation/live_trip_screen.dart';
@@ -44,6 +45,7 @@ class AppRoutes {
   static const promotional = '/promotional';
   static const settings = '/settings';
   static const helpSupport = '/help-support';
+  static const deleteAccount = '/delete-account';
   static const rideHistory = '/ride-history';
   static const tripDetails = '/trip-details';
   static const scheduleRide = '/schedule-ride';
@@ -223,6 +225,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.helpSupport,
         builder: (_, __) => const HelpSupportScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.deleteAccount,
+        builder: (_, __) => const DeleteAccountScreen(),
       ),
       GoRoute(
         path: AppRoutes.promotional,

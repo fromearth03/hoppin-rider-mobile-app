@@ -16,18 +16,60 @@ void main() {
     expect(find.byIcon(Icons.arrow_back), findsOneWidget);
   });
 
-  testWidgets('shows FAQ entries and a contact section', (tester) async {
+  testWidgets('shows the three sections from the design', (tester) async {
     await tester.pumpWidget(_harness());
 
-    expect(find.text('Frequently asked questions'), findsOneWidget);
-    expect(find.text('Contact us'), findsOneWidget);
+    expect(find.text('Frequently Asked Questions (FAQs)'), findsOneWidget);
+    expect(find.text('Contact to Support'), findsOneWidget);
 
     await tester.scrollUntilVisible(
-      find.text('support@hoppin.app'),
+      find.text('Legal'),
       200,
       scrollable: find.byType(Scrollable),
     );
-    expect(find.text('support@hoppin.app'), findsOneWidget);
+    expect(find.text('Legal'), findsOneWidget);
+    expect(find.text('Support@hoppin.com'), findsOneWidget);
+  });
+
+  testWidgets('first FAQ starts open, as the design draws it', (tester) async {
+    await tester.pumpWidget(_harness());
+
+    expect(
+      find.textContaining('£5 fee is charged as penalty'),
+      findsOneWidget,
+    );
+    // The others start closed.
+    expect(find.textContaining('representative responds'), findsNothing);
+  });
+
+  testWidgets('tapping a question toggles its answer', (tester) async {
+    await tester.pumpWidget(_harness());
+
+    await tester.tap(find.text('How to Dispute'));
+    await tester.pump();
+    expect(find.textContaining('representative responds'), findsOneWidget);
+
+    await tester.tap(find.text('How to Dispute'));
+    await tester.pump();
+    expect(find.textContaining('representative responds'), findsNothing);
+  });
+
+  testWidgets(
+      'Open Ticket and the Legal rows are visibly not live — no endpoint and '
+      'no documents exist behind them', (tester) async {
+    await tester.pumpWidget(_harness());
+
+    expect(find.text('Open Ticket'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('Privacy Policy'),
+      200,
+      scrollable: find.byType(Scrollable),
+    );
+    expect(find.text('Terms of Services'), findsOneWidget);
+    expect(find.text('Privacy Policy'), findsOneWidget);
+    // One Soon per disabled surface: Open Ticket + two legal rows.
+    expect(find.text('Soon'), findsNWidgets(3));
   });
 
   testWidgets('back arrow pops the route', (tester) async {
@@ -62,6 +104,6 @@ void main() {
   testWidgets('renders in dark mode', (tester) async {
     await tester.pumpWidget(_harness(brightness: Brightness.dark));
     expect(find.text('Help & Support'), findsOneWidget);
-    expect(find.text('Contact us'), findsOneWidget);
+    expect(find.text('Contact to Support'), findsOneWidget);
   });
 }

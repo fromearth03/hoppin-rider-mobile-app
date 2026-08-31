@@ -6,6 +6,7 @@ import '../../core/theme/colors.dart';
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/data/profile_repository.dart';
 import 'app_router.dart';
+import 'logout_confirm.dart';
 
 /// The navigation drawer — `Side Nav Bar.png`.
 ///
@@ -115,7 +116,11 @@ class AppDrawer extends ConsumerWidget {
             _Item(
               icon: Icons.logout,
               label: 'Logout',
-              onTap: () {
+              // Confirmed first, as `Logout.png` draws it. One stray tap on
+              // the bottom drawer row otherwise ends the session.
+              onTap: () async {
+                final confirmed = await confirmLogout(context);
+                if (!confirmed || !context.mounted) return;
                 Navigator.of(context).pop();
                 ref.read(authControllerProvider.notifier).signOut();
               },

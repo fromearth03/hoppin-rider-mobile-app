@@ -17,6 +17,7 @@ void main() {
     AppRoutes.promotional,
     AppRoutes.settings,
     AppRoutes.helpSupport,
+    AppRoutes.deleteAccount,
     AppRoutes.rideHistory,
     AppRoutes.scheduleRide,
     AppRoutes.savedPlaces,

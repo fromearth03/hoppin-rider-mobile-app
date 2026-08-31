@@ -26,6 +26,7 @@ void main() {
     String name, {
     Brightness brightness = Brightness.light,
     Size size = const Size(430, 932),
+    Future<void> Function(WidgetTester)? interact,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
@@ -37,6 +38,11 @@ void main() {
       home: screen,
     ));
     await tester.pumpAndSettle();
+
+    if (interact != null) {
+      await interact(tester);
+      await tester.pumpAndSettle();
+    }
 
     await expectLater(
       find.byType(MaterialApp),
@@ -98,6 +104,8 @@ void main() {
         size: const Size(320, 932));
   });
 
+  // The first FAQ opens by default, as the frame draws it, so the expanded
+  // branch renders without interaction.
   testWidgets('help support light', (t) async {
     await shoot(t, const HelpSupportScreen(), 'help_support_light');
   });
