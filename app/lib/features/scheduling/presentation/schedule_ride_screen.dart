@@ -240,7 +240,13 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
             crossAxisCount: 2,
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
-            childAspectRatio: 2.2,
+            // A fixed aspect ratio shrinks cell height along with cell width
+            // as the screen narrows, while the two lines of text inside each
+            // tile (name + seats/bags) do not shrink to match — at 320px
+            // wide that squeeze overflowed the tile's Column by a couple of
+            // pixels. 1.9 keeps cells comfortably tall enough at narrow
+            // widths without a visible change at the 430px Figma width.
+            childAspectRatio: 1.9,
           ),
           itemBuilder: (context, index) {
             final category = categories[index];
@@ -294,7 +300,11 @@ class _HeaderCard extends StatelessWidget {
                     const Icon(Icons.calendar_month,
                         size: 18, color: AppColors.primary),
                     const SizedBox(width: 6),
-                    Text('Schedule Ride', style: theme.textTheme.titleMedium),
+                    Expanded(
+                      child: Text('Schedule Ride',
+                          style: theme.textTheme.titleMedium,
+                          overflow: TextOverflow.ellipsis),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 2),
@@ -456,7 +466,10 @@ class _UnavailableNotice extends StatelessWidget {
             children: [
               const Icon(Icons.info_outline, color: AppColors.info, size: 20),
               const SizedBox(width: 8),
-              Text('Not available yet', style: theme.textTheme.titleMedium),
+              Expanded(
+                child: Text('Not available yet',
+                    style: theme.textTheme.titleMedium),
+              ),
             ],
           ),
           const SizedBox(height: 8),

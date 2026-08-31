@@ -144,7 +144,10 @@ class _TripDetailsBody extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Waiting time', style: theme.textTheme.bodyMedium),
+                      Expanded(
+                        child: Text('Waiting time',
+                            style: theme.textTheme.bodyMedium),
+                      ),
                       Text(
                         receipt.waitingPence!.format(currency: receipt.currency),
                         style: theme.textTheme.bodyLarge,
