@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/api/error_codes.dart';
@@ -194,14 +195,33 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       controller: _scroll,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
       itemCount: _messages.length,
-      itemBuilder: (_, i) => _Bubble(message: _messages[i]),
+      itemBuilder: (_, i) {
+        final message = _messages[i];
+        // A day separator above the first message of each day. The design
+        // draws "Today"; a ride's chat can straddle midnight, so the label is
+        // computed rather than fixed.
+        final previous = i == 0 ? null : _messages[i - 1];
+        final newDay = previous == null ||
+            !_sameDay(previous.createdAt, message.createdAt);
+
+        return Column(
+          children: [
+            if (newDay) _DayPill(date: message.createdAt),
+            _Bubble(message: message, driverName: widget.driverName),
+          ],
+        );
+      },
     );
   }
+
+  static bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 }
 
 class _Bubble extends StatelessWidget {
   final RideMessage message;
-  const _Bubble({required this.message});
+  final String driverName;
+  const _Bubble({required this.message, required this.driverName});
 
   @override
   Widget build(BuildContext context) {
@@ -215,8 +235,20 @@ class _Bubble extends StatelessWidget {
             mine ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
+          // The driver's avatar sits beside their bubble, as in the design.
+          if (!mine) ...[
+            _Avatar(name: driverName),
+            const SizedBox(width: 8),
+          ],
+          // Bubbles hug their text and stop well short of the far edge — a
+          // full-width bubble has no direction to it, and the conversation
+          // stops reading as a conversation.
           Flexible(
-            child: Container(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.72,
+              ),
+              child: Container(
               padding:
                   const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
@@ -269,8 +301,67 @@ class _Bubble extends StatelessWidget {
                 ],
               ),
             ),
+            ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The dark "Today" pill the design centres above each day's first message.
+class _DayPill extends StatelessWidget {
+  final DateTime date;
+  const _DayPill({required this.date});
+
+  String get _label {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(date.year, date.month, date.day);
+    final delta = today.difference(day).inDays;
+
+    if (delta == 0) return 'Today';
+    if (delta == 1) return 'Yesterday';
+    return DateFormat('d MMM').format(day);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.lightTextPrimary,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          _label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Circular initial, standing in for the driver's photo — no endpoint serves
+/// one, so a broken image placeholder would be worse than a letter.
+class _Avatar extends StatelessWidget {
+  final String name;
+  const _Avatar({required this.name});
+
+  @override
+  Widget build(BuildContext context) {
+    return CircleAvatar(
+      radius: 16,
+      backgroundColor: AppColors.primary,
+      child: Text(
+        name.characters.first.toUpperCase(),
+        style: const TextStyle(color: Colors.white, fontSize: 13),
       ),
     );
   }
@@ -295,17 +386,37 @@ class _Composer extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
         child: Row(
           children: [
+            // A dark rounded pill, as drawn — not the app's standard boxed
+            // field. The attachment and microphone icons the design puts
+            // inside it are omitted: `ride_messages` holds a single text
+            // column, so neither could send anything.
             Expanded(
-              child: TextField(
-                controller: controller,
-                textInputAction: TextInputAction.send,
-                onSubmitted: (_) => onSend(),
-                decoration: const InputDecoration(
-                  hintText: 'Enter your message',
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.lightTextPrimary,
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: TextField(
+                  controller: controller,
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => onSend(),
+                  style: const TextStyle(color: Colors.white, fontSize: 15),
+                  cursorColor: Colors.white,
+                  decoration: const InputDecoration(
+                    hintText: 'Enter your message',
+                    hintStyle:
+                        TextStyle(color: Color(0xFFA0A0B0), fontSize: 15),
+                    filled: false,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(vertical: 16),
+                  ),
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             Material(
               color: AppColors.positive,
               shape: const CircleBorder(),
