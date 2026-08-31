@@ -115,6 +115,36 @@ void main() {
       expect(controller.state.error?.code, 'USER_NOT_FOUND');
     });
 
+    test('a transient profile failure does not read as a broken account',
+        () async {
+      // This stranded a rider with a perfectly good account on the sign-up
+      // screen: every profile read failure — a network drop, a 5xx, CORS on
+      // the web build — was treated as "your account is half-made", and
+      // profileIncomplete forces the router to /signup. Only a profile that
+      // genuinely is not there means that.
+      when(() => auth.signIn(any(), any()))
+          .thenAnswer((_) async => Ok(_session()));
+      when(() => profiles.get()).thenAnswer(
+          (_) async => Err(ApiException('NETWORK', 'Connection failed', 0)));
+
+      await controller.signIn('a@b.com', 'pw');
+
+      expect(controller.state.status, isNot(AuthStatus.profileIncomplete),
+          reason: 'a network blip must not send the rider to sign up');
+      expect(controller.state.error?.code, 'NETWORK');
+    });
+
+    test('a genuinely missing profile still reads as incomplete', () async {
+      when(() => auth.signIn(any(), any()))
+          .thenAnswer((_) async => Ok(_session()));
+      when(() => profiles.get()).thenAnswer((_) async =>
+          Err(ApiException('USER_NOT_FOUND', 'profile not found', 404)));
+
+      await controller.signIn('a@b.com', 'pw');
+
+      expect(controller.state.status, AuthStatus.profileIncomplete);
+    });
+
     test('does not attempt the DOB write when signup itself failed', () async {
       when(() => auth.signUp(
             email: any(named: 'email'),

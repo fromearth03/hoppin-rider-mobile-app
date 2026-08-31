@@ -148,8 +148,16 @@ class AuthController extends StateNotifier<AuthSnapshot> {
               : AuthStatus.signedIn,
           profile: value,
         ),
+      // Only a profile that genuinely is not there means the account is
+      // half-made. Anything else — a network failure, a 5xx, CORS on the web
+      // build — is a transient error, and treating it as profileIncomplete
+      // strands the rider on the sign-up screen with an account that is
+      // actually fine. That is a far worse outcome than showing an error and
+      // letting them retry.
       Err(:final error) => AuthSnapshot(
-          status: AuthStatus.profileIncomplete,
+          status: error.code == 'USER_NOT_FOUND'
+              ? AuthStatus.profileIncomplete
+              : AuthStatus.signedOut,
           error: error,
         ),
     };
