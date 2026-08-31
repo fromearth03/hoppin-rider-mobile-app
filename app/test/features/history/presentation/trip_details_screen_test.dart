@@ -34,6 +34,14 @@ void main() {
     api = _MockApi();
   });
 
+  testWidgets('an empty ride id never hits the network', (tester) async {
+    await tester.pumpWidget(_harness(api, rideId: ''));
+    await tester.pumpAndSettle();
+
+    verifyZeroInteractions(api);
+    expect(find.text('This ride could not be found.'), findsOneWidget);
+  });
+
   testWidgets('shows a loading indicator while the receipt is in flight',
       (tester) async {
     final completer = Completer<Ok<Map<String, dynamic>>>();

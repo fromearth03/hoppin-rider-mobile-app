@@ -47,6 +47,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    // An empty id can only come from a hand-typed URL, and the request it
+    // would send — /rides//messages — is malformed. Skip straight to the
+    // error state instead of firing (and re-polling) a doomed call.
+    if (widget.rideId.isEmpty) {
+      _error = const ApiException(
+          'RIDE_NOT_FOUND', 'This ride could not be found.', 0);
+      _loadedOnce = true;
+      return;
+    }
     _load();
     // There is no websocket for chat; the server expects a `since` cursor.
     _poll = Timer.periodic(const Duration(seconds: 4), (_) => _load());

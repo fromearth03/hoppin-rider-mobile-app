@@ -13,6 +13,12 @@ import 'widgets/receipt_row.dart';
 /// lands on two different completed rides never sees a cached mix-up.
 final rideReceiptProvider =
     FutureProvider.family<Receipt, String>((ref, rideId) {
+  // An empty id only comes from a hand-typed URL; the request it would
+  // send — /rides//receipt — is malformed. Fail here without the network.
+  if (rideId.isEmpty) {
+    throw const ApiException(
+        'RIDE_NOT_FOUND', 'This ride could not be found.', 0);
+  }
   final repo = ref.watch(receiptsRepositoryProvider);
   return repo.forRide(rideId).then((result) => switch (result) {
         Ok(:final value) => value,

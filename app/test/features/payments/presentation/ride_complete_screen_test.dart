@@ -9,6 +9,9 @@ import 'package:hoppin_rider/core/theme/app_theme.dart';
 import 'package:hoppin_rider/features/payments/data/receipts_repository.dart';
 import 'package:hoppin_rider/features/payments/presentation/ride_complete_screen.dart';
 import 'package:hoppin_rider/shared/widgets/hoppin_button.dart';
+import 'package:mocktail/mocktail.dart';
+
+class _GuardMockReceipts extends Mock implements ReceiptsRepository {}
 
 const _rideId = 'r1';
 
@@ -60,6 +63,24 @@ Receipt _receipt({
     );
 
 void main() {
+  test('an empty ride id fails without touching the network', () async {
+    // Shared by Ride Complete and Ride Details: an empty id only comes from
+    // a hand-typed URL, and /rides//receipt is malformed. The provider must
+    // throw locally, never call the repository.
+    final repo = _GuardMockReceipts();
+    final container = ProviderContainer(
+      overrides: [receiptsRepositoryProvider.overrideWithValue(repo)],
+    );
+    addTearDown(container.dispose);
+
+    await expectLater(
+      container.read(rideReceiptProvider('').future),
+      throwsA(isA<ApiException>()
+          .having((e) => e.code, 'code', 'RIDE_NOT_FOUND')),
+    );
+    verifyZeroInteractions(repo);
+  });
+
   testWidgets('shows a loading indicator while the receipt is in flight',
       (tester) async {
     await tester.pumpWidget(_harness(const AsyncLoading()));

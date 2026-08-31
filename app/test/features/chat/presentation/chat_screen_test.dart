@@ -47,6 +47,24 @@ void main() {
     await tester.pump();
   }
 
+  testWidgets('an empty ride id never hits the network', (tester) async {
+    // Only a hand-typed URL produces this; the request it would send is
+    // /rides//messages — malformed. The screen must not fire it or poll it.
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [chatRepositoryProvider.overrideWithValue(repo)],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const ChatScreen(rideId: '', driverName: 'Driver'),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    verifyZeroInteractions(repo);
+    expect(find.byType(Scaffold), findsOneWidget);
+  });
+
   group('design fidelity', () {
     testWidgets('a bubble hugs its text rather than filling the row',
         (tester) async {
