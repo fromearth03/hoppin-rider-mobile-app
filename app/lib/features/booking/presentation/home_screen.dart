@@ -5,6 +5,7 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/api/error_codes.dart';
 import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
+import '../../../shared/nav/app_drawer.dart';
 import '../data/vehicle_repository.dart';
 import 'widgets/map_placeholder.dart';
 import 'widgets/vehicle_card.dart';
@@ -42,15 +43,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final categories = ref.watch(vehicleCategoriesProvider);
 
     return Scaffold(
+      drawer: const AppDrawer(),
       body: Stack(
         children: [
           const Positioned.fill(child: MapPlaceholder()),
           Positioned(
             top: MediaQuery.of(context).padding.top + 12,
             left: 16,
-            child: _CircleButton(
-              icon: Icons.menu,
-              onTap: () => Scaffold.of(context).openDrawer(),
+            // Builder, not `context`: `Scaffold.of` needs a context BELOW the
+            // Scaffold, and this screen's own context sits above it. Without
+            // the Builder the menu button throws instead of opening.
+            child: Builder(
+              builder: (context) => _CircleButton(
+                icon: Icons.menu,
+                onTap: () => Scaffold.of(context).openDrawer(),
+              ),
             ),
           ),
           Align(
