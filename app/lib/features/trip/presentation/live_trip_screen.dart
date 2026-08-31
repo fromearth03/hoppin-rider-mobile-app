@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/api/error_codes.dart';
+import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
 import '../../../shared/nav/app_router.dart';
 import '../../booking/presentation/widgets/rider_map.dart';
 import '../data/live_trip_source.dart';
+import '../data/ride_actions_repository.dart';
 import 'widgets/driver_info_card.dart';
 import 'widgets/trip_status_banner.dart';
 import 'widgets/turn_banner.dart';
@@ -67,7 +70,7 @@ class LiveTripScreen extends ConsumerWidget {
   }
 }
 
-class _LiveTripBody extends StatelessWidget {
+class _LiveTripBody extends ConsumerWidget {
   final LiveTripInfo info;
   final String rideId;
 
@@ -79,7 +82,7 @@ class _LiveTripBody extends StatelessWidget {
       info.status == LiveTripStatus.started;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final topInset = MediaQuery.of(context).padding.top + 12;
 
     return Stack(
@@ -127,15 +130,15 @@ class _LiveTripBody extends StatelessWidget {
               '${AppRoutes.chat}?ride=$rideId&driver=${Uri.encodeComponent(info.driver?.name ?? 'Driver')}',
             ),
             onSafety: () => context.push('${AppRoutes.safety}?ride=$rideId'),
-            onCancel: () => _confirmCancel(context),
+            onCancel: () => _confirmCancel(context, ref),
           ),
         ),
       ],
     );
   }
 
-  Future<void> _confirmCancel(BuildContext context) async {
-    await showDialog<bool>(
+  Future<void> _confirmCancel(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Cancel this ride?'),
@@ -154,6 +157,25 @@ class _LiveTripBody extends StatelessWidget {
         ],
       ),
     );
+    if (confirmed != true || !context.mounted) return;
+
+    // The dialog's answer used to be discarded here — the button looked
+    // live and cancelled nothing, leaving the request queued in dispatch.
+    final result =
+        await ref.read(rideActionsRepositoryProvider).cancelRide(rideId);
+    if (!context.mounted) return;
+
+    switch (result) {
+      case Ok():
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ride cancelled.')),
+        );
+        context.go(AppRoutes.home);
+      case Err(:final error):
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(RiderErrorCopy.messageFor(error))),
+        );
+    }
   }
 }
 
