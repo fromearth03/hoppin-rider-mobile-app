@@ -136,7 +136,30 @@ class _RouteEntryScreenState extends ConsumerState<RouteEntryScreen> {
         : _results;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Enter Your Route')),
+      // The design presents this as a sheet sitting over the map, with the
+      // title centred and a close button rather than a back arrow — the rider
+      // is dismissing a panel, not navigating up a stack.
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        centerTitle: true,
+        title: Text(
+          'Enter Your Route',
+          style: theme.textTheme.titleMedium?.copyWith(fontSize: 17),
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: IconButton(
+              onPressed: () => Navigator.of(context).maybePop(),
+              icon: const Icon(Icons.close, size: 20),
+              style: IconButton.styleFrom(
+                backgroundColor: theme.dividerColor.withValues(alpha: 0.4),
+              ),
+              tooltip: 'Close',
+            ),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Padding(
@@ -146,7 +169,7 @@ class _RouteEntryScreenState extends ConsumerState<RouteEntryScreen> {
                 _Field(
                   controller: _pickup,
                   hint: 'Active Location',
-                  icon: Icons.my_location,
+                  icon: Icons.location_on,
                   onTap: () => setState(() => _activeField = 0),
                   onChanged: _onChanged,
                 ),
@@ -165,7 +188,7 @@ class _RouteEntryScreenState extends ConsumerState<RouteEntryScreen> {
                 _Field(
                   controller: _dropoff,
                   hint: 'To',
-                  icon: Icons.place_outlined,
+                  icon: Icons.search,
                   onTap: () => setState(() => _activeField = 1),
                   onChanged: _onChanged,
                   // The design puts a + on the destination field. The cap is
