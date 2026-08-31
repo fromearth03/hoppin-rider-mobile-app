@@ -33,7 +33,7 @@ class _HoppinAppState extends ConsumerState<HoppinApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Hoppin',
+      title: 'Hoppin Rider',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
