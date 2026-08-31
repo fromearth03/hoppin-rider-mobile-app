@@ -101,5 +101,32 @@ void main() {
           reason: 'GoTrue should refuse an unknown account, not error out — '
               'a 5xx here means the project or key is wrong');
     });
+
+    test('/geocode/search is JWT-gated', () async {
+      final response = await get('/geocode/search?q=molineux');
+      expect(response.statusCode, anyOf(401, 403),
+          reason: 'autocomplete must not be an open geocoding service');
+    });
+
+    test('/rides/estimate rejects an unauthenticated caller', () async {
+      final request =
+          await client.postUrl(Uri.parse('${AppConfig.apiBaseUrl}/rides/estimate'));
+      request.headers.set('X-Hoppin-Device-ID', 'integration-test');
+      request.headers.contentType = ContentType.json;
+      request.write('{"pickup_lat":52.586,"pickup_lng":-2.128,'
+          '"dropoff_lat":52.593,"dropoff_lng":-2.110}');
+      final response = await request.close();
+
+      expect(response.statusCode, anyOf(401, 403),
+          reason: 'pricing must not be free to anyone who asks');
+    });
+
+    test('/contacts is public, like /app-status', () async {
+      // Support and emergency numbers are read live so they can change
+      // without an app release, and the safety screen needs them before a
+      // rider has necessarily signed in.
+      final response = await get('/contacts');
+      expect(response.statusCode, 200);
+    });
   });
 }
