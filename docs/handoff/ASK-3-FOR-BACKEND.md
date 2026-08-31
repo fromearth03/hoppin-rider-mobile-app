@@ -47,4 +47,4 @@ tickets are wanted at all, the minimal rider shape is `POST /support/tickets`
 |---|---|---|
 | ASK-1 (`FOR-BACKEND.md`) | R1–R5 | Delivered |
 | ASK-2 (`ASK-2-FOR-BACKEND.md`) | R1 turn-by-turn, R2 rider rating | Open, low priority |
-| ASK-3 (this file) | R1 deactivate, R2 delete, R3 tickets | Open |
+| ASK-3 (this file) | R1 deactivate, R2 delete, R3 tickets | Sent to backend 2026-09-01 |
