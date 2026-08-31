@@ -272,6 +272,38 @@ Attachments, voice notes, presence and call are **phase 2** — see above.
 
 ---
 
+## Ride history — `Ride History.png` *(milestone 2, contract recorded now)*
+
+`GET /api/v1/rides` — cursor paged, verified at `rider_trips_read.go:73-115`.
+
+| Param | Behaviour |
+|---|---|
+| `status` | `completed` \| `cancelled`. **Anything else means "all trips"**, silently — not an error |
+| `from` / `to` | ISO date or timestamp, both optional, cast to `timestamptz` (added 2026-08-31, `4211757`) |
+| `limit` | Default 20, **capped at 50**. A malformed value falls back to 20 silently |
+| `cursor` | RFC3339, from the previous page's `next_cursor` |
+
+Returns `{ trips, next_cursor, has_more }`. Infinite scroll passes `next_cursor`
+back until `has_more` is false.
+
+**Two things the client must not rely on:**
+
+- **Bad input fails silently.** `limit=abc` becomes 20; `status=pending` returns
+  everything. Neither errors, so the app cannot detect a mistake by watching for
+  a failure — it has to send valid values.
+- **The cursor is `created_at`, not an opaque token**
+  (`AND r.created_at < $n ORDER BY created_at DESC`). It works, but the app
+  should treat it as opaque anyway and pass back exactly what it received, so a
+  future change of cursor scheme does not break the client.
+
+`has_more` is computed by fetching `limit+1` rows rather than a second `COUNT`,
+so it is exact and cheap.
+
+**The filter UI is ours to build** — status chips and a date-range picker wired
+to these params. Nothing further is needed from the backend.
+
+---
+
 ## Open questions for the designer
 
 Collected as they arise, to be sent in one batch rather than piecemeal.
