@@ -20,6 +20,26 @@ class AuthController extends StateNotifier<AuthSnapshot> {
 
   AuthController(this._auth, this._profiles) : super(const AuthSnapshot());
 
+  /// Resolves the startup state, moving the app off [AuthStatus.unknown].
+  ///
+  /// Without this a returning rider with a valid persisted Supabase session
+  /// cold-starts onto the login screen and stays there: `redirectFor` returns
+  /// null for `unknown` by design, waiting for someone to say what the state
+  /// actually is. Nothing was saying.
+  ///
+  /// It also closes the null-DOB hole. The spec requires the app to retry the
+  /// date-of-birth write on launch whenever the profile has none — a rider who
+  /// dismissed recovery once would otherwise be silently booking-eligible
+  /// forever, because the backend's booking guard treats a null DOB as
+  /// allowed. `_loadProfile` parks them in `profileIncomplete` instead.
+  Future<void> bootstrap() async {
+    if (_auth.currentSession == null) {
+      state = const AuthSnapshot(status: AuthStatus.signedOut);
+      return;
+    }
+    await _loadProfile();
+  }
+
   Future<void> signIn(String email, String password) async {
     state = state.copyWith(isBusy: true, clearError: true);
 

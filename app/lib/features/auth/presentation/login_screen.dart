@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/api/error_codes.dart';
 import '../../../core/theme/colors.dart';
+import '../../../shared/nav/app_router.dart';
 import '../../../shared/widgets/hoppin_button.dart';
 import '../../../shared/widgets/hoppin_text_field.dart';
 import '../application/auth_controller.dart';
@@ -36,10 +38,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(authControllerProvider);
     final error = state.error;
+    final theme = Theme.of(context);
 
     return AuthScaffold(
       title: 'Login',
       subtitle: 'Welcome back',
+      showBack: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -78,6 +82,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             onPressed: () => ref
                 .read(authControllerProvider.notifier)
                 .signIn(_email.text, _password.text),
+          ),
+          const SizedBox(height: 8),
+          // Without this the sign-up screen is unreachable: the app opens on
+          // login and the redirect keeps a signed-out rider on an auth route,
+          // so a new rider had nowhere to go.
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text("Don't have an account?",
+                  style: theme.textTheme.bodyMedium),
+              TextButton(
+                onPressed: () => context.go(AppRoutes.signup),
+                child: const Text('Sign up'),
+              ),
+            ],
           ),
         ],
       ),

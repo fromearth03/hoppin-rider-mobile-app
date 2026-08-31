@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/api/error_codes.dart';
 import '../../../core/theme/colors.dart';
+import '../../../shared/nav/app_router.dart';
 import '../../../shared/widgets/hoppin_button.dart';
 import '../../../shared/widgets/hoppin_text_field.dart';
 import '../application/auth_controller.dart';
@@ -102,6 +104,13 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     final theme = Theme.of(context);
     final incomplete = state.status == AuthStatus.profileIncomplete;
 
+    // USER_NOT_FOUND means the auth user exists but its profile row does not,
+    // so there is nothing for the PATCH to write to and retrying can never
+    // succeed. Offering "Finish setting up" here would loop the rider
+    // forever; they need a route to support instead.
+    final unrecoverable =
+        incomplete && state.error?.code == 'USER_NOT_FOUND';
+
     return AuthScaffold(
       title: 'Sign up',
       subtitle: 'Create an account',
@@ -165,7 +174,15 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               style: const TextStyle(color: AppColors.negative),
             ),
           ],
-          if (incomplete) ...[
+          if (unrecoverable) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Your account was created, but we could not set up your '
+              'profile. Retrying will not help — please contact support and '
+              'we will finish it for you.',
+              style: theme.textTheme.bodyMedium,
+            ),
+          ] else if (incomplete) ...[
             const SizedBox(height: 12),
             Text(
               'Your account was created but we could not finish setting it '
@@ -174,11 +191,39 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             ),
           ],
           const SizedBox(height: 24),
-          HoppinButton(
-            label: incomplete ? 'Finish setting up' : 'Create account',
-            isLoading: state.isBusy,
-            onPressed: incomplete ? _finishSetup : _submit,
-          ),
+          if (unrecoverable)
+            // A dead end otherwise: the rider cannot be signed out (their
+            // email is taken, so they cannot re-register) and cannot retry
+            // (no profile row exists for the PATCH to write to). Signing out
+            // at least returns them to a screen they can act from.
+            HoppinButton(
+              label: 'Back to sign in',
+              onPressed: () =>
+                  ref.read(authControllerProvider.notifier).signOut(),
+            )
+          else
+            HoppinButton(
+              label: incomplete ? 'Finish setting up' : 'Create account',
+              isLoading: state.isBusy,
+              onPressed: incomplete ? _finishSetup : _submit,
+            ),
+          // Only offered when the rider has no half-made account to finish.
+          // In profileIncomplete the redirect would bounce them straight back,
+          // so a link to login there would look broken.
+          if (!incomplete) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('Already have an account?',
+                    style: theme.textTheme.bodyMedium),
+                TextButton(
+                  onPressed: () => context.go(AppRoutes.login),
+                  child: const Text('Login'),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

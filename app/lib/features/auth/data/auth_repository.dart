@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/api/api_exception.dart';
@@ -8,7 +8,7 @@ import '../../../core/result.dart';
 /// Wraps `supabase_flutter`'s auth client so the rest of the app sees the same
 /// `Result` + `{code}` contract it uses for the ride service.
 ///
-/// The SDK owns refresh and persistence — nothing here re-implements them.
+/// The SDK owns refresh and persistence â€” nothing here re-implements them.
 class AuthRepository {
   final SupabaseClient _client;
   AuthRepository(this._client);
@@ -26,7 +26,7 @@ class AuthRepository {
       );
       final session = response.session;
       if (session == null) {
-        return Err(ApiException('AUTH_FAILED', 'No session returned', 0));
+        return const Err(ApiException('AUTH_FAILED', 'No session returned', 0));
       }
       return Ok(session);
     } on AuthException catch (e) {
@@ -44,7 +44,7 @@ class AuthRepository {
   /// string would overwrite it with something the API cannot hide.
   ///
   /// `signUp` asserts email XOR phone, so the number cannot be passed as the
-  /// `phone:` argument here — it travels as metadata.
+  /// `phone:` argument here â€” it travels as metadata.
   Future<Result<Session>> signUp({
     required String email,
     required String password,
@@ -63,7 +63,7 @@ class AuthRepository {
       );
       final session = response.session;
       if (session == null) {
-        return Err(ApiException(
+        return const Err(ApiException(
             'AUTH_FAILED', 'Account created but no session returned', 0));
       }
       return Ok(session);
@@ -92,13 +92,13 @@ class AuthRepository {
     try {
       await _auth.signOut();
     } catch (_) {
-      // Intentionally swallowed — see above.
+      // Intentionally swallowed â€” see above.
     }
     return const Ok(null);
   }
 
   /// Prefers GoTrue's structured `code` field over matching English message
-  /// text: message strings are fragile — Supabase can reword them or the
+  /// text: message strings are fragile â€” Supabase can reword them or the
   /// project can enable localised auth errors, and either would silently
   /// break a plain `contains(...)` check. `code` is null for some errors that
   /// occur before a response is received (e.g. older tokens, transport
