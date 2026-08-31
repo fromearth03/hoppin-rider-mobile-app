@@ -242,6 +242,30 @@ slow or unavailable. So:
 | "Select Payment Method", presented as a booking step | **"Payment cards" — card management** | There is no per-ride payment selection in the API. Booking always charges the default card, so this was never a step in the booking flow; it is where a rider manages cards and sets a default. Wording must not imply a choice that does not exist. *2026-08-30* |
 | Card number / CVV fields *(elsewhere in the pack)* | **Stripe SDK card element** | `setup-intent` → `clientSecret` → the SDK collects the card. A raw PAN in a `TextField` we control puts the app in PCI SAQ A-EP; the SDK element keeps it at SAQ A. |
 
+**Contract** — verified at `payments_handler.go:68-130` and
+`payments/moneyloop.go:100-107`. Two quirks that are unique in this API and will
+catch out anyone assuming the house style:
+
+- **`GET /me/payment-methods` returns a BARE ARRAY**, not `{"cards": [...]}`.
+  Every other list endpoint wraps its rows in a named key. Parsing this like the
+  others yields nothing.
+- **The card DTO is camelCase**, alone in a snake_case API:
+  `paymentMethodId`, `brand`, `last4`, `expMonth`, `expYear`, `isDefault`.
+
+Stripe test publishable key is in `config/dev.json` (git-ignored). It ships
+inside the binary by design, so it is not a secret — but the Maps key is, in the
+sense that an unrestricted one is billable by anyone who extracts it.
+
+**Flow:** `POST /me/payment-methods/setup-intent` returns a `clientSecret`, the
+Stripe SDK collects the card against it, then `GET /me/payment-methods` lists
+what is saved. `POST /me/payment-methods/:pmId/default` sets the default;
+`DELETE /me/payment-methods/:pmId` detaches one.
+
+**Booking always charges the default card.** There is no per-ride payment
+selection anywhere in the API, so this screen is card management, not a booking
+step — and `402 NO_PAYMENT_METHOD` blocks booking outright when nothing is on
+file, which is why an add-card path has to exist inside the booking flow too.
+
 `402 NO_PAYMENT_METHOD` blocks booking outright when no card is on file, so an
 add-card path must exist inside the booking flow, not only in the drawer.
 
