@@ -58,6 +58,59 @@ than dropping the rider into a signed-in app where nothing works. *2026-08-30*
 |---|---|---|
 | "Email or Phone Number" | **"Email"** | Supabase can only authenticate a phone it verified by SMS, and there is no SMS provider. A phone field on this screen would be a path that cannot work. *2026-08-30* |
 | "Login using your credentials" | **Dropped** | Invite-flow copy. Riders self-signup; nobody issues them credentials. |
+
+### Fidelity pass — 2026-08-31
+
+The auth screens were built *from* the designs but had never been *compared*
+against them. Rendering them side by side found five gaps, all now closed:
+
+| Was | Now | Note |
+|---|---|---|
+| Deep indigo button `#2E0B78` | **`#9480BD`**, sampled from the design | The indigo is the *header* colour; a button filled with it disappeared into the screen. Now `AppColors.buttonPrimary`, distinct from `AppColors.primary`. |
+| No logo | **"Hoppin' Go" lockup at the foot of every auth screen** | Was missing entirely. See the open issue below. |
+| "Show password" text button below the field | **Eye toggle inside the field** | `HoppinTextField` takes `obscurable:` and owns the toggle, so every password field in the app behaves alike. |
+| Label above the field | **Label floating on the field's top border** | `floatingLabelBehavior: always` — the label is the field's name, and the hint carries the example value beneath it. |
+| "Forgot Password" unstyled | **Right-aligned and underlined, routed to a real screen** | |
+
+Two overflows were found by rendering that no widget test had caught: the
+"Don't have an account? / Sign up" rows on both auth screens overflowed by
+53px at 430px wide once the `TextButton`'s own padding was counted. Both are
+now `Wrap`s.
+
+**`test/golden/` renders these screens to PNGs** (`flutter test test/golden
+--run-skipped --update-goldens`). They assert nothing — a test proves
+behaviour and nothing in this project proves appearance, which is precisely
+why the screens drifted. They exist to be looked at.
+
+### Forgot Password — `Forgot Password.png` — BUILT 2026-08-31
+
+Previously unbuilt; `AuthRepository.requestPasswordReset` already existed and
+was unused. On success the screen swaps to a "check your email" confirmation
+rather than navigating away — the rider is leaving for their inbox, and
+bouncing them to login would leave them unsure anything was sent. The
+confirmation copy is deliberately conditional ("if an account exists for…") so
+the screen cannot be used to enumerate which emails are registered.
+
+`redirectFor` treats `/forgot-password` as an auth screen. Without that a
+signed-out rider — which anyone who has forgotten their password is, by
+definition — would be bounced straight back to login on tapping the link.
+
+### OPEN — the supplied logo says "Hoppin' Admin"
+
+The brand vector handed over on 2026-08-31 and shipped at
+`app/assets/brand/hoppin_go.svg` renders as **"Hoppin' Admin"**. The Figma auth
+screens show **"Hoppin' Go"**. The pin and the typography match; only the word
+after the apostrophe differs, which reads like the admin panel's lockup rather
+than the rider one.
+
+It is shipped as supplied rather than edited — hand-editing outlined letterforms
+would produce a worse wordmark than the real asset. **Needs the "Hoppin' Go"
+vector to replace it**; that is a one-file swap, since `HoppinLogo` reads the
+asset and nothing else references the wordmark.
+
+The dark-mode variant `hoppin_go_dark.svg` is the same file with the wordmark's
+`#181C39` swapped for `#EDEEF4`. The mark's red is unchanged in both: a single
+`colorFilter` over the lockup would have tinted the pin too.
 | Forgot Password link | **Kept** | Fires `resetPasswordForEmail`, ends at "check your inbox". The reset itself happens in the browser off the emailed link — out of milestone 1. |
 
 ---

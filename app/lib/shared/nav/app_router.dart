@@ -4,14 +4,23 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/domain/auth_state.dart';
+import '../../features/auth/presentation/forgot_password_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/signup_screen.dart';
+import '../../features/booking/presentation/home_screen.dart';
+import '../../features/booking/presentation/route_entry_screen.dart';
+import '../../features/chat/presentation/chat_screen.dart';
+import '../../features/safety/presentation/safety_screen.dart';
 
 class AppRoutes {
   AppRoutes._();
   static const login = '/login';
   static const signup = '/signup';
+  static const forgotPassword = '/forgot-password';
   static const home = '/home';
+  static const route = '/route';
+  static const safety = '/safety';
+  static const chat = '/chat';
 }
 
 /// Where a rider in [status] currently at [location] should be sent, or null
@@ -24,8 +33,12 @@ String? redirectFor(AuthStatus status, String location) {
   // screen at a rider who is already signed in.
   if (status == AuthStatus.unknown) return null;
 
-  final onAuthScreen =
-      location == AppRoutes.login || location == AppRoutes.signup;
+  // Password recovery counts as an auth screen: a signed-out rider must be
+  // able to reach it, and without it here the redirect would bounce them
+  // straight back to login the moment they tapped "Forgot Password".
+  final onAuthScreen = location == AppRoutes.login ||
+      location == AppRoutes.signup ||
+      location == AppRoutes.forgotPassword;
 
   switch (status) {
     case AuthStatus.signedOut:
@@ -84,10 +97,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const SignupScreen(),
       ),
       GoRoute(
+        path: AppRoutes.forgotPassword,
+        builder: (_, __) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.home,
-        // Replaced by the booking map in batch 2.
-        builder: (_, __) => const Scaffold(
-          body: Center(child: Text('Signed in')),
+        builder: (_, __) => const HomeScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.route,
+        builder: (_, __) => const RouteEntryScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.safety,
+        builder: (_, state) =>
+            SafetyScreen(rideId: state.uri.queryParameters['ride']),
+      ),
+      GoRoute(
+        path: AppRoutes.chat,
+        builder: (_, state) => ChatScreen(
+          rideId: state.uri.queryParameters['ride'] ?? '',
+          driverName: state.uri.queryParameters['driver'] ?? 'Driver',
         ),
       ),
     ],

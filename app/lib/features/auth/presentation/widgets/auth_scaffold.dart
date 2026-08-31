@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/colors.dart';
+import '../../../../shared/widgets/hoppin_logo.dart';
 
 /// The curved indigo header both auth screens share.
 ///
 /// The curve is a single bottom-right radius, matching the design. The header
 /// keeps its brand colour in both themes — the indigo IS the brand, and
 /// inverting it in dark mode would make the app unrecognisable.
+///
+/// The "Hoppin' Go" lockup pins to the bottom of the screen, as in the design.
+/// It is inside the scroll view rather than fixed, so a small screen with the
+/// keyboard up scrolls it away instead of stealing height from the fields.
 class AuthScaffold extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -70,9 +75,35 @@ class AuthScaffold extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 32, 20, 24),
-              child: child,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 32, 20, 24),
+                  child: ConstrainedBox(
+                    // Fills the viewport when the form is short, so the logo
+                    // reaches the foot of the screen rather than floating
+                    // directly under the last field; taller forms simply push
+                    // past it and scroll.
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight - 56,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      // Pushes the logo to the foot of the available space.
+                      // `Spacer` would throw here: this Column is inside a
+                      // scroll view, so its height is unbounded.
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        child,
+                        const Padding(
+                          padding: EdgeInsets.only(top: 32),
+                          child: Center(child: HoppinLogo()),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],

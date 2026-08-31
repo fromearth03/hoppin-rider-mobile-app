@@ -115,6 +115,28 @@ class AuthController extends StateNotifier<AuthSnapshot> {
     state = const AuthSnapshot(status: AuthStatus.signedOut);
   }
 
+  /// Sends a password-reset email.
+  ///
+  /// Returns whether the request was accepted so the screen can swap to its
+  /// "check your inbox" state. This deliberately does NOT touch [AuthStatus]:
+  /// the rider is signed out before and after, and moving the status would
+  /// bounce them through the router mid-flow.
+  Future<bool> requestPasswordReset(String email) async {
+    state = state.copyWith(isBusy: true, clearError: true);
+
+    final result = await _auth.requestPasswordReset(email);
+    return switch (result) {
+      Ok() => () {
+          state = state.copyWith(isBusy: false, clearError: true);
+          return true;
+        }(),
+      Err(:final error) => () {
+          state = state.copyWith(isBusy: false, error: error);
+          return false;
+        }(),
+    };
+  }
+
   /// Reads the profile and decides whether the rider can actually use the app.
   Future<void> _loadProfile() async {
     final profile = await _profiles.get();

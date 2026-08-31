@@ -5,8 +5,10 @@ import 'package:hoppin_rider/core/api/api_exception.dart';
 import 'package:hoppin_rider/core/theme/app_theme.dart';
 import 'package:hoppin_rider/features/auth/application/auth_controller.dart';
 import 'package:hoppin_rider/features/auth/domain/auth_state.dart';
+import 'package:hoppin_rider/core/theme/colors.dart';
 import 'package:hoppin_rider/features/auth/presentation/login_screen.dart';
 import 'package:hoppin_rider/shared/widgets/hoppin_button.dart';
+import 'package:hoppin_rider/shared/widgets/hoppin_logo.dart';
 import 'package:mocktail/mocktail.dart';
 
 class _MockController extends Mock implements AuthController {}
@@ -91,5 +93,64 @@ void main() {
     await tester.pumpWidget(_harness(controller, const AuthSnapshot(),
         brightness: Brightness.dark));
     expect(find.widgetWithText(HoppinButton, 'Login'), findsOneWidget);
+  });
+
+  group('design fidelity', () {
+    testWidgets('carries the Hoppin\' Go lockup at the foot', (tester) async {
+      // Missing entirely in the first build of this screen.
+      await tester.pumpWidget(_harness(controller, const AuthSnapshot()));
+      expect(find.byType(HoppinLogo), findsOneWidget);
+    });
+
+    testWidgets('offers Forgot Password, underlined and right-aligned',
+        (tester) async {
+      await tester.pumpWidget(_harness(controller, const AuthSnapshot()));
+
+      final label = find.text('Forgot Password');
+      expect(label, findsOneWidget);
+      expect(
+        tester.widget<Text>(label).style?.decoration,
+        TextDecoration.underline,
+      );
+      expect(
+        find.ancestor(of: label, matching: find.byType(Align)),
+        findsWidgets,
+      );
+    });
+
+    testWidgets('toggles the password from inside the field', (tester) async {
+      // Was a "Show password" text button sitting below the field.
+      await tester.pumpWidget(_harness(controller, const AuthSnapshot()));
+
+      expect(find.text('Show password'), findsNothing);
+      expect(find.byIcon(Icons.visibility_outlined), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.visibility_outlined));
+      await tester.pump();
+
+      expect(
+        tester.widget<TextField>(find.byType(TextField).last).obscureText,
+        isFalse,
+      );
+    });
+
+    testWidgets('fills the primary button with the design lavender',
+        (tester) async {
+      // Was the deep indigo, which is the header colour — the button vanished
+      // into it.
+      await tester.pumpWidget(_harness(controller, const AuthSnapshot()));
+
+      final button = tester.widget<FilledButton>(find.byType(FilledButton));
+      final resolved = button.style?.backgroundColor
+              ?.resolve(<WidgetState>{}) ??
+          Theme.of(tester.element(find.byType(FilledButton)))
+              .filledButtonTheme
+              .style
+              ?.backgroundColor
+              ?.resolve(<WidgetState>{});
+
+      expect(resolved, AppColors.buttonPrimary);
+      expect(resolved, isNot(AppColors.primary));
+    });
   });
 }

@@ -12,6 +12,19 @@ class AppColors {
   static const primaryDark = Color(0xFF1E0550);
   static const accent = Color(0xFFF07A21);
 
+  /// Primary button fill, sampled from the auth screens in the design.
+  ///
+  /// Deliberately NOT [primary]: the design fills buttons with a muted lavender
+  /// and reserves the deep indigo for the header. Filling a button with
+  /// [primary] makes it disappear into that header.
+  static const buttonPrimary = Color(0xFF9480BD);
+  static const buttonPrimaryPressed = Color(0xFF7E68AC);
+
+  // Logo. The mark is red and the wordmark near-black in both modes — this is
+  // a supplied brand asset, not a themed surface.
+  static const logoMark = Color(0xFFE23038);
+  static const logoWord = Color(0xFF181C39);
+
   // Semantic – same hue both modes; the surfaces around them change.
   static const positive = Color(0xFF2BA84A);
   static const negative = Color(0xFFD64545);

@@ -65,6 +65,13 @@ class AppTheme {
         fillColor: surface,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+        // The design floats every label on the field's top border, including
+        // on empty fields — the label is the field's name, not a placeholder,
+        // and the hint carries the example value underneath it.
+        floatingLabelBehavior: FloatingLabelBehavior.always,
+        labelStyle: TextStyle(fontSize: 14, color: textSecondary),
+        floatingLabelStyle: TextStyle(fontSize: 14, color: textPrimary),
+        hintStyle: TextStyle(fontSize: 16, color: textSecondary),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: border),
@@ -85,8 +92,12 @@ class AppTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size.fromHeight(56),
-          backgroundColor: AppColors.primary,
+          backgroundColor: AppColors.buttonPrimary,
           foregroundColor: Colors.white,
+          disabledBackgroundColor: AppColors.buttonPrimary.withValues(
+            alpha: 0.55,
+          ),
+          disabledForegroundColor: Colors.white,
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12)),
           textStyle:

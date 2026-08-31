@@ -25,7 +25,6 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
-  bool _obscure = true;
 
   @override
   void dispose() {
@@ -58,14 +57,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           HoppinTextField(
             label: 'Password',
             controller: _password,
-            obscure: _obscure,
+            obscurable: true,
             prefixIcon: const Icon(Icons.lock_outline),
           ),
+          const SizedBox(height: 10),
           Align(
             alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () => setState(() => _obscure = !_obscure),
-              child: Text(_obscure ? 'Show password' : 'Hide password'),
+            child: GestureDetector(
+              onTap: () => context.go(AppRoutes.forgotPassword),
+              child: Text(
+                'Forgot Password',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  decoration: TextDecoration.underline,
+                  color: theme.textTheme.bodyLarge?.color,
+                ),
+              ),
             ),
           ),
           if (error != null) ...[
@@ -87,8 +93,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           // Without this the sign-up screen is unreachable: the app opens on
           // login and the redirect keeps a signed-out rider on an auth route,
           // so a new rider had nowhere to go.
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          // Wraps rather than a Row: at 430px with the button's own padding a
+          // fixed Row overflows, and a striped overflow bar on the sign-in
+          // screen is the first thing a new rider would see.
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Text("Don't have an account?",
                   style: theme.textTheme.bodyMedium),

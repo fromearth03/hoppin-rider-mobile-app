@@ -137,7 +137,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           HoppinTextField(
             label: 'Password',
             controller: _password,
-            obscure: true,
+            obscurable: true,
             prefixIcon: const Icon(Icons.lock_outline),
           ),
           const SizedBox(height: 18),
@@ -212,8 +212,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           // so a link to login there would look broken.
           if (!incomplete) ...[
             const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            // Wraps for the same reason as the login screen's counterpart: a
+            // fixed Row overflows at 430px once the button's padding is added.
+            Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Text('Already have an account?',
                     style: theme.textTheme.bodyMedium),

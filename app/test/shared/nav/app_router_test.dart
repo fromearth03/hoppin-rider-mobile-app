@@ -32,6 +32,19 @@ void main() {
           AppRoutes.signup);
     });
 
+    test('leaves a signed-out rider alone on forgot password', () {
+      expect(redirectFor(AuthStatus.signedOut, AppRoutes.forgotPassword),
+          isNull,
+          reason: 'a rider who cannot remember their password is signed out '
+              'by definition; bouncing them to login makes recovery '
+              'unreachable');
+    });
+
+    test('sends a signed-in rider away from forgot password', () {
+      expect(redirectFor(AuthStatus.signedIn, AppRoutes.forgotPassword),
+          AppRoutes.home);
+    });
+
     test('does not redirect while auth state is still unknown', () {
       expect(redirectFor(AuthStatus.unknown, '/home'), isNull,
           reason: 'redirecting before the session is restored would flash '

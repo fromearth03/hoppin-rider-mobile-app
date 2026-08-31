@@ -23,7 +23,7 @@ void main() {
 
     testWidgets('obscures text when asked', (tester) async {
       await tester.pumpWidget(
-          _wrap(const HoppinTextField(label: 'Password', obscure: true)));
+          _wrap(const HoppinTextField(label: 'Password', obscurable: true)));
       expect(tester.widget<TextField>(find.byType(TextField)).obscureText,
           isTrue);
     });
@@ -59,6 +59,61 @@ void main() {
       );
 
       expect(find.text('Something is wrong'), findsOneWidget);
+    });
+
+    group('design fidelity', () {
+      testWidgets('floats the label on the border even when empty',
+          (tester) async {
+        // The design draws every label sitting on the field's top border, not
+        // above the field and not inside it as a placeholder.
+        await tester.pumpWidget(_wrap(const HoppinTextField(label: 'Email')));
+
+        final field = tester.widget<TextField>(find.byType(TextField));
+        expect(field.decoration!.labelText, 'Email');
+        expect(
+          Theme.of(tester.element(find.byType(TextField)))
+              .inputDecorationTheme
+              .floatingLabelBehavior,
+          FloatingLabelBehavior.always,
+        );
+      });
+
+      testWidgets('puts an eye toggle inside a password field', (tester) async {
+        await tester.pumpWidget(
+            _wrap(const HoppinTextField(label: 'Password', obscurable: true)));
+
+        // Inside the field's decoration, not a separate button beneath it.
+        expect(
+          find.descendant(
+            of: find.byType(TextField),
+            matching: find.byIcon(Icons.visibility_outlined),
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Show password'), findsNothing);
+      });
+
+      testWidgets('the eye toggle reveals and re-hides the password',
+          (tester) async {
+        await tester.pumpWidget(
+            _wrap(const HoppinTextField(label: 'Password', obscurable: true)));
+
+        TextField field() => tester.widget<TextField>(find.byType(TextField));
+        expect(field().obscureText, isTrue);
+
+        await tester.tap(find.byIcon(Icons.visibility_outlined));
+        await tester.pump();
+        expect(field().obscureText, isFalse);
+
+        await tester.tap(find.byIcon(Icons.visibility_off_outlined));
+        await tester.pump();
+        expect(field().obscureText, isTrue);
+      });
+
+      testWidgets('a non-password field has no eye toggle', (tester) async {
+        await tester.pumpWidget(_wrap(const HoppinTextField(label: 'Email')));
+        expect(find.byIcon(Icons.visibility_outlined), findsNothing);
+      });
     });
   });
 }

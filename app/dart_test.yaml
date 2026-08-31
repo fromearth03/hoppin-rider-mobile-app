@@ -12,3 +12,11 @@
 tags:
   live:
     skip: "talks to the live backend — run with --run-skipped"
+
+  # Screen renders, kept out of the default run for the same reason and in the
+  # same way. These write PNGs to compare against docs/figma/extracted/ rather
+  # than asserting anything, so a font or platform difference must never fail
+  # an ordinary test run:
+  #   flutter test test/golden --run-skipped --update-goldens
+  golden:
+    skip: "renders screens for eyeballing — run with --run-skipped"
