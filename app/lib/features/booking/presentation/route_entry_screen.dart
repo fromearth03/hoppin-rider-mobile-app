@@ -38,7 +38,12 @@ class ChosenRoute {
 /// filtered two ways, not two calls: `/geocode/search` returns `source` on
 /// every row and already ranks saved places first.
 class RouteEntryScreen extends ConsumerStatefulWidget {
-  const RouteEntryScreen({super.key});
+  /// When true, confirming POPS with the [ChosenRoute] as the result instead
+  /// of pushing fare-confirm — for callers (scheduling) that need a route
+  /// picked but own what happens next themselves.
+  final bool pickMode;
+
+  const RouteEntryScreen({super.key, this.pickMode = false});
 
   @override
   ConsumerState<RouteEntryScreen> createState() => _RouteEntryScreenState();
@@ -147,14 +152,16 @@ class _RouteEntryScreenState extends ConsumerState<RouteEntryScreen> {
       List.generate(_stops.length, (i) => i).every(_stopPoints.containsKey);
 
   void _confirm() {
-    context.push(
-      AppRoutes.fareConfirm,
-      extra: ChosenRoute(
-        pickup: _pickupPoint!,
-        dropoff: _dropoffPoint!,
-        stops: [for (var i = 0; i < _stops.length; i++) _stopPoints[i]!],
-      ),
+    final route = ChosenRoute(
+      pickup: _pickupPoint!,
+      dropoff: _dropoffPoint!,
+      stops: [for (var i = 0; i < _stops.length; i++) _stopPoints[i]!],
     );
+    if (widget.pickMode) {
+      context.pop(route);
+      return;
+    }
+    context.push(AppRoutes.fareConfirm, extra: route);
   }
 
   void _addStop() {

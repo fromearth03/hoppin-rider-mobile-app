@@ -1,10 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/api/api_exception.dart';
+import '../../../core/api/error_codes.dart';
 import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
+import '../../../shared/nav/app_router.dart';
+import '../../booking/data/fare_repository.dart';
 import '../../booking/data/vehicle_repository.dart';
+import '../../booking/presentation/route_entry_screen.dart'
+    show ChosenRoute;
+import '../data/scheduled_rides_repository.dart';
+
+/// The rider's booked future rides, refreshed after every create/cancel.
+final _scheduledListProvider =
+    FutureProvider.autoDispose<List<ScheduledRide>>((ref) async {
+  final result = await ref.watch(scheduledRidesRepositoryProvider).list();
+  return switch (result) {
+    Ok(:final value) => value,
+    Err(:final error) => throw error,
+  };
+});
+
+/// Rider cancellation scenarios for the policy card the frame draws.
+final _policyProvider =
+    FutureProvider.autoDispose<List<CancellationScenario>>((ref) async {
+  final result =
+      await ref.watch(scheduledRidesRepositoryProvider).cancellationPolicy();
+  return switch (result) {
+    Ok(:final value) => value,
+    Err(:final error) => throw error,
+  };
+});
 
 /// Live vehicle categories for the "Ride Type" picker, from `GET
 /// /vehicle-types` -- the same call and the same live values `Select
@@ -36,31 +65,16 @@ IconData _iconFor(String name) => switch (name.toLowerCase().replaceAll(' ', '')
       _ => Icons.directions_car_outlined,
     };
 
-/// Schedule Ride — matches `docs/figma/extracted/Schedule Ride.png`.
+/// Schedule Ride — matches `docs/figma/extracted/Schedule Ride.png`, wired
+/// to the live `POST/GET/DELETE /scheduled-rides` surface (verified in
+/// `ride_handler.go`; an earlier build believed the docs that said this was
+/// a later milestone — the endpoints exist and dispatch's watchdog activates
+/// the ride as the pickup window opens).
 ///
-/// **Scheduling is not wired to the backend.** The API does expose
-/// `POST /api/v1/scheduled-rides` (`docs/SCREEN-API-MATRIX.md:74`) with a
-/// `GET`/`DELETE` pair alongside it, and dispatch even auto-activates a
-/// scheduled ride ~15 minutes before its pickup window
-/// (`docs/BACKEND-RIDER-APP-ROUND5-2026-08-30.md:56`). But:
-///
-/// - `docs/superpowers/specs/2026-08-30-rider-app-milestone1-design.md:57`
-///   lists "scheduled rides" under "Out — later milestones".
-/// - `docs/superpowers/plans/2026-08-31-batch-2-booking-data.md:1165`:
-///   "`/scheduled-rides` is out of milestone 1."
-/// - `lib/features/booking/data/booking_repository.dart`'s `request()` takes
-///   `pickup`, `dropoff`, `vehicleCategoryId` and `waypoints` only -- no
-///   scheduled/future pickup-time parameter exists anywhere.
-/// - There is no `scheduled_rides_repository.dart` (or any scheduling data
-///   source) anywhere in this codebase to call the endpoint through.
-///
-/// So this screen renders the full drawn layout -- date/time, route fields,
-/// vehicle picker -- but the submit path is an honest "arrives in a later
-/// milestone" state rather than a button that pretends to book. This mirrors
-/// how `app_drawer.dart`'s milestone-2 destinations are shown but disabled
-/// (see `docs/SCREEN-DECISIONS.md`, "Side navigation"), and avoids the one
-/// outcome the project rules explicitly forbid: a control that silently
-/// drops the rider's chosen time.
+/// The frame's fare section draws Base + Surge rows; the estimate endpoint
+/// returns a total (and duration) with no base/surge split for a future
+/// ride, so the card shows the real total honestly rather than inventing a
+/// split — recorded in docs/SCREEN-DECISIONS.md.
 class ScheduleRideScreen extends ConsumerStatefulWidget {
   const ScheduleRideScreen({super.key});
 
@@ -72,6 +86,73 @@ class ScheduleRideScreen extends ConsumerStatefulWidget {
 class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
   DateTime? _scheduledFor;
   String? _selectedVehicleId;
+  ChosenRoute? _route;
+  bool _submitting = false;
+  String? _serverError;
+
+  Future<void> _pickRoute() async {
+    final result = await context.push(AppRoutes.route, extra: 'pick');
+    if (result is ChosenRoute && mounted) {
+      setState(() {
+        _route = result;
+        _serverError = null;
+      });
+    }
+  }
+
+  Future<void> _submit() async {
+    final route = _route;
+    final when = _scheduledFor;
+    if (route == null || when == null || _submitting) return;
+
+    setState(() {
+      _submitting = true;
+      _serverError = null;
+    });
+
+    final result = await ref.read(scheduledRidesRepositoryProvider).create(
+          pickup: route.pickup.position,
+          dropoff: route.dropoff.position,
+          pickupTime: when,
+          vehicleCategoryId: _selectedVehicleId,
+        );
+    if (!mounted) return;
+
+    switch (result) {
+      case Ok():
+        setState(() {
+          _submitting = false;
+          _route = null;
+          _scheduledFor = null;
+        });
+        ref.invalidate(_scheduledListProvider);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Ride scheduled. A driver is dispatched as the '
+                  'pickup time approaches.')),
+        );
+      case Err(:final error):
+        setState(() {
+          _submitting = false;
+          // The 30-minute rule especially: the server's own words.
+          _serverError = RiderErrorCopy.messageFor(error);
+        });
+    }
+  }
+
+  Future<void> _cancelScheduled(ScheduledRide ride) async {
+    final result =
+        await ref.read(scheduledRidesRepositoryProvider).cancel(ride.id);
+    if (!mounted) return;
+    switch (result) {
+      case Ok():
+        ref.invalidate(_scheduledListProvider);
+      case Err(:final error):
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(RiderErrorCopy.messageFor(error))),
+        );
+    }
+  }
 
   Future<void> _pickDateTime() async {
     final now = DateTime.now();
@@ -128,6 +209,26 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
                       : AppColors.lightTextPrimary),
             ),
           ),
+          // This screen is PUSHED from the drawer; without an exit the rider
+          // was stranded (the hamburger above is decorative map chrome, per
+          // the frame). Same circled close as route entry.
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 16,
+            right: 16,
+            child: CircleAvatar(
+              backgroundColor:
+                  isDark ? AppColors.darkSurface : AppColors.lightSurface,
+              child: IconButton(
+                onPressed: () => Navigator.of(context).maybePop(),
+                icon: Icon(Icons.close,
+                    size: 20,
+                    color: isDark
+                        ? AppColors.darkTextPrimary
+                        : AppColors.lightTextPrimary),
+                tooltip: 'Close',
+              ),
+            ),
+          ),
           DraggableScrollableSheet(
             initialChildSize: 0.82,
             minChildSize: 0.82,
@@ -174,28 +275,54 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
                     Text('From', style: theme.textTheme.titleMedium),
                     const SizedBox(height: 8),
                     _FieldTile(
-                      label: 'Pickup location',
-                      isPlaceholder: true,
+                      label: _route?.pickup.label ?? 'Pickup location',
+                      isPlaceholder: _route == null,
                       trailingIcon: Icons.edit_outlined,
-                      onTap: () {},
+                      onTap: _pickRoute,
                       isDark: isDark,
                     ),
                     const SizedBox(height: 20),
                     Text('To', style: theme.textTheme.titleMedium),
                     const SizedBox(height: 8),
                     _FieldTile(
-                      label: 'Destination',
-                      isPlaceholder: true,
+                      label: _route?.dropoff.label ?? 'Destination',
+                      isPlaceholder: _route == null,
                       trailingIcon: Icons.edit_outlined,
-                      onTap: () {},
+                      onTap: _pickRoute,
                       isDark: isDark,
                     ),
                     const SizedBox(height: 24),
                     Text('Ride Type', style: theme.textTheme.titleMedium),
                     const SizedBox(height: 8),
                     _vehicleCatalogue(theme, isDark),
+                    const SizedBox(height: 24),
+                    _fareEstimate(theme, isDark),
+                    const SizedBox(height: 24),
+                    Text('Cancellation Policy',
+                        style: theme.textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    _policyCard(theme, isDark),
+                    if (_serverError != null) ...[
+                      const SizedBox(height: 16),
+                      Text(_serverError!,
+                          style: const TextStyle(color: AppColors.negative)),
+                    ],
+                    const SizedBox(height: 20),
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primaryDark,
+                        minimumSize: const Size.fromHeight(52),
+                      ),
+                      onPressed:
+                          _route != null && _scheduledFor != null && !_submitting
+                              ? _submit
+                              : null,
+                      child: Text(_submitting
+                          ? 'Scheduling…'
+                          : 'Confirm Schedule'),
+                    ),
                     const SizedBox(height: 28),
-                    _UnavailableNotice(isDark: isDark),
+                    _upcomingList(theme, isDark),
                   ],
                 ),
               );
@@ -262,7 +389,211 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
       },
     );
   }
+
+  /// Fare Estimate, as the frame draws the section. The estimate endpoint
+  /// returns a total and duration with no base/surge split for a future
+  /// ride, so the real total renders and nothing is invented.
+  Widget _fareEstimate(ThemeData theme, bool isDark) {
+    final route = _route;
+    final catalogue = ref.watch(_vehicleCatalogueProvider).valueOrNull;
+    final categoryId = _selectedVehicleId ??
+        (catalogue != null && catalogue.isNotEmpty ? catalogue.first.id : null);
+
+    final rows = <Widget>[];
+    if (route == null || categoryId == null) {
+      rows.add(Text('Choose a route to see your fare.',
+          style: theme.textTheme.bodyMedium));
+    } else {
+      final quote = ref.watch(_quoteProvider((
+        pickup: route.pickup.position,
+        dropoff: route.dropoff.position,
+        categoryId: categoryId,
+      )));
+      rows.add(quote.when(
+        loading: () => const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8),
+          child: Center(
+              child: SizedBox(
+                  width: 20, height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2))),
+        ),
+        error: (error, _) => Text(
+          error is ApiException
+              ? RiderErrorCopy.messageFor(error)
+              : 'Could not quote this trip.',
+          style: const TextStyle(color: AppColors.negative),
+        ),
+        data: (estimate) => Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Total', style: theme.textTheme.titleMedium),
+            Text(estimate.totalPence.format(currency: estimate.currency),
+                style: theme.textTheme.titleMedium),
+          ],
+        ),
+      ));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Fare Estimate', style: theme.textTheme.titleMedium),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+            border: Border.all(
+                color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start, children: rows),
+        ),
+      ],
+    );
+  }
+
+  /// The rider's cancellation scenarios from `GET /cancellation-policy`,
+  /// rendered with the server's own labels and fees.
+  Widget _policyCard(ThemeData theme, bool isDark) {
+    final policy = ref.watch(_policyProvider);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+        border: Border.all(
+            color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: policy.when(
+        loading: () => Text('Loading policy…', style: theme.textTheme.bodyMedium),
+        error: (_, __) => Text(
+          'Cancellation fees may apply after a driver is assigned.',
+          style: theme.textTheme.bodyMedium,
+        ),
+        data: (scenarios) => scenarios.isEmpty
+            ? Text('No cancellation fee applies to this trip.',
+                style: theme.textTheme.bodyMedium)
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final s in scenarios) ...[
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                            child: Text(s.label,
+                                style: theme.textTheme.bodyMedium)),
+                        const SizedBox(width: 12),
+                        Text(
+                          s.feePence.value == 0 ? 'Free' : s.feePence.format(),
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                      ],
+                    ),
+                    if (s != scenarios.last) const SizedBox(height: 8),
+                  ],
+                ],
+              ),
+      ),
+    );
+  }
+
+  /// The rider's booked future rides, with a cancel per row. Not drawn on
+  /// the frame, but a booking the rider cannot see or cancel would be worse
+  /// than the section's absence.
+  Widget _upcomingList(ThemeData theme, bool isDark) {
+    final list = ref.watch(_scheduledListProvider);
+
+    return list.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (rides) {
+        final upcoming = rides
+            .where((r) => r.status != 'cancelled' && r.activeRideId == null)
+            .toList(growable: false);
+        if (upcoming.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Upcoming rides', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 8),
+            for (final ride in upcoming) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color:
+                      isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                  border: Border.all(
+                      color: isDark
+                          ? AppColors.darkBorder
+                          : AppColors.lightBorder),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            ride.requestedPickupTime == null
+                                ? 'Scheduled ride'
+                                : DateFormat('MMM d, yyyy  -  h:mm a').format(
+                                    ride.requestedPickupTime!.toLocal()),
+                            style: theme.textTheme.bodyLarge,
+                          ),
+                          if (ride.vehicleCategory != null ||
+                              ride.estimatePence != null)
+                            Text(
+                              [
+                                if (ride.vehicleCategory != null)
+                                  ride.vehicleCategory!,
+                                if (ride.estimatePence != null)
+                                  ride.estimatePence!
+                                      .format(currency: ride.currency),
+                              ].join('  ·  '),
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                        ],
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => _cancelScheduled(ride),
+                      child: const Text('Cancel',
+                          style: TextStyle(color: AppColors.negative)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
 }
+
+/// One quote for the chosen route + category, cached per key so reselecting
+/// a vehicle re-uses the fetched estimate.
+final _quoteProvider = FutureProvider.autoDispose.family<FareEstimate,
+    ({LatLng pickup, LatLng dropoff, String categoryId})>((ref, key) async {
+  final result = await ref.watch(fareRepositoryProvider).estimate(
+        pickup: key.pickup,
+        dropoff: key.dropoff,
+        vehicleCategoryId: key.categoryId,
+      );
+  return switch (result) {
+    Ok(:final value) => value,
+    Err(:final error) => throw error,
+  };
+});
 
 class _HeaderCard extends StatelessWidget {
   final bool isDark;
@@ -437,57 +768,3 @@ class _VehicleTile extends StatelessWidget {
   }
 }
 
-/// The honest state in place of a fare estimate and a submit button.
-///
-/// See the class doc on [ScheduleRideScreen] for why: scheduling has no
-/// wired backend path from this app, so nothing here claims to book, quote,
-/// or estimate a fare for a future pickup time.
-class _UnavailableNotice extends StatelessWidget {
-  final bool isDark;
-  const _UnavailableNotice({required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
-    final surface = isDark ? AppColors.darkSurface : AppColors.lightSurface;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: surface,
-        border: Border.all(color: border),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.info_outline, color: AppColors.info, size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text('Not available yet',
-                    style: theme.textTheme.titleMedium),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Scheduled rides arrive in a later milestone. You can book an '
-            'immediate ride from the home screen today.',
-            style: theme.textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 16),
-          const SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: null,
-              child: Text('Confirm Schedule (coming soon)'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
