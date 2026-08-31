@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/api/error_codes.dart';
 import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
 import '../../../shared/nav/app_drawer.dart';
+import '../../../shared/nav/app_router.dart';
 import '../data/vehicle_repository.dart';
 import 'widgets/rider_map.dart';
 import 'widgets/vehicle_card.dart';
@@ -267,25 +269,31 @@ class _SearchField extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+    // Material + InkWell rather than Container: the whole bar is the way
+    // into route entry, and a tap target should ripple.
+    return Material(
+      color: theme.colorScheme.surface,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
         borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.search,
-              color: theme.textTheme.bodyMedium?.color, size: 22),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Where to & for how much?',
-              style: theme.textTheme.bodyMedium,
-              overflow: TextOverflow.ellipsis,
-            ),
+        onTap: () => context.push(AppRoutes.route),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          child: Row(
+            children: [
+              Icon(Icons.search,
+                  color: theme.textTheme.bodyMedium?.color, size: 22),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Where to & for how much?',
+                  style: theme.textTheme.bodyMedium,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

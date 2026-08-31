@@ -5,8 +5,10 @@ import 'package:hoppin_rider/core/theme/app_theme.dart';
 import 'package:hoppin_rider/features/auth/application/auth_controller.dart';
 import 'package:hoppin_rider/features/auth/domain/auth_state.dart';
 import 'package:hoppin_rider/features/booking/data/vehicle_repository.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hoppin_rider/features/booking/presentation/home_screen.dart';
 import 'package:hoppin_rider/shared/nav/app_drawer.dart';
+import 'package:hoppin_rider/shared/nav/app_router.dart';
 import 'package:mocktail/mocktail.dart';
 
 class _MockAuth extends Mock implements AuthController {}
@@ -58,6 +60,31 @@ void main() {
       return () {};
     });
   });
+  testWidgets('tapping the search bar opens route entry', (tester) async {
+    final router = GoRouter(
+      initialLocation: AppRoutes.home,
+      routes: [
+        GoRoute(path: AppRoutes.home, builder: (_, __) => const HomeScreen()),
+        GoRoute(
+            path: AppRoutes.route,
+            builder: (_, __) => const Scaffold(body: Text('route entry'))),
+      ],
+    );
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        vehicleCategoriesProvider.overrideWith((ref) async => _categories),
+        authControllerProvider.overrideWith((ref) => auth),
+      ],
+      child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Where to & for how much?'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('route entry'), findsOneWidget);
+  });
+
   testWidgets('the menu button opens the navigation drawer', (tester) async {
     // The button called Scaffold.of(context).openDrawer() while the Scaffold
     // had no drawer attached, and from a context above the Scaffold at that —
