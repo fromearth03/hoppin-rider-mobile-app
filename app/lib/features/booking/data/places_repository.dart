@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/geo.dart';
 import '../../../core/result.dart';
 
 /// The server returns `[]` below this length rather than an error, so calling
@@ -30,17 +31,34 @@ class PlaceSuggestion {
 
   bool get isSaved => source == 'saved';
 
+  /// The coordinate, in the shared type the estimate and booking calls take.
+  /// Saves every call site converting by hand.
+  LatLng get position => LatLng(lat, lng);
+
+  /// Returns null for a row with no usable coordinate.
+  ///
+  /// A suggestion the rider cannot actually travel to is worse than one that
+  /// is missing: it renders as a tappable row that fails when chosen. Letting
+  /// the repository skip it keeps the rest of the list usable, where an
+  /// unguarded cast would throw away every suggestion.
+  static PlaceSuggestion? tryFromJson(Map<String, dynamic> json) {
+    final lat = json['lat'], lng = json['lng'];
+    if (lat is! num || lng is! num) return null;
+
+    return PlaceSuggestion(
+      label: (json['label'] as String?) ?? '',
+      lat: lat.toDouble(),
+      lng: lng.toDouble(),
+      postcode: switch (json['postcode']) {
+        String s when s.isNotEmpty => s,
+        _ => null,
+      },
+      source: (json['source'] as String?) ?? 'map',
+    );
+  }
+
   factory PlaceSuggestion.fromJson(Map<String, dynamic> json) =>
-      PlaceSuggestion(
-        label: (json['label'] as String?) ?? '',
-        lat: (json['lat'] as num).toDouble(),
-        lng: (json['lng'] as num).toDouble(),
-        postcode: switch (json['postcode']) {
-          String s when s.isNotEmpty => s,
-          _ => null,
-        },
-        source: (json['source'] as String?) ?? 'map',
-      );
+      tryFromJson(json)!;
 }
 
 class PlacesRepository {
@@ -79,7 +97,10 @@ class PlacesRepository {
     return switch (result) {
       Ok(:final value) => Ok(((value['results'] as List?) ?? [])
           .cast<Map<String, dynamic>>()
-          .map(PlaceSuggestion.fromJson)
+          // A row with no usable coordinate is skipped, so one bad result
+          // does not cost the rider the whole suggestion list.
+          .map(PlaceSuggestion.tryFromJson)
+          .whereType<PlaceSuggestion>()
           .toList(growable: false)),
       Err(:final error) => Err(error),
     };

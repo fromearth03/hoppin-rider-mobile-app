@@ -2,11 +2,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../core/geo.dart';
 import '../../../core/result.dart';
-import 'fare_repository.dart' show LatLng;
 
-/// The server caps intermediate stops at five.
-const kMaxWaypoints = 5;
+// kMaxWaypoints now lives in core/geo.dart so the estimate path enforces the
+// same cap -- quoting a six-stop fare and then refusing it at the book button
+// would be worse than refusing the sixth stop as it is added.
 
 /// The acknowledgement from `POST /api/v1/rides/request`.
 ///
@@ -37,7 +38,7 @@ class BookingRepository {
     List<LatLng> waypoints = const [],
   }) async {
     if (waypoints.length > kMaxWaypoints) {
-      return Err(ApiException(
+      return const Err(ApiException(
         'VALIDATION_FAILED',
         'A trip can have at most $kMaxWaypoints stops.',
         0,
