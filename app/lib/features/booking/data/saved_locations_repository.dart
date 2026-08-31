@@ -64,7 +64,7 @@ class SavedLocationsRepository {
   }) async {
     final trimmed = label.trim();
     if (trimmed.isEmpty) {
-      return Err(
+      return const Err(
           ApiException('VALIDATION_FAILED', 'Give this place a name.', 0));
     }
 
@@ -86,7 +86,7 @@ class SavedLocationsRepository {
   Future<Result<SavedLocation>> rename(String id, String label) async {
     final trimmed = label.trim();
     if (trimmed.isEmpty) {
-      return Err(
+      return const Err(
           ApiException('VALIDATION_FAILED', 'Give this place a name.', 0));
     }
 

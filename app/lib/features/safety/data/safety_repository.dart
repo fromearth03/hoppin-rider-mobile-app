@@ -192,7 +192,7 @@ class SafetyRepository {
       // a row whose call button does nothing is worse than saying so.
       Ok(:final value) => switch (EmergencyContact.tryFromJson(value)) {
           final EmergencyContact c => Ok(c),
-          null => Err(ApiException('INTERNAL',
+          null => const Err(ApiException('INTERNAL',
               'That contact could not be saved. Try again.', 0)),
         },
       Err(:final error) => Err(error),
@@ -216,7 +216,7 @@ class SafetyRepository {
       // rider believes someone can follow their trip when nobody can.
       Ok(:final value) => switch (ShareLink.tryFromJson(value)) {
           final ShareLink l => Ok(l),
-          null => Err(ApiException('INTERNAL',
+          null => const Err(ApiException('INTERNAL',
               'Could not create a tracking link. Try again.', 0)),
         },
       Err(:final error) => Err(error),
