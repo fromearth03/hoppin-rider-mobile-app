@@ -278,7 +278,13 @@ class _SearchField extends StatelessWidget {
           Icon(Icons.search,
               color: theme.textTheme.bodyMedium?.color, size: 22),
           const SizedBox(width: 10),
-          Text('Where to & for how much?', style: theme.textTheme.bodyMedium),
+          Expanded(
+            child: Text(
+              'Where to & for how much?',
+              style: theme.textTheme.bodyMedium,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
     );

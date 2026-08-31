@@ -15,12 +15,14 @@ import '../../features/booking/presentation/home_screen.dart';
 import '../../features/booking/presentation/route_entry_screen.dart';
 import '../../features/booking/presentation/saved_places_screen.dart';
 import '../../features/booking/presentation/select_vehicle_screen.dart';
+import '../../features/history/presentation/ride_details_screen.dart';
 import '../../features/history/presentation/ride_history_screen.dart';
 import '../../features/history/presentation/trip_details_screen.dart';
 import '../../features/notifications/presentation/notifications_screen.dart';
 import '../../features/notifications/presentation/promotional_screen.dart';
 import '../../features/payments/presentation/payment_methods_screen.dart';
 import '../../features/payments/presentation/ride_complete_screen.dart';
+import '../../features/payments/presentation/transactions_screen.dart';
 import '../../features/profile/presentation/personal_information_screen.dart';
 import '../../features/scheduling/presentation/schedule_ride_screen.dart';
 import '../../features/settings/presentation/help_support_screen.dart';
@@ -51,6 +53,8 @@ class AppRoutes {
   static const resetPassword = '/reset-password';
   static const liveTrip = '/live-trip';
   static const fareConfirm = '/fare-confirm';
+  static const transactions = '/transactions';
+  static const rideDetails = '/ride-details';
   static const home = '/home';
   static const route = '/route';
   static const safety = '/safety';
@@ -193,6 +197,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.fareConfirm,
         builder: (_, __) => const FareConfirmScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.transactions,
+        builder: (_, __) => const TransactionsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.rideDetails,
+        builder: (_, state) => RideDetailsScreen(
+          rideId: state.uri.queryParameters['ride'] ?? '',
+        ),
       ),
       GoRoute(
         path: AppRoutes.liveTrip,

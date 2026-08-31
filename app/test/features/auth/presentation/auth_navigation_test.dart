@@ -142,12 +142,14 @@ void main() {
       expect(find.byType(LoginScreen), findsOneWidget);
     });
 
-    testWidgets('a restored session with no date of birth is caught',
+    testWidgets(
+        'a restored session with no date of birth signs in but cannot book',
         (tester) async {
-      // The spec requires the app to retry the DOB write on launch whenever
-      // the profile has none. A rider who dismissed recovery once would
-      // otherwise stay booking-eligible forever, because the backend treats a
-      // null DOB as allowed.
+      // This used to park the rider on the sign-up screen, which locked an
+      // existing rider with a real profile out of the whole app over one
+      // null field. The age gate the old behaviour protected still holds —
+      // the backend treats a null DOB as allowed, so the app enforces it —
+      // but at booking, via canBook, not at the door.
       when(() => auth.currentSession).thenReturn(_session());
       when(() => profiles.get())
           .thenAnswer((_) async => Ok(_profile(dob: null)));
@@ -156,10 +158,13 @@ void main() {
       await c.read(authControllerProvider.notifier).bootstrap();
       await pumpApp(tester, c);
 
-      expect(c.read(authControllerProvider).status,
-          AuthStatus.profileIncomplete);
-      expect(find.byType(SignupScreen), findsOneWidget,
-          reason: 'the recovery UI lives on the sign-up screen');
+      final snapshot = c.read(authControllerProvider);
+      expect(snapshot.status, AuthStatus.signedIn);
+      expect(find.byType(SignupScreen), findsNothing,
+          reason: 'an existing rider must not be held at the sign-up door');
+      expect(snapshot.canBook, isFalse,
+          reason: 'the age gate moved to booking, it did not disappear');
+      expect(snapshot.needsDateOfBirthToBook, isTrue);
     });
   });
 

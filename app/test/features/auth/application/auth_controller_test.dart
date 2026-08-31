@@ -185,7 +185,11 @@ void main() {
   });
 
   group('signIn', () {
-    test('flags an incomplete profile so the app can recover it', () async {
+    test('a missing date of birth still signs the rider in', () async {
+      // This used to park the rider in profileIncomplete, and the router
+      // forces that status to /signup — so an existing rider with a real
+      // profile (rating, avatar, history) was locked out of the entire app
+      // over one null field, with a sign-up form as the only way forward.
       when(() => auth.signIn(any(), any()))
           .thenAnswer((_) async => Ok(_session()));
       when(() => profiles.get())
@@ -193,8 +197,47 @@ void main() {
 
       await controller.signIn('a@b.com', 'pw');
 
-      expect(controller.state.status, AuthStatus.profileIncomplete,
-          reason: 'a null DOB means the age gate is unenforced for this rider');
+      expect(controller.state.status, AuthStatus.signedIn);
+    });
+
+    test('a missing date of birth blocks booking rather than sign-in',
+        () async {
+      // The gate itself must not be lost: the backend's booking check treats
+      // a null DOB as ALLOWED, so if the app does not enforce it nobody does.
+      // It moved from the door to the point where it bites.
+      when(() => auth.signIn(any(), any()))
+          .thenAnswer((_) async => Ok(_session()));
+      when(() => profiles.get())
+          .thenAnswer((_) async => Ok(_profile(dob: null)));
+
+      await controller.signIn('a@b.com', 'pw');
+
+      expect(controller.state.canBook, isFalse,
+          reason: 'a rider with no date of birth has not passed the age gate');
+      expect(controller.state.needsDateOfBirthToBook, isTrue);
+    });
+
+    test('a rider with a date of birth may book', () async {
+      when(() => auth.signIn(any(), any()))
+          .thenAnswer((_) async => Ok(_session()));
+      when(() => profiles.get())
+          .thenAnswer((_) async => Ok(_profile(dob: '1990-12-10')));
+
+      await controller.signIn('a@b.com', 'pw');
+
+      expect(controller.state.canBook, isTrue);
+      expect(controller.state.needsDateOfBirthToBook, isFalse);
+    });
+
+    test('a signed-out rider cannot book', () async {
+      when(() => auth.signIn(any(), any())).thenAnswer((_) async =>
+          Err(ApiException('INVALID_CREDENTIALS', 'Invalid login', 400)));
+
+      await controller.signIn('a@b.com', 'pw');
+
+      expect(controller.state.canBook, isFalse);
+      expect(controller.state.needsDateOfBirthToBook, isFalse,
+          reason: 'a signed-out rider needs credentials, not a birthday');
     });
 
     test('signs in cleanly when the profile is complete', () async {

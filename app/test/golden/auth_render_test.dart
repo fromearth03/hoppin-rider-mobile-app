@@ -9,6 +9,7 @@ import 'package:hoppin_rider/features/auth/application/auth_controller.dart';
 import 'package:hoppin_rider/features/auth/domain/auth_state.dart';
 import 'package:hoppin_rider/features/auth/presentation/forgot_password_screen.dart';
 import 'package:hoppin_rider/features/auth/presentation/login_screen.dart';
+import 'package:hoppin_rider/features/auth/presentation/signup_screen.dart';
 import 'package:mocktail/mocktail.dart';
 
 class _MockController extends Mock implements AuthController {}
@@ -46,9 +47,13 @@ void main() {
     Widget screen,
     String name, {
     Brightness brightness = Brightness.light,
+    // The Figma frames are 430x932. A 320-wide render is not a Figma frame —
+    // it exists purely to surface the class of bug a fixed-height Row with a
+    // squeezed flexible child produces, which only shows up under narrower
+    // constraints than the design ships at.
+    double width = 430,
   }) async {
-    // The Figma frames are 430x932.
-    tester.view.physicalSize = const Size(430, 932);
+    tester.view.physicalSize = Size(width, 932);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
@@ -80,7 +85,23 @@ void main() {
         brightness: Brightness.dark);
   });
 
+  testWidgets('login narrow', (t) async {
+    await shoot(t, const LoginScreen(), 'login_narrow', width: 320);
+  });
+
   testWidgets('forgot password light', (t) async {
     await shoot(t, const ForgotPasswordScreen(), 'forgot_light');
+  });
+
+  testWidgets('forgot password narrow', (t) async {
+    await shoot(t, const ForgotPasswordScreen(), 'forgot_narrow', width: 320);
+  });
+
+  testWidgets('signup light', (t) async {
+    await shoot(t, const SignupScreen(), 'signup_light');
+  });
+
+  testWidgets('signup narrow', (t) async {
+    await shoot(t, const SignupScreen(), 'signup_narrow', width: 320);
   });
 }

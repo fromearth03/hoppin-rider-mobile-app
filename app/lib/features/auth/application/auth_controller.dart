@@ -142,10 +142,21 @@ class AuthController extends StateNotifier<AuthSnapshot> {
     final profile = await _profiles.get();
 
     state = switch (profile) {
+      // A missing date of birth does NOT hold the rider at the door.
+      //
+      // It used to: `needsDateOfBirth` parked them in profileIncomplete, and
+      // the router forces that status to /signup. An existing rider with a
+      // real profile — rating, avatar, history — was therefore locked out of
+      // every screen in the app because one field was null, with a sign-up
+      // form as the only way forward. That is a worse failure than the one it
+      // was guarding against.
+      //
+      // The guard it replaces still matters: the backend's booking check
+      // treats a null DOB as ALLOWED, so the age gate has to be enforced
+      // here. It is enforced where it bites — at booking — via
+      // [RiderProfile.needsDateOfBirth], not at sign-in.
       Ok(:final value) => AuthSnapshot(
-          status: value.needsDateOfBirth
-              ? AuthStatus.profileIncomplete
-              : AuthStatus.signedIn,
+          status: AuthStatus.signedIn,
           profile: value,
         ),
       // Only a profile that genuinely is not there means the account is

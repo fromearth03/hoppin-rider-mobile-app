@@ -42,6 +42,8 @@ void main() {
     AppRoutes.tripDetails,
     AppRoutes.liveTrip,
     AppRoutes.fareConfirm,
+    AppRoutes.transactions,
+    AppRoutes.rideDetails,
   ];
 
   group('a signed-in rider is left alone on', () {

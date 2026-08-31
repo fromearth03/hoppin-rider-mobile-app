@@ -8,6 +8,7 @@ import 'package:hoppin_rider/core/result.dart';
 import 'package:hoppin_rider/core/theme/app_theme.dart';
 import 'package:hoppin_rider/features/auth/data/profile_repository.dart';
 import 'package:hoppin_rider/features/booking/data/vehicle_repository.dart';
+import 'package:hoppin_rider/features/booking/presentation/home_screen.dart';
 import 'package:hoppin_rider/features/booking/presentation/select_vehicle_screen.dart';
 import 'package:hoppin_rider/features/profile/application/personal_information_controller.dart';
 import 'package:hoppin_rider/features/profile/domain/personal_information_state.dart';
@@ -67,8 +68,13 @@ void main() {
     Widget screen,
     String name, {
     Brightness brightness = Brightness.light,
+    // The Figma frames are 430x932. A 320-wide render is not a Figma frame —
+    // it exists to surface the class of bug a fixed-height Row with a
+    // squeezed flexible child produces, which only shows up under narrower
+    // constraints than the design ships at.
+    double width = 430,
   }) async {
-    tester.view.physicalSize = const Size(430, 932);
+    tester.view.physicalSize = Size(width, 932);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
@@ -115,6 +121,37 @@ void main() {
     );
   });
 
+  testWidgets('personal information narrow', (t) async {
+    final controller = _MockPersonalInfoController();
+    final state = PersonalInformationState(
+      status: PersonalInformationStatus.ready,
+      profile: _profile,
+    );
+    when(() => controller.state).thenReturn(state);
+    when(() => controller.addListener(any(),
+            fireImmediately: any(named: 'fireImmediately')))
+        .thenAnswer((invocation) {
+      final listener = invocation.positionalArguments[0]
+          as void Function(PersonalInformationState);
+      final fire =
+          invocation.namedArguments[#fireImmediately] as bool? ?? true;
+      if (fire) listener(controller.state);
+      return () {};
+    });
+
+    await shoot(
+      t,
+      ProviderScope(
+        overrides: [
+          personalInformationControllerProvider.overrideWith((_) => controller),
+        ],
+        child: const PersonalInformationScreen(),
+      ),
+      'personal_information_narrow',
+      width: 320,
+    );
+  });
+
   testWidgets('select vehicle light', (t) async {
     final repo = _MockVehicleRepository();
     when(() => repo.list()).thenAnswer(
@@ -127,6 +164,53 @@ void main() {
         child: const SelectVehicleScreen(),
       ),
       'select_vehicle_light',
+    );
+  });
+
+  testWidgets('select vehicle narrow', (t) async {
+    final repo = _MockVehicleRepository();
+    when(() => repo.list()).thenAnswer(
+        (_) async => const Ok([_standard, _estate, _mpv, _minibus]));
+
+    await shoot(
+      t,
+      ProviderScope(
+        overrides: [vehicleRepositoryProvider.overrideWithValue(repo)],
+        child: const SelectVehicleScreen(),
+      ),
+      'select_vehicle_narrow',
+      width: 320,
+    );
+  });
+
+  testWidgets('home light', (t) async {
+    final repo = _MockVehicleRepository();
+    when(() => repo.list()).thenAnswer(
+        (_) async => const Ok([_standard, _estate, _mpv, _minibus]));
+
+    await shoot(
+      t,
+      ProviderScope(
+        overrides: [vehicleRepositoryProvider.overrideWithValue(repo)],
+        child: const HomeScreen(),
+      ),
+      'home_light',
+    );
+  });
+
+  testWidgets('home narrow', (t) async {
+    final repo = _MockVehicleRepository();
+    when(() => repo.list()).thenAnswer(
+        (_) async => const Ok([_standard, _estate, _mpv, _minibus]));
+
+    await shoot(
+      t,
+      ProviderScope(
+        overrides: [vehicleRepositoryProvider.overrideWithValue(repo)],
+        child: const HomeScreen(),
+      ),
+      'home_narrow',
+      width: 320,
     );
   });
 }

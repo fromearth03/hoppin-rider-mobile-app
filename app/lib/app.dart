@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_mode_provider.dart';
 import 'features/auth/application/auth_controller.dart';
 import 'shared/nav/app_router.dart';
 
@@ -36,9 +37,10 @@ class _HoppinAppState extends ConsumerState<HoppinApp> {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      // Follows the device until the rider sets a preference; the backend
-      // stores one on /me/preferences, wired in a later batch.
-      themeMode: ThemeMode.system,
+      // Rider's in-session choice from Settings > Appearance. Held in memory
+      // only -- shared_preferences is not a dependency, so this resets to
+      // ThemeMode.system on every app restart rather than persisting.
+      themeMode: ref.watch(themeModeProvider),
       routerConfig: ref.watch(appRouterProvider),
     );
   }

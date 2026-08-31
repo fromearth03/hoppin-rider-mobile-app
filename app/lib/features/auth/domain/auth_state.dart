@@ -4,10 +4,12 @@ import '../data/profile_repository.dart';
 /// Where the rider stands with authentication.
 ///
 /// `profileIncomplete` is signed in but not usable: the auth user exists while
-/// its profile row or date of birth does not. It is a distinct state because
-/// signing the rider out would strand them with an account they cannot
-/// recreate — the email is taken — and leaving them in the app would fail
-/// every call with USER_NOT_FOUND.
+/// its profile ROW does not, so every authenticated call fails with
+/// USER_NOT_FOUND. It is a distinct state because signing the rider out would
+/// strand them with an account they cannot recreate — the email is taken.
+///
+/// A missing date of birth is NOT this state. That is an ordinary signed-in
+/// rider who cannot book yet; see [AuthSnapshot.canBook].
 enum AuthStatus { unknown, signedOut, signedIn, profileIncomplete }
 
 class AuthSnapshot {
@@ -22,6 +24,24 @@ class AuthSnapshot {
     this.error,
     this.isBusy = false,
   });
+
+  /// Whether this rider may actually book a ride.
+  ///
+  /// The age gate lives HERE rather than at sign-in. The backend's booking
+  /// check treats a null date of birth as ALLOWED, so if the app does not
+  /// enforce it nobody does — but enforcing it at the door locked riders with
+  /// a real profile out of the whole app over one empty field.
+  ///
+  /// Every path that starts a booking must consult this and send a rider with
+  /// no date of birth to collect one first.
+  bool get canBook =>
+      status == AuthStatus.signedIn && profile?.needsDateOfBirth == false;
+
+  /// True when the only thing standing between this rider and booking is a
+  /// missing date of birth — the case worth prompting for, as opposed to a
+  /// rider who is simply signed out.
+  bool get needsDateOfBirthToBook =>
+      status == AuthStatus.signedIn && profile?.needsDateOfBirth == true;
 
   AuthSnapshot copyWith({
     AuthStatus? status,

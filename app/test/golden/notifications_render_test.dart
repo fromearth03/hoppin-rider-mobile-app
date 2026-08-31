@@ -26,8 +26,13 @@ void main() {
     Widget screen,
     String name, {
     Brightness brightness = Brightness.light,
+    // The Figma frames are 430x932. A 320-wide render is not a Figma frame —
+    // it exists to surface the class of bug a fixed-height Row with a
+    // squeezed flexible child produces, which only shows up under narrower
+    // constraints than the design ships at.
+    double width = 430,
   }) async {
-    tester.view.physicalSize = const Size(430, 932);
+    tester.view.physicalSize = Size(width, 932);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
@@ -44,42 +49,68 @@ void main() {
     );
   }
 
+  final notifications = [
+    NotificationItem(
+      id: '1',
+      title: 'Driver Arrived',
+      body: 'Your driver is arrived, Feel free to contact your driver',
+      createdAt: DateTime(2026, 8, 31, 9),
+      isRead: false,
+      dayLabel: 'Today',
+    ),
+    NotificationItem(
+      id: '2',
+      title: 'New Message',
+      body: 'You have a new message from George',
+      createdAt: DateTime(2026, 8, 31, 8, 45),
+      isRead: false,
+      dayLabel: 'Today',
+    ),
+    NotificationItem(
+      id: '3',
+      title: 'Rate your driver',
+      body: 'How your trip went? Give driver a rating.',
+      createdAt: DateTime(2026, 8, 31, 8, 30),
+      isRead: true,
+      dayLabel: 'Today',
+    ),
+    NotificationItem(
+      id: '4',
+      title: 'Issue Resolved',
+      body: '-£ 12.36 refunded in your wallet.',
+      createdAt: DateTime(2026, 8, 31, 8),
+      isRead: true,
+      dayLabel: 'Today',
+    ),
+  ];
+
+  final promotions = [
+    PromotionItem(
+      id: '1',
+      title: 'First Ride Discount',
+      description: "Get 10% off on your first ride with Hoppin'",
+      status: PromotionStatus.active,
+      validUntil: DateTime(2026, 9, 2),
+    ),
+    PromotionItem(
+      id: '2',
+      title: 'First Ride Discount',
+      description: "Get 10% off on your first ride with Hoppin'",
+      status: PromotionStatus.availed,
+      validUntil: DateTime(2026, 9, 2),
+    ),
+    PromotionItem(
+      id: '3',
+      title: 'First Ride Discount',
+      description: "Get 10% off on your first ride with Hoppin'",
+      status: PromotionStatus.expired,
+      validUntil: DateTime(2026, 9, 2),
+    ),
+  ];
+
   testWidgets('notifications light', (t) async {
     final source = _MockNotificationsSource();
-    when(() => source.list()).thenAnswer((_) async => [
-          NotificationItem(
-            id: '1',
-            title: 'Driver Arrived',
-            body: 'Your driver is arrived, Feel free to contact your driver',
-            createdAt: DateTime(2026, 8, 31, 9),
-            isRead: false,
-            dayLabel: 'Today',
-          ),
-          NotificationItem(
-            id: '2',
-            title: 'New Message',
-            body: 'You have a new message from George',
-            createdAt: DateTime(2026, 8, 31, 8, 45),
-            isRead: false,
-            dayLabel: 'Today',
-          ),
-          NotificationItem(
-            id: '3',
-            title: 'Rate your driver',
-            body: 'How your trip went? Give driver a rating.',
-            createdAt: DateTime(2026, 8, 31, 8, 30),
-            isRead: true,
-            dayLabel: 'Today',
-          ),
-          NotificationItem(
-            id: '4',
-            title: 'Issue Resolved',
-            body: '-£ 12.36 refunded in your wallet.',
-            createdAt: DateTime(2026, 8, 31, 8),
-            isRead: true,
-            dayLabel: 'Today',
-          ),
-        ]);
+    when(() => source.list()).thenAnswer((_) async => notifications);
     when(() => source.markRead(any())).thenAnswer((_) async {});
     when(() => source.markAllRead()).thenAnswer((_) async {});
 
@@ -93,31 +124,26 @@ void main() {
     );
   });
 
+  testWidgets('notifications narrow', (t) async {
+    final source = _MockNotificationsSource();
+    when(() => source.list()).thenAnswer((_) async => notifications);
+    when(() => source.markRead(any())).thenAnswer((_) async {});
+    when(() => source.markAllRead()).thenAnswer((_) async {});
+
+    await shoot(
+      t,
+      ProviderScope(
+        overrides: [notificationsSourceProvider.overrideWithValue(source)],
+        child: const NotificationsScreen(),
+      ),
+      'notifications_narrow',
+      width: 320,
+    );
+  });
+
   testWidgets('promotional light', (t) async {
     final source = _MockPromotionsSource();
-    when(() => source.list()).thenAnswer((_) async => [
-          PromotionItem(
-            id: '1',
-            title: 'First Ride Discount',
-            description: "Get 10% off on your first ride with Hoppin'",
-            status: PromotionStatus.active,
-            validUntil: DateTime(2026, 9, 2),
-          ),
-          PromotionItem(
-            id: '2',
-            title: 'First Ride Discount',
-            description: "Get 10% off on your first ride with Hoppin'",
-            status: PromotionStatus.availed,
-            validUntil: DateTime(2026, 9, 2),
-          ),
-          PromotionItem(
-            id: '3',
-            title: 'First Ride Discount',
-            description: "Get 10% off on your first ride with Hoppin'",
-            status: PromotionStatus.expired,
-            validUntil: DateTime(2026, 9, 2),
-          ),
-        ]);
+    when(() => source.list()).thenAnswer((_) async => promotions);
 
     await shoot(
       t,
@@ -126,6 +152,21 @@ void main() {
         child: const PromotionalScreen(),
       ),
       'promotional_light',
+    );
+  });
+
+  testWidgets('promotional narrow', (t) async {
+    final source = _MockPromotionsSource();
+    when(() => source.list()).thenAnswer((_) async => promotions);
+
+    await shoot(
+      t,
+      ProviderScope(
+        overrides: [promotionsSourceProvider.overrideWithValue(source)],
+        child: const PromotionalScreen(),
+      ),
+      'promotional_narrow',
+      width: 320,
     );
   });
 }

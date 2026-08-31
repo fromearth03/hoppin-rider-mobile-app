@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/application/auth_controller.dart';
+import 'widgets/appearance_picker_sheet.dart';
 import 'widgets/settings_card.dart';
 import 'widgets/settings_header.dart';
 import 'widgets/settings_rows.dart';
@@ -16,13 +17,25 @@ import 'widgets/settings_rows.dart';
 /// that resets the moment the rider leaves the screen would be a lie about a
 /// setting.
 ///
-/// Appearance is not a working theme switch either: `HoppinApp` in `app.dart`
-/// hardcodes `themeMode: ThemeMode.system` with its own note that the backend
-/// preference wiring is a later batch, and that file is owned by another
-/// agent. So Appearance is disabled here rather than wired to a control this
-/// screen has no authority to drive.
+/// Appearance is the one row with a real effect: it opens a picker sheet
+/// (`appearance_picker_sheet.dart`) that writes to `themeModeProvider`,
+/// which `HoppinApp` reads for `MaterialApp.themeMode`. The choice changes
+/// the resolved theme immediately, for the current session only -- there is
+/// still no settings/preferences repository and `shared_preferences` is not
+/// a dependency, so nothing here claims to survive an app restart.
 ///
-/// Logout is the one row with a real backend behind it: `AuthController`
+/// Distance Units stays disabled: distance is rendered ad hoc inline in
+/// `trip_details_screen.dart` and `ride_complete_screen.dart` (both outside
+/// this feature), with no shared formatter to thread a units preference
+/// through. Wiring a toggle here would either require editing screens this
+/// pass does not own, or ship a control that changes nothing -- so it stays
+/// off, honestly.
+///
+/// Map provider stays disabled too: there is no Maps SDK key and
+/// `MapPlaceholder` stands in for the map, so choosing between two map
+/// providers that do not render anything would be meaningless.
+///
+/// Logout is the one other row with a real backend behind it: `AuthController`
 /// already exposes `signOut()`.
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -35,20 +48,20 @@ class SettingsScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           children: [
-            const SettingsCard(children: [
-              SettingsToggleRow(
+            SettingsCard(children: [
+              const SettingsToggleRow(
                 icon: Icons.notifications_none,
                 label: 'Notification',
                 value: false,
                 comingSoon: true,
               ),
-              SettingsToggleRow(
+              const SettingsToggleRow(
                 icon: Icons.volume_up_outlined,
                 label: 'Driver Arrived Sound',
                 value: false,
                 comingSoon: true,
               ),
-              SettingsToggleRow(
+              const SettingsToggleRow(
                 icon: Icons.lightbulb_outline,
                 label: 'Do not lock the screen',
                 value: false,
@@ -57,7 +70,7 @@ class SettingsScreen extends ConsumerWidget {
               SettingsNavRow(
                 icon: Icons.wb_sunny_outlined,
                 label: 'Apperance',
-                comingSoon: true,
+                onTap: () => showAppearancePickerSheet(context),
               ),
             ]),
             const SizedBox(height: 20),
