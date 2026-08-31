@@ -4,11 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hoppin_rider/core/theme/theme_mode_provider.dart';
 
 void main() {
-  test('defaults to ThemeMode.system', () {
+  test('defaults to ThemeMode.light -- the design pack is light-only', () {
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
-    expect(container.read(themeModeProvider), ThemeMode.system);
+    expect(container.read(themeModeProvider), ThemeMode.light);
   });
 
   test('writing to the notifier updates the provider value', () {
@@ -32,6 +32,6 @@ void main() {
     // A brand new container (standing in for a fresh app launch) does not
     // see the first container's choice -- there is nothing durable behind
     // this provider, by design.
-    expect(second.read(themeModeProvider), ThemeMode.system);
+    expect(second.read(themeModeProvider), ThemeMode.light);
   });
 }

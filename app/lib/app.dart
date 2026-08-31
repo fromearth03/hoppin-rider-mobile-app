@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -42,6 +43,23 @@ class _HoppinAppState extends ConsumerState<HoppinApp> {
       // ThemeMode.system on every app restart rather than persisting.
       themeMode: ref.watch(themeModeProvider),
       routerConfig: ref.watch(appRouterProvider),
+      // The design is a 430px phone screen. In a wide browser window the
+      // app used to stretch edge to edge — sheets became slabs and the map
+      // area a grey ocean. Clamp to a centred phone column instead; on a
+      // phone-sized viewport (and everywhere off web) nothing changes.
+      builder: (context, child) {
+        if (!kIsWeb || child == null) return child ?? const SizedBox.shrink();
+        return LayoutBuilder(builder: (context, constraints) {
+          if (constraints.maxWidth <= 500) return child;
+          final dark = Theme.of(context).brightness == Brightness.dark;
+          return ColoredBox(
+            color: dark ? const Color(0xFF101016) : const Color(0xFFE7E7EC),
+            child: Center(
+              child: SizedBox(width: 430, child: child),
+            ),
+          );
+        });
+      },
     );
   }
 }

@@ -49,6 +49,10 @@ class AppTheme {
       useMaterial3: true,
       brightness: brightness,
       colorScheme: scheme,
+      // The design pack's face — the rounded geometric type every frame is
+      // set in. Bundled, not fetched: the app renders identically offline
+      // and in tests. Weights 400/500/600/700 are declared in pubspec.yaml.
+      fontFamily: 'Poppins',
       scaffoldBackgroundColor: background,
       textTheme: TextTheme(
         headlineLarge: TextStyle(
