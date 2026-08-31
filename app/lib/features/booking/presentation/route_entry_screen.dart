@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/api/error_codes.dart';
 import '../../../core/geo.dart';
 import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
+import '../../../shared/nav/app_router.dart';
 import '../data/places_repository.dart';
 
 /// One chosen point on the trip.
@@ -47,6 +49,13 @@ class _RouteEntryScreenState extends ConsumerState<RouteEntryScreen> {
   final _dropoff = TextEditingController();
   final _stops = <TextEditingController>[];
 
+  /// The geocoded place behind each field, or null once the rider edits the
+  /// text — typed text is a query, not a place, and booking it would send
+  /// stale coordinates under a fresh label.
+  RoutePoint? _pickupPoint;
+  RoutePoint? _dropoffPoint;
+  final Map<int, RoutePoint> _stopPoints = {};
+
   /// Which field the suggestions currently apply to: 0 = pickup, 1 = dropoff,
   /// 2+ = the stop at index (n - 2).
   int _activeField = 1;
@@ -70,6 +79,16 @@ class _RouteEntryScreenState extends ConsumerState<RouteEntryScreen> {
 
   void _onChanged(String query) {
     _debounce?.cancel();
+    setState(() {
+      switch (_activeField) {
+        case 0:
+          _pickupPoint = null;
+        case 1:
+          _dropoffPoint = null;
+        default:
+          _stopPoints.remove(_activeField - 2);
+      }
+    });
     // The server answers an empty list below two characters, so there is
     // nothing to fetch - but the field should still clear as the rider deletes.
     if (query.trim().length < kMinQueryLength) {
@@ -106,14 +125,36 @@ class _RouteEntryScreenState extends ConsumerState<RouteEntryScreen> {
   }
 
   void _choose(PlaceSuggestion place) {
-    final controller = switch (_activeField) {
-      0 => _pickup,
-      1 => _dropoff,
-      _ => _stops[_activeField - 2],
-    };
-    controller.text = place.label;
+    final point = RoutePoint(place.label, place.position);
+    switch (_activeField) {
+      case 0:
+        _pickup.text = place.label;
+        _pickupPoint = point;
+      case 1:
+        _dropoff.text = place.label;
+        _dropoffPoint = point;
+      default:
+        _stops[_activeField - 2].text = place.label;
+        _stopPoints[_activeField - 2] = point;
+    }
     setState(() => _results = const []);
     FocusScope.of(context).unfocus();
+  }
+
+  bool get _routeComplete =>
+      _pickupPoint != null &&
+      _dropoffPoint != null &&
+      List.generate(_stops.length, (i) => i).every(_stopPoints.containsKey);
+
+  void _confirm() {
+    context.push(
+      AppRoutes.fareConfirm,
+      extra: ChosenRoute(
+        pickup: _pickupPoint!,
+        dropoff: _dropoffPoint!,
+        stops: [for (var i = 0; i < _stops.length; i++) _stopPoints[i]!],
+      ),
+    );
   }
 
   void _addStop() {
@@ -124,6 +165,16 @@ class _RouteEntryScreenState extends ConsumerState<RouteEntryScreen> {
   void _removeStop(int i) {
     setState(() {
       _stops.removeAt(i).dispose();
+      // Shift the chosen points above the removed stop down one slot so
+      // they stay attached to the fields they were picked for.
+      _stopPoints.remove(i);
+      final shifted = <int, RoutePoint>{
+        for (final entry in _stopPoints.entries)
+          entry.key > i ? entry.key - 1 : entry.key: entry.value,
+      };
+      _stopPoints
+        ..clear()
+        ..addAll(shifted);
       if (_activeField >= 2) _activeField = 1;
     });
   }
@@ -218,6 +269,13 @@ class _RouteEntryScreenState extends ConsumerState<RouteEntryScreen> {
           const SizedBox(height: 8),
           Expanded(child: _results_(theme, visible)),
         ],
+      ),
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+        child: FilledButton(
+          onPressed: _routeComplete ? _confirm : null,
+          child: const Text('Confirm Route'),
+        ),
       ),
     );
   }
