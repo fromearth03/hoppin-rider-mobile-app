@@ -154,10 +154,15 @@ class SafetyRepository {
   }
 
   Future<Result<List<EmergencyContact>>> listContacts() async {
-    final result =
-        await _api.get<Map<String, dynamic>>('/me/emergency-contacts');
+    // The live endpoint returns a BARE ARRAY (`[]`), verified against the
+    // running backend 2026-09-01 — not the `{"contacts": [...]}` wrapper the
+    // handover docs described. Requesting `Map` here made every 200 parse as
+    // a failure and the safety screen said contacts could not load. Accept
+    // both shapes so a future wrapper does not break it back.
+    final result = await _api.get<dynamic>('/me/emergency-contacts');
     return switch (result) {
-      Ok(:final value) => Ok(_objects(value['contacts'])
+      Ok(:final value) => Ok(_objects(
+              value is List ? value : (value is Map ? value['contacts'] : null))
           .map(EmergencyContact.tryFromJson)
           .whereType<EmergencyContact>()
           .toList(growable: false)),

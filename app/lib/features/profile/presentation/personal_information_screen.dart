@@ -1,6 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/api/api_client.dart';
+import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
 import '../../../shared/widgets/hoppin_button.dart';
 import '../../../shared/widgets/hoppin_text_field.dart';
@@ -24,6 +28,19 @@ import '../domain/personal_information_state.dart';
 ///   API marks name or avatar as locked; `full_name` is a plain patchable
 ///   field like any other, so presenting it as immutable would misrepresent
 ///   what the backend actually allows.
+/// The avatar bytes, fetched with auth. The image routes 401 a plain
+/// `NetworkImage` — on web an `<img>` tag cannot carry the bearer token —
+/// so the bytes come through the authenticated client and render from
+/// memory. Null (initials fallback) on any failure.
+final avatarBytesProvider =
+    FutureProvider.autoDispose.family<Uint8List?, String>((ref, url) async {
+  final result = await ref.watch(apiClientProvider).getBytes(url);
+  return switch (result) {
+    Ok(:final value) => value,
+    Err() => null,
+  };
+});
+
 class PersonalInformationScreen extends ConsumerStatefulWidget {
   const PersonalInformationScreen({super.key});
 
@@ -121,19 +138,26 @@ class _PersonalInformationScreenState
             Center(
               child: Stack(
                 children: [
-                  CircleAvatar(
-                    radius: 56,
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                    backgroundImage: profile.avatarUrl != null
-                        ? NetworkImage(profile.avatarUrl!)
-                        : null,
-                    child: profile.avatarUrl == null
-                        ? Text(
-                            _initials(profile.fullName),
-                            style: theme.textTheme.headlineLarge,
-                          )
-                        : null,
-                  ),
+                  Builder(builder: (context) {
+                    final bytes = profile.avatarUrl == null
+                        ? null
+                        : ref
+                            .watch(avatarBytesProvider(profile.avatarUrl!))
+                            .valueOrNull;
+                    return CircleAvatar(
+                      radius: 56,
+                      backgroundColor:
+                          AppColors.primary.withValues(alpha: 0.15),
+                      backgroundImage:
+                          bytes != null ? MemoryImage(bytes) : null,
+                      child: bytes == null
+                          ? Text(
+                              _initials(profile.fullName),
+                              style: theme.textTheme.headlineLarge,
+                            )
+                          : null,
+                    );
+                  }),
                 ],
               ),
             ),

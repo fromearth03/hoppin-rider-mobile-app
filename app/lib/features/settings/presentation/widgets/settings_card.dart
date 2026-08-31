@@ -18,6 +18,10 @@ class SettingsCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
+        // Stretch, not the default centre: a card header is a bare padded
+        // Text, and centring it floats the title mid-card — the frames all
+        // draw card titles left-aligned.
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (var i = 0; i < children.length; i++) ...[
             children[i],

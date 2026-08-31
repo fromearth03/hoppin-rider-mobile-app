@@ -22,8 +22,8 @@ void main() {
       // escaping a method whose signature promises a Result. ApiClient catches
       // only DioException, so it would propagate to a caller that cannot see
       // it coming - on the emergency contacts screen.
-      when(() => api.get<Map<String, dynamic>>(any()))
-          .thenAnswer((_) async => const Ok({
+      when(() => api.get<dynamic>(any()))
+          .thenAnswer((_) async => const Ok<dynamic>({
                 'contacts': [
                   {'id': 'c1', 'name': 'Mum', 'phone': '+447700900123'},
                   null,
@@ -43,8 +43,8 @@ void main() {
       // addContact refuses a blank number on the way in; nothing refused one
       // on the way out. A contact with no phone renders as a tappable row
       // whose call button does nothing - in an emergency, worse than absent.
-      when(() => api.get<Map<String, dynamic>>(any()))
-          .thenAnswer((_) async => const Ok({
+      when(() => api.get<dynamic>(any()))
+          .thenAnswer((_) async => const Ok<dynamic>({
                 'contacts': [
                   {'id': 'c1', 'name': 'Mum', 'phone': '+447700900123'},
                   {'id': 'c2', 'name': 'No phone', 'phone': ''},
@@ -120,8 +120,8 @@ void main() {
 
   group('emergency contacts', () {
     test('reads the list', () async {
-      when(() => api.get<Map<String, dynamic>>(any()))
-          .thenAnswer((_) async => const Ok({
+      when(() => api.get<dynamic>(any()))
+          .thenAnswer((_) async => const Ok<dynamic>({
                 'contacts': [
                   {'id': 'c1', 'name': 'Mum', 'phone': '+447700900123',
                    'relationship': 'parent'},
@@ -136,9 +136,35 @@ void main() {
       expect(list.first.relationship, 'parent');
     });
 
+    test('reads the live backend shape: a bare array, no wrapper', () async {
+      // Verified against the running backend 2026-09-01: GET
+      // /me/emergency-contacts returns `[...]`, not `{"contacts": [...]}`.
+      // Requesting Map made every 200 parse as a failure — the safety screen
+      // said contacts could not load while the server was fine.
+      when(() => api.get<dynamic>(any()))
+          .thenAnswer((_) async => const Ok<dynamic>([
+                {'id': 'c1', 'name': 'Mum', 'phone': '+447700900123'},
+              ]));
+
+      final list =
+          ((await repo.listContacts()) as Ok<List<EmergencyContact>>).value;
+
+      expect(list, hasLength(1));
+      expect(list.first.name, 'Mum');
+    });
+
+    test('an empty bare array is an empty list, not an error', () async {
+      when(() => api.get<dynamic>(any()))
+          .thenAnswer((_) async => const Ok<dynamic>([]));
+
+      final result = await repo.listContacts();
+
+      expect((result as Ok<List<EmergencyContact>>).value, isEmpty);
+    });
+
     test('a contact with no relationship reads as null, not empty', () async {
-      when(() => api.get<Map<String, dynamic>>(any()))
-          .thenAnswer((_) async => const Ok({
+      when(() => api.get<dynamic>(any()))
+          .thenAnswer((_) async => const Ok<dynamic>({
                 'contacts': [
                   {'id': 'c2', 'name': 'Sam', 'phone': '+447700900124',
                    'relationship': ''},

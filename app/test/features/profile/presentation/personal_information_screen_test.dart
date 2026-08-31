@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -261,5 +263,69 @@ void main() {
     await tester.pump();
 
     expect(find.widgetWithText(HoppinButton, 'Save'), findsOneWidget);
+  });
+
+  group('avatar', () {
+    const withAvatar = RiderProfile(
+      fullName: 'Taimoor Ali Asghar',
+      phoneNumber: '+44 123 567 8910',
+      email: 'ali.asghar123@gmail.com',
+      avatarUrl: 'https://api.hoppin.tech/api/v1/images/avatars/users/u/a.jpg',
+      dateOfBirth: '1995-04-12',
+      rating: null,
+      ratingCount: 0,
+    );
+
+    // A 1x1 transparent GIF — the smallest thing the image decoder accepts.
+    final onePixel = Uint8List.fromList(const [
+      0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x80, 0x00, //
+      0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0x21, 0xF9, 0x04, 0x01, 0x00,
+      0x00, 0x00, 0x00, 0x2C, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00,
+      0x00, 0x02, 0x02, 0x44, 0x01, 0x00, 0x3B,
+    ]);
+
+    Widget avatarHarness(Uint8List? bytes) => ProviderScope(
+          overrides: [
+            personalInformationControllerProvider
+                .overrideWith((ref) => controller),
+            // The bytes come from the authenticated client in production;
+            // the override stands in for a 200 (bytes) or a 401 (null).
+            avatarBytesProvider(withAvatar.avatarUrl!)
+                .overrideWith((ref) async => bytes),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.light,
+            home: const PersonalInformationScreen(),
+          ),
+        );
+
+    testWidgets('renders the fetched image, not the initials', (tester) async {
+      stub(const PersonalInformationState(
+        status: PersonalInformationStatus.ready,
+        profile: withAvatar,
+      ));
+
+      await tester.pumpWidget(avatarHarness(onePixel));
+      await tester.pumpAndSettle();
+
+      final circle = tester.widget<CircleAvatar>(find.byType(CircleAvatar));
+      expect(circle.backgroundImage, isA<MemoryImage>());
+      expect(find.text('TA'), findsNothing);
+    });
+
+    testWidgets('falls back to initials when the fetch fails (401)',
+        (tester) async {
+      stub(const PersonalInformationState(
+        status: PersonalInformationStatus.ready,
+        profile: withAvatar,
+      ));
+
+      await tester.pumpWidget(avatarHarness(null));
+      await tester.pumpAndSettle();
+
+      final circle = tester.widget<CircleAvatar>(find.byType(CircleAvatar));
+      expect(circle.backgroundImage, isNull);
+      expect(find.text('TA'), findsOneWidget);
+    });
   });
 }

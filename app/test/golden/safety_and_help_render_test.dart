@@ -57,17 +57,16 @@ void main() {
 
   testWidgets('safety light', (t) async {
     final api = _MockApi();
-    when(() => api.get<Map<String, dynamic>>('/me/emergency-contacts'))
-        .thenAnswer((_) async => const Ok({
-              'contacts': [
-                {
-                  'id': 'c1',
-                  'name': 'Jordan Lee',
-                  'phone': '+44 7700 900123',
-                  'relationship': 'Partner',
-                },
-              ],
-            }));
+    // Bare array — the live backend shape.
+    when(() => api.get<dynamic>('/me/emergency-contacts'))
+        .thenAnswer((_) async => const Ok<dynamic>([
+              {
+                'id': 'c1',
+                'name': 'Jordan Lee',
+                'phone': '+44 7700 900123',
+                'relationship': 'Partner',
+              },
+            ]));
     when(() => api.get<Map<String, dynamic>>('/contacts'))
         .thenAnswer((_) async => const Ok({
               'support_email': 'support@hoppin.app',
@@ -81,17 +80,16 @@ void main() {
 
   testWidgets('safety narrow', (t) async {
     final api = _MockApi();
-    when(() => api.get<Map<String, dynamic>>('/me/emergency-contacts'))
-        .thenAnswer((_) async => const Ok({
-              'contacts': [
-                {
-                  'id': 'c1',
-                  'name': 'Jordan Lee',
-                  'phone': '+44 7700 900123',
-                  'relationship': 'Partner',
-                },
-              ],
-            }));
+    // Bare array — the live backend shape.
+    when(() => api.get<dynamic>('/me/emergency-contacts'))
+        .thenAnswer((_) async => const Ok<dynamic>([
+              {
+                'id': 'c1',
+                'name': 'Jordan Lee',
+                'phone': '+44 7700 900123',
+                'relationship': 'Partner',
+              },
+            ]));
     when(() => api.get<Map<String, dynamic>>('/contacts'))
         .thenAnswer((_) async => const Ok({
               'support_email': 'support@hoppin.app',

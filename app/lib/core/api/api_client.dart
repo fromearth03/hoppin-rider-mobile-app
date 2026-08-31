@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -54,6 +55,27 @@ class ApiClient {
 
   Future<Result<T>> delete<T>(String path, {Object? body}) =>
       _send<T>(() => _dio.delete(path, data: body));
+
+  /// Raw bytes with the same auth the JSON calls get. The image routes
+  /// require a bearer token, which a plain `NetworkImage` (an `<img>` tag on
+  /// web) cannot send — so images that need auth come through here instead.
+  Future<Result<Uint8List>> getBytes(String url) async {
+    try {
+      final response = await _dio.get<List<int>>(
+        url,
+        options: Options(responseType: ResponseType.bytes),
+      );
+      final status = response.statusCode ?? 500;
+      final data = response.data;
+      if (status >= 200 && status < 300 && data != null) {
+        return Ok(Uint8List.fromList(data));
+      }
+      return Err(
+          ApiException(status >= 500 ? 'INTERNAL' : 'NOT_FOUND', '', status));
+    } on DioException catch (e) {
+      return Err(ApiException('INTERNAL', e.message ?? 'network error', 0));
+    }
+  }
 
   Future<Result<T>> _send<T>(Future<Response> Function() call) async {
     try {
