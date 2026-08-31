@@ -30,15 +30,28 @@ class VehicleCategory {
   /// "0 Seats 0 Bags" would state something false, so the row is dropped.
   bool get hasCapacity => seats > 0 || bags > 0;
 
+  /// Returns null for a row with no usable id.
+  ///
+  /// The id is sent to `/rides/estimate` and `/rides/request`, so a category
+  /// without one cannot be booked and is worse than absent — it would render
+  /// as a tappable card that fails at the last step. Returning null lets the
+  /// repository skip that one row instead of throwing away the whole
+  /// catalogue, which an unguarded cast would do.
+  static VehicleCategory? tryFromJson(Map<String, dynamic> json) {
+    final id = json['id'] as String?;
+    if (id == null || id.isEmpty) return null;
+
+    return VehicleCategory(
+      id: id,
+      name: (json['name'] as String?) ?? '',
+      seats: (json['seats'] as num?)?.toInt() ?? 0,
+      bags: (json['bags'] as num?)?.toInt() ?? 0,
+      priceMultiplier: (json['price_multiplier'] as num?)?.toDouble() ?? 1.0,
+    );
+  }
+
   factory VehicleCategory.fromJson(Map<String, dynamic> json) =>
-      VehicleCategory(
-        id: json['id'] as String,
-        name: (json['name'] as String?) ?? '',
-        seats: (json['seats'] as num?)?.toInt() ?? 0,
-        bags: (json['bags'] as num?)?.toInt() ?? 0,
-        priceMultiplier:
-            (json['price_multiplier'] as num?)?.toDouble() ?? 1.0,
-      );
+      tryFromJson(json)!;
 }
 
 class VehicleRepository {
@@ -53,9 +66,13 @@ class VehicleRepository {
   Future<Result<List<VehicleCategory>>> list() async {
     final result = await _api.get<Map<String, dynamic>>('/vehicle-types');
     return switch (result) {
+      // A malformed row is skipped rather than throwing: one bad record from
+      // the admin panel should cost the rider that category, not the entire
+      // picker.
       Ok(:final value) => Ok(((value['vehicle_types'] as List?) ?? [])
           .cast<Map<String, dynamic>>()
-          .map(VehicleCategory.fromJson)
+          .map(VehicleCategory.tryFromJson)
+          .whereType<VehicleCategory>()
           .toList(growable: false)),
       Err(:final error) => Err(error),
     };

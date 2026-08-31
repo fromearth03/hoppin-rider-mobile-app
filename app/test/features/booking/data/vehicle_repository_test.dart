@@ -75,6 +75,33 @@ void main() {
       expect(names, ['MiniCar', 'Standard', 'Estate']);
     });
 
+    test('skips a row with no id rather than losing the whole list',
+        () async {
+      // The id is sent to /rides/estimate and /rides/request, so a category
+      // without one cannot be booked - it would render as a tappable card
+      // that fails at the last step. One bad row from the admin panel should
+      // cost that category, not the entire picker.
+      when(() => api.get<Map<String, dynamic>>(any()))
+          .thenAnswer((_) async => const Ok({
+                'vehicle_types': [
+                  {'id': 'a', 'name': 'Standard', 'seats': 4, 'bags': 2,
+                   'price_multiplier': 1.0},
+                  {'name': 'Broken', 'seats': 4, 'bags': 2,
+                   'price_multiplier': 1.0},
+                  {'id': '', 'name': 'AlsoBroken', 'seats': 4, 'bags': 2,
+                   'price_multiplier': 1.0},
+                  {'id': 'b', 'name': 'Estate', 'seats': 5, 'bags': 4,
+                   'price_multiplier': 1.3},
+                ],
+              }));
+
+      final result = await repo.list();
+      final names =
+          (result as Ok<List<VehicleCategory>>).value.map((v) => v.name);
+
+      expect(names, ['Standard', 'Estate']);
+    });
+
     test('an empty catalogue is a success, not an error', () async {
       when(() => api.get<Map<String, dynamic>>(any()))
           .thenAnswer((_) async => const Ok({'vehicle_types': []}));
