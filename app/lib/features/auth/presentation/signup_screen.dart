@@ -78,6 +78,24 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         );
   }
 
+  /// The recovery path: the account exists, but its date of birth was never
+  /// stored.
+  ///
+  /// This is reachable two ways — a DOB write that failed during sign-up, and
+  /// a restored session whose profile has no DOB. In the second case `_dob` is
+  /// null because this screen never collected it, so the rider must pick one
+  /// before we can finish. Submitting a placeholder here would write a
+  /// fabricated birth date to a real profile and defeat the age gate the whole
+  /// two-step flow exists to enforce.
+  void _finishSetup() {
+    final invalid = DobValidator.validate(_dob);
+    if (invalid != null) {
+      setState(() => _dobError = invalid);
+      return;
+    }
+    ref.read(authControllerProvider.notifier).completeProfile(_dob!);
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(authControllerProvider);
@@ -159,11 +177,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           HoppinButton(
             label: incomplete ? 'Finish setting up' : 'Create account',
             isLoading: state.isBusy,
-            onPressed: incomplete
-                ? () => ref
-                    .read(authControllerProvider.notifier)
-                    .completeProfile(_dob ?? DateTime(1990))
-                : _submit,
+            onPressed: incomplete ? _finishSetup : _submit,
           ),
         ],
       ),

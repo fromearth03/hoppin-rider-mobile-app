@@ -5,6 +5,7 @@ import 'package:hoppin_rider/core/theme/app_theme.dart';
 import 'package:hoppin_rider/features/auth/application/auth_controller.dart';
 import 'package:hoppin_rider/features/auth/domain/auth_state.dart';
 import 'package:hoppin_rider/features/auth/presentation/signup_screen.dart';
+import 'package:hoppin_rider/shared/widgets/hoppin_button.dart';
 import 'package:mocktail/mocktail.dart';
 
 class _MockController extends Mock implements AuthController {}
@@ -109,5 +110,30 @@ void main() {
     // The account exists; signing out would strand the rider with an email
     // they cannot reuse. The only sane action is to finish the job.
     expect(find.textContaining('finish'), findsOneWidget);
+  });
+
+  testWidgets('recovery never submits a placeholder date of birth',
+      (tester) async {
+    // Reachable when a RESTORED session lands in profileIncomplete: the
+    // account has no stored DOB and this screen never collected one, so
+    // `_dob` is null. Submitting a made-up date here would write a fabricated
+    // birth date to a real profile and defeat the age gate entirely.
+    when(() => controller.state)
+        .thenReturn(const AuthSnapshot(status: AuthStatus.profileIncomplete));
+    when(() => controller.completeProfile(any())).thenAnswer((_) async {});
+
+    await tester.pumpWidget(_harness(controller));
+    await tester.pump();
+
+    // The form scrolls past the 800x600 test viewport, so the button must be
+    // brought into view before it can be tapped.
+    final button = find.widgetWithText(HoppinButton, 'Finish setting up');
+    await tester.ensureVisible(button);
+    await tester.pumpAndSettle();
+    await tester.tap(button);
+    await tester.pump();
+
+    verifyNever(() => controller.completeProfile(any()));
+    expect(find.text('Enter your date of birth'), findsOneWidget);
   });
 }
