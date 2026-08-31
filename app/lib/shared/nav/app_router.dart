@@ -17,6 +17,10 @@ class AppRoutes {
   static const login = '/login';
   static const signup = '/signup';
   static const forgotPassword = '/forgot-password';
+  static const personalInformation = '/personal-information';
+  static const paymentMethods = '/payment-methods';
+  static const selectVehicle = '/select-vehicle';
+  static const rideComplete = '/ride-complete';
   static const home = '/home';
   static const route = '/route';
   static const safety = '/safety';
