@@ -96,24 +96,30 @@ class _TripDetailsBody extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _SummaryStat(
-                      icon: Icons.place_outlined,
-                      label: 'Distance',
-                      value: receipt.distanceMiles == null
-                          ? '—'
-                          : '${receipt.distanceMiles!.toStringAsFixed(1)} mi',
+                    Expanded(
+                      child: _SummaryStat(
+                        icon: Icons.place_outlined,
+                        label: 'Distance',
+                        value: receipt.distanceMiles == null
+                            ? '—'
+                            : '${receipt.distanceMiles!.toStringAsFixed(1)} mi',
+                      ),
                     ),
-                    _SummaryStat(
-                      icon: Icons.access_time,
-                      label: 'Duration',
-                      value: duration == null
-                          ? '—'
-                          : _formatDuration(duration),
+                    Expanded(
+                      child: _SummaryStat(
+                        icon: Icons.access_time,
+                        label: 'Duration',
+                        value: duration == null
+                            ? '—'
+                            : _formatDuration(duration),
+                      ),
                     ),
-                    _SummaryStat(
-                      icon: Icons.attach_money,
-                      label: 'Total Fare',
-                      value: _totalLabel,
+                    Expanded(
+                      child: _SummaryStat(
+                        icon: Icons.attach_money,
+                        label: 'Total Fare',
+                        value: _totalLabel,
+                      ),
                     ),
                   ],
                 ),
@@ -159,10 +165,13 @@ class _TripDetailsBody extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('Date', style: theme.textTheme.bodyMedium),
-                  Text(
-                    DateFormat('d MMM yyyy, HH:mm')
-                        .format(receipt.pickupTime!.toLocal()),
-                    style: theme.textTheme.bodyLarge,
+                  Flexible(
+                    child: Text(
+                      DateFormat('d MMM yyyy, HH:mm')
+                          .format(receipt.pickupTime!.toLocal()),
+                      style: theme.textTheme.bodyLarge,
+                      textAlign: TextAlign.right,
+                    ),
                   ),
                 ],
               ),
@@ -204,7 +213,11 @@ class _SummaryStat extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(label, style: theme.textTheme.bodyMedium),
-        Text(value, style: theme.textTheme.labelLarge),
+        Text(
+          value,
+          style: theme.textTheme.labelLarge,
+          overflow: TextOverflow.ellipsis,
+        ),
       ],
     );
   }

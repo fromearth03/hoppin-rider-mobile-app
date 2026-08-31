@@ -48,7 +48,16 @@ class SettingsToggleRow extends StatelessWidget {
             _SoonBadge(),
             const SizedBox(width: 8),
           ],
-          Switch(value: value, onChanged: onChanged),
+          // The design's toggles are orange, not the app's indigo brand
+          // colour -- coloured here rather than in the shared theme, since
+          // Switch appears nowhere else in the app and a theme-wide change
+          // would affect screens this pass does not own.
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeThumbColor: AppColors.accent,
+            activeTrackColor: AppColors.accent.withValues(alpha: 0.5),
+          ),
         ],
       ),
     );

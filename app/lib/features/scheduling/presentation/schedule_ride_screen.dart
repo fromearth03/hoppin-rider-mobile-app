@@ -1,28 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
+import '../../booking/data/vehicle_repository.dart';
 
-/// One vehicle category tile, matching `Select Vehicle`'s live values.
-///
-/// Scheduling has no fare-quote call wired to a future pickup time anywhere
-/// in this codebase (see the class doc on [ScheduleRideScreen]), so seats and
-/// bags are shown for context only -- never a fare.
-class _VehicleOption {
-  final String name;
-  final int seats;
-  final int bags;
-  final IconData icon;
+/// Live vehicle categories for the "Ride Type" picker, from `GET
+/// /vehicle-types` -- the same call and the same live values `Select
+/// Vehicle` renders. This screen used to hardcode Standard/Estate/MPV/Minibus
+/// with the exact seats/bags numbers `Select Vehicle`'s own decision log
+/// records as wrong (Estate 4/4 vs live 5/4, MPV 6/4 vs live 7/5, Minibus
+/// 16/12 vs live 8/6) -- fixed here to read the same source of truth rather
+/// than repeat a rejected set of numbers.
+final _vehicleCatalogueProvider =
+    FutureProvider.autoDispose<List<VehicleCategory>>((ref) async {
+  final result = await ref.watch(vehicleRepositoryProvider).list();
+  return switch (result) {
+    Ok(:final value) => value.where((c) => c.hasCapacity).toList(),
+    Err(:final error) => throw error,
+  };
+});
 
-  const _VehicleOption(this.name, this.seats, this.bags, this.icon);
-}
-
-const _vehicleOptions = [
-  _VehicleOption('Standard', 4, 2, Icons.directions_car),
-  _VehicleOption('Estate', 4, 4, Icons.directions_car_filled),
-  _VehicleOption('MPV', 6, 4, Icons.airport_shuttle),
-  _VehicleOption('Minibus', 16, 12, Icons.directions_bus),
-];
+/// Icon keyed by category name, with a generic fallback -- mirrors
+/// `vehicle_card.dart`'s `_Artwork`. The API has no image field and
+/// categories are admin-editable, so a name this map has never heard of must
+/// still render something rather than nothing.
+IconData _iconFor(String name) => switch (name.toLowerCase().replaceAll(' ', '')) {
+      'standard' => Icons.directions_car,
+      'minicar' => Icons.directions_car_outlined,
+      'estate' => Icons.directions_car_filled,
+      'mpv' => Icons.airport_shuttle_outlined,
+      'minibus' => Icons.airport_shuttle,
+      'minitruck' => Icons.local_shipping_outlined,
+      _ => Icons.directions_car_outlined,
+    };
 
 /// Schedule Ride — matches `docs/figma/extracted/Schedule Ride.png`.
 ///
@@ -49,16 +61,17 @@ const _vehicleOptions = [
 /// (see `docs/SCREEN-DECISIONS.md`, "Side navigation"), and avoids the one
 /// outcome the project rules explicitly forbid: a control that silently
 /// drops the rider's chosen time.
-class ScheduleRideScreen extends StatefulWidget {
+class ScheduleRideScreen extends ConsumerStatefulWidget {
   const ScheduleRideScreen({super.key});
 
   @override
-  State<ScheduleRideScreen> createState() => _ScheduleRideScreenState();
+  ConsumerState<ScheduleRideScreen> createState() =>
+      _ScheduleRideScreenState();
 }
 
-class _ScheduleRideScreenState extends State<ScheduleRideScreen> {
+class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
   DateTime? _scheduledFor;
-  int _selectedVehicle = 0;
+  String? _selectedVehicleId;
 
   Future<void> _pickDateTime() async {
     final now = DateTime.now();
@@ -180,29 +193,7 @@ class _ScheduleRideScreenState extends State<ScheduleRideScreen> {
                     const SizedBox(height: 24),
                     Text('Ride Type', style: theme.textTheme.titleMedium),
                     const SizedBox(height: 8),
-                    GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _vehicleOptions.length,
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: 2.2,
-                      ),
-                      itemBuilder: (context, index) {
-                        final option = _vehicleOptions[index];
-                        final selected = index == _selectedVehicle;
-                        return _VehicleTile(
-                          option: option,
-                          selected: selected,
-                          isDark: isDark,
-                          onTap: () =>
-                              setState(() => _selectedVehicle = index),
-                        );
-                      },
-                    ),
+                    _vehicleCatalogue(theme, isDark),
                     const SizedBox(height: 28),
                     _UnavailableNotice(isDark: isDark),
                   ],
@@ -212,6 +203,57 @@ class _ScheduleRideScreenState extends State<ScheduleRideScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  /// The Ride Type grid, driven by the live `GET /vehicle-types` catalogue --
+  /// see the provider doc above for why this replaced a hardcoded, partly
+  /// wrong four-category list. Loading/error states are quiet placeholders
+  /// rather than blocking spinners or error banners, since the rest of this
+  /// screen (date/time, route fields) works regardless of whether the
+  /// catalogue has loaded and the submit path is unavailable either way.
+  Widget _vehicleCatalogue(ThemeData theme, bool isDark) {
+    final catalogue = ref.watch(_vehicleCatalogueProvider);
+
+    return catalogue.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, _) => Text(
+        'Could not load vehicle types',
+        style: theme.textTheme.bodyMedium,
+      ),
+      data: (categories) {
+        if (categories.isEmpty) {
+          return Text('No vehicles available right now',
+              style: theme.textTheme.bodyMedium);
+        }
+
+        final selectedId = _selectedVehicleId ?? categories.first.id;
+
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: categories.length,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 2.2,
+          ),
+          itemBuilder: (context, index) {
+            final category = categories[index];
+            final selected = category.id == selectedId;
+            return _VehicleTile(
+              category: category,
+              selected: selected,
+              isDark: isDark,
+              onTap: () => setState(() => _selectedVehicleId = category.id),
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -320,13 +362,13 @@ class _FieldTile extends StatelessWidget {
 }
 
 class _VehicleTile extends StatelessWidget {
-  final _VehicleOption option;
+  final VehicleCategory category;
   final bool selected;
   final bool isDark;
   final VoidCallback onTap;
 
   const _VehicleTile({
-    required this.option,
+    required this.category,
     required this.selected,
     required this.isDark,
     required this.onTap,
@@ -355,7 +397,7 @@ class _VehicleTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(option.icon,
+            Icon(_iconFor(category.name),
                 color: isDark
                     ? AppColors.darkTextPrimary
                     : AppColors.lightTextPrimary),
@@ -365,10 +407,16 @@ class _VehicleTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(option.name, style: theme.textTheme.labelLarge),
-                  Text('${option.seats} Seats ${option.bags} Bags',
-                      style: theme.textTheme.bodyMedium,
+                  Text(category.name,
+                      style: theme.textTheme.labelLarge,
                       overflow: TextOverflow.ellipsis),
+                  // Same rule as the vehicle picker: a category configured
+                  // with neither seats nor bags shows no capacity line
+                  // rather than "0 Seats 0 Bags".
+                  if (category.hasCapacity)
+                    Text('${category.seats} Seats ${category.bags} Bags',
+                        style: theme.textTheme.bodyMedium,
+                        overflow: TextOverflow.ellipsis),
                 ],
               ),
             ),

@@ -193,19 +193,24 @@ class _Stars extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         for (var i = 1; i <= 5; i++)
           Icon(
             rating >= i
                 ? Icons.star
                 : (rating >= i - 0.5 ? Icons.star_half : Icons.star_border),
-            size: 15,
+            size: 12,
             color: AppColors.warning,
           ),
         const SizedBox(width: 6),
-        Text(
-          '${rating.toStringAsFixed(2)} ($count)',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 13),
+        Flexible(
+          child: Text(
+            '${rating.toStringAsFixed(2)} ($count)',
+            style:
+                Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 13),
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ],
     );

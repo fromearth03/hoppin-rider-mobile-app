@@ -4,11 +4,16 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/domain/auth_state.dart';
+import '../../features/auth/presentation/expired_link_screen.dart';
 import '../../features/auth/presentation/forgot_password_screen.dart';
+import '../../features/auth/presentation/link_sent_screen.dart';
+import '../../features/auth/presentation/reset_password_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/signup_screen.dart';
+import '../../features/booking/presentation/fare_confirm_screen.dart';
 import '../../features/booking/presentation/home_screen.dart';
 import '../../features/booking/presentation/route_entry_screen.dart';
+import '../../features/booking/presentation/saved_places_screen.dart';
 import '../../features/booking/presentation/select_vehicle_screen.dart';
 import '../../features/history/presentation/ride_history_screen.dart';
 import '../../features/history/presentation/trip_details_screen.dart';
@@ -20,6 +25,7 @@ import '../../features/profile/presentation/personal_information_screen.dart';
 import '../../features/scheduling/presentation/schedule_ride_screen.dart';
 import '../../features/settings/presentation/help_support_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
+import '../../features/trip/presentation/live_trip_screen.dart';
 import '../../features/chat/presentation/chat_screen.dart';
 import '../../features/safety/presentation/safety_screen.dart';
 
@@ -39,6 +45,12 @@ class AppRoutes {
   static const rideHistory = '/ride-history';
   static const tripDetails = '/trip-details';
   static const scheduleRide = '/schedule-ride';
+  static const savedPlaces = '/saved-places';
+  static const linkSent = '/link-sent';
+  static const expiredLink = '/expired-link';
+  static const resetPassword = '/reset-password';
+  static const liveTrip = '/live-trip';
+  static const fareConfirm = '/fare-confirm';
   static const home = '/home';
   static const route = '/route';
   static const safety = '/safety';
@@ -58,9 +70,16 @@ String? redirectFor(AuthStatus status, String location) {
   // Password recovery counts as an auth screen: a signed-out rider must be
   // able to reach it, and without it here the redirect would bounce them
   // straight back to login the moment they tapped "Forgot Password".
+  // The whole recovery flow counts as auth. A rider who cannot remember their
+  // password is signed out by definition, so without these the redirect would
+  // bounce them back to login at every step — including when they arrive from
+  // the emailed link itself.
   final onAuthScreen = location == AppRoutes.login ||
       location == AppRoutes.signup ||
-      location == AppRoutes.forgotPassword;
+      location == AppRoutes.forgotPassword ||
+      location == AppRoutes.linkSent ||
+      location == AppRoutes.expiredLink ||
+      location == AppRoutes.resetPassword;
 
   switch (status) {
     case AuthStatus.signedOut:
@@ -153,6 +172,33 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.scheduleRide,
         builder: (_, __) => const ScheduleRideScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.savedPlaces,
+        builder: (_, __) => const SavedPlacesScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.linkSent,
+        builder: (_, state) =>
+            LinkSentScreen(email: state.uri.queryParameters['email']),
+      ),
+      GoRoute(
+        path: AppRoutes.expiredLink,
+        builder: (_, __) => const ExpiredLinkScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.resetPassword,
+        builder: (_, __) => const ResetPasswordScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.fareConfirm,
+        builder: (_, __) => const FareConfirmScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.liveTrip,
+        builder: (_, state) => LiveTripScreen(
+          rideId: state.uri.queryParameters['ride'] ?? '',
+        ),
       ),
       GoRoute(
         path: AppRoutes.tripDetails,

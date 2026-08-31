@@ -1,7 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hoppin_rider/core/result.dart';
 import 'package:hoppin_rider/core/theme/app_theme.dart';
+import 'package:hoppin_rider/features/booking/data/vehicle_repository.dart';
 import 'package:hoppin_rider/features/scheduling/presentation/schedule_ride_screen.dart';
+import 'package:mocktail/mocktail.dart';
+
+class _MockVehicleRepository extends Mock implements VehicleRepository {}
+
+const _standard = VehicleCategory(
+  id: 'a',
+  name: 'Standard',
+  seats: 4,
+  bags: 2,
+  priceMultiplier: 1.0,
+);
+const _estate = VehicleCategory(
+  id: 'b',
+  name: 'Estate',
+  seats: 5,
+  bags: 4,
+  priceMultiplier: 1.3,
+);
+const _mpv = VehicleCategory(
+  id: 'c',
+  name: 'MPV',
+  seats: 7,
+  bags: 5,
+  priceMultiplier: 1.5,
+);
+const _minibus = VehicleCategory(
+  id: 'd',
+  name: 'Minibus',
+  seats: 8,
+  bags: 6,
+  priceMultiplier: 2.0,
+);
 
 /// The backend does expose `POST/GET/DELETE /api/v1/scheduled-rides`
 /// (`docs/SCREEN-API-MATRIX.md:74`), but scheduled rides is explicitly listed
@@ -13,10 +48,30 @@ import 'package:hoppin_rider/features/scheduling/presentation/schedule_ride_scre
 /// element, but the submit path is honestly unavailable rather than wired to
 /// nothing — in the same spirit as the disabled milestone-2 drawer
 /// destinations described in `docs/SCREEN-DECISIONS.md`.
-Widget _harness({Brightness brightness = Brightness.light}) => MaterialApp(
+///
+/// The "Ride Type" grid reads the same live `GET /vehicle-types` catalogue
+/// `Select Vehicle` does, so this harness mocks the same repository rather
+/// than relying on a hardcoded list.
+Widget _harness({
+  Brightness brightness = Brightness.light,
+  VehicleRepository? vehicleRepository,
+}) {
+  final repo = vehicleRepository ?? _defaultRepo();
+  return ProviderScope(
+    overrides: [vehicleRepositoryProvider.overrideWithValue(repo)],
+    child: MaterialApp(
       theme: brightness == Brightness.light ? AppTheme.light : AppTheme.dark,
       home: const ScheduleRideScreen(),
-    );
+    ),
+  );
+}
+
+VehicleRepository _defaultRepo() {
+  final repo = _MockVehicleRepository();
+  when(() => repo.list()).thenAnswer(
+      (_) async => const Ok([_standard, _estate, _mpv, _minibus]));
+  return repo;
+}
 
 /// The sheet's content is a lazily-built scrollable, so anything below the
 /// fold in the default 800x600 test surface must be scrolled into the
@@ -149,7 +204,12 @@ void main() {
 
   testWidgets('has a const constructor taking only a key', (tester) async {
     const screen = ScheduleRideScreen(key: Key('sched'));
-    await tester.pumpWidget(MaterialApp(home: screen));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [vehicleRepositoryProvider.overrideWithValue(_defaultRepo())],
+        child: const MaterialApp(home: screen),
+      ),
+    );
     expect(find.byKey(const Key('sched')), findsOneWidget);
   });
 }

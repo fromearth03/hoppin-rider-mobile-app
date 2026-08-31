@@ -125,26 +125,32 @@ class _RideCompleteBody extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _SummaryStat(
-                    icon: Icons.place_outlined,
-                    label: 'Distance',
-                    value: receipt.distanceMiles != null
-                        ? '${receipt.distanceMiles!.toStringAsFixed(1)} mi'
-                        : '—',
-                    theme: theme,
-                  ),
-                  if (duration != null)
-                    _SummaryStat(
-                      icon: Icons.access_time,
-                      label: 'Duration',
-                      value: _durationLabel,
+                  Expanded(
+                    child: _SummaryStat(
+                      icon: Icons.place_outlined,
+                      label: 'Distance',
+                      value: receipt.distanceMiles != null
+                          ? '${receipt.distanceMiles!.toStringAsFixed(1)} mi'
+                          : '—',
                       theme: theme,
                     ),
-                  _SummaryStat(
-                    icon: Icons.currency_pound,
-                    label: 'Total Fare',
-                    value: _totalLabel,
-                    theme: theme,
+                  ),
+                  if (duration != null)
+                    Expanded(
+                      child: _SummaryStat(
+                        icon: Icons.access_time,
+                        label: 'Duration',
+                        value: _durationLabel,
+                        theme: theme,
+                      ),
+                    ),
+                  Expanded(
+                    child: _SummaryStat(
+                      icon: Icons.currency_pound,
+                      label: 'Total Fare',
+                      value: _totalLabel,
+                      theme: theme,
+                    ),
                   ),
                 ],
               ),
@@ -217,7 +223,11 @@ class _SummaryStat extends StatelessWidget {
         Icon(icon, size: 18, color: theme.textTheme.bodyMedium?.color),
         const SizedBox(height: 4),
         Text(label, style: theme.textTheme.bodyMedium),
-        Text(value, style: theme.textTheme.titleMedium),
+        Text(
+          value,
+          style: theme.textTheme.titleMedium,
+          overflow: TextOverflow.ellipsis,
+        ),
       ],
     );
   }

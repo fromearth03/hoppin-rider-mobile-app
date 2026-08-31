@@ -19,6 +19,17 @@ void main() {
     AppRoutes.helpSupport,
     AppRoutes.rideHistory,
     AppRoutes.scheduleRide,
+    AppRoutes.savedPlaces,
+  ];
+
+  /// The password-recovery flow. A rider here is signed out by definition, so
+  /// these must NOT bounce to login — including the screen the emailed link
+  /// lands on.
+  const recoveryFlow = <String>[
+    AppRoutes.forgotPassword,
+    AppRoutes.linkSent,
+    AppRoutes.expiredLink,
+    AppRoutes.resetPassword,
   ];
 
   const bookingFlow = <String>[
@@ -29,6 +40,8 @@ void main() {
     AppRoutes.chat,
     AppRoutes.safety,
     AppRoutes.tripDetails,
+    AppRoutes.liveTrip,
+    AppRoutes.fareConfirm,
   ];
 
   group('a signed-in rider is left alone on', () {
@@ -48,6 +61,19 @@ void main() {
     for (final path in drawerDestinations) {
       test(path, () {
         expect(redirectFor(AuthStatus.signedOut, path), AppRoutes.login);
+      });
+    }
+  });
+
+  group('a signed-out rider can complete recovery at', () {
+    for (final path in recoveryFlow) {
+      test(path, () {
+        expect(
+          redirectFor(AuthStatus.signedOut, path),
+          isNull,
+          reason: 'bouncing a signed-out rider off $path makes password '
+              'recovery impossible to finish',
+        );
       });
     }
   });
