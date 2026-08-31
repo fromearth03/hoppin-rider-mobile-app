@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_stripe/flutter_stripe.dart' show CardField;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hoppin_rider/core/api/api_exception.dart';
 import 'package:hoppin_rider/core/theme/app_theme.dart';
@@ -203,8 +204,15 @@ void main() {
   });
 
   group('add card', () {
+    // These run under a plain `flutter test`, which never injects
+    // STRIPE_PUBLISHABLE_KEY - so AppConfig.stripePublishableKey is empty and
+    // the screen correctly refuses to start the Stripe flow. That is the
+    // "key missing" state from docs/PAYMENTS-STRIPE.md, not a workaround: it
+    // proves the screen never silently proceeds without a key. The full
+    // CardField hand-off is exercised on-device / in the mobile app, since
+    // it renders a real platform view that a widget test cannot drive.
     testWidgets(
-        'tapping Add card shows an honest not-yet-available state, never a raw PAN field',
+        'without a configured key, tapping Add card explains why instead of opening the SDK sheet',
         (tester) async {
       when(() => repo.list()).thenAnswer((_) async => const Ok([]));
 
@@ -217,7 +225,25 @@ void main() {
       // No PCI-violating raw card-number entry, ever.
       expect(find.widgetWithText(TextField, 'Card Number'), findsNothing);
       expect(find.text('Card Number'), findsNothing);
-      expect(find.textContaining('not yet'), findsOneWidget);
+      expect(find.byType(CardField), findsNothing);
+      expect(find.text('Add a card'), findsOneWidget);
+      expect(find.textContaining('unavailable'), findsOneWidget);
+
+      // Nothing was started against the backend.
+      verifyNever(() => repo.startAddCard());
+    });
+
+    testWidgets('never shows a raw TextField for card number, CVV or expiry anywhere on the screen',
+        (tester) async {
+      when(() => repo.list()).thenAnswer((_) async => Ok([_card()]));
+
+      await tester.pumpWidget(_harness(repo));
+      await tester.pump();
+
+      for (final label in ['Card Number', 'CVV', 'CVC', 'Expiry', 'Expiration']) {
+        expect(find.widgetWithText(TextField, label), findsNothing);
+        expect(find.text(label), findsNothing);
+      }
     });
   });
 
@@ -231,5 +257,21 @@ void main() {
 
     expect(find.text('Payment cards'), findsOneWidget);
     expect(find.textContaining('4242'), findsOneWidget);
+  });
+
+  testWidgets(
+      'dark mode: Add card without a key still explains why, never a raw PAN field',
+      (tester) async {
+    when(() => repo.list()).thenAnswer((_) async => const Ok([]));
+
+    await tester.pumpWidget(_harness(repo, brightness: Brightness.dark));
+    await tester.pump();
+
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Add card'));
+    await tester.pump();
+
+    expect(find.widgetWithText(TextField, 'Card Number'), findsNothing);
+    expect(find.byType(CardField), findsNothing);
+    expect(find.textContaining('unavailable'), findsOneWidget);
   });
 }

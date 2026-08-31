@@ -1,10 +1,14 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_stripe/flutter_stripe.dart' as stripe_sdk;
 
 import '../../../core/api/error_codes.dart';
+import '../../../core/config.dart';
 import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
 import '../data/payment_methods_repository.dart';
+import 'widgets/add_card_sheet.dart';
 import 'widgets/payment_card_tile.dart';
 
 /// Card management, not a per-ride payment picker.
@@ -123,35 +127,101 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
     await _load();
   }
 
-  /// Starting a card add needs the Stripe SDK to collect the PAN against a
-  /// setup intent — there is no Stripe key in this environment to wire it
-  /// up. Building a raw TextField for the card number instead would put the
-  /// app in PCI SAQ A-EP, which the design decisions explicitly forbid.
+  /// Whether the Stripe SDK can actually collect a card here.
   ///
-  /// So this calls the real endpoint (proving the wiring up to the SDK
-  /// handoff works) and then tells the rider honestly that card entry isn't
-  /// available yet, rather than faking a form that goes nowhere.
+  /// `CardField` has no web platform implementation in the version this app
+  /// depends on, so on web the raw PAN has nowhere PCI-safe to go — showing
+  /// it would either crash or, worse, fall back to a field this app
+  /// controls. Mobile still needs a real key: without one, `confirmSetupIntent`
+  /// would fail opaquely deep inside the SDK instead of with a clear reason
+  /// shown up front.
+  bool get _canAddCard => !kIsWeb && AppConfig.stripePublishableKey.isNotEmpty;
+
+  /// `POST /me/payment-methods/setup-intent` → the Stripe `CardField` sheet
+  /// collects the card directly against the returned `clientSecret` → the
+  /// SDK confirms the setup intent → the list is refreshed. The PAN is
+  /// never read, logged or held by this app at any point — see
+  /// docs/PAYMENTS-STRIPE.md.
   Future<void> _startAddCard() async {
+    if (!_canAddCard) {
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Add a card'),
+          content: const Text(kIsWeb
+              ? 'Card entry needs the mobile app — the Stripe card field is '
+                  'not available in this web build. Nothing was charged or saved.'
+              : 'Card entry is unavailable in this build — the Stripe key is '
+                  'not configured. Nothing was charged or saved.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     final repo = ref.read(paymentMethodsRepositoryProvider);
-    await repo.startAddCard();
+    final result = await repo.startAddCard();
     if (!mounted) return;
 
-    await showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add a card'),
-        content: const Text(
-            'Card entry is not yet available in this build — it requires the '
-            'Stripe SDK, which is not configured in this environment. Nothing '
-            'was charged or saved.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
+    final SetupIntent setupIntent;
+    switch (result) {
+      case Ok(:final value):
+        setupIntent = value;
+      case Err(:final error):
+        setState(() => _errorMessage = RiderErrorCopy.messageFor(error));
+        return;
+    }
+
+    final saved = await AddCardSheet.show(
+      context,
+      clientSecret: setupIntent.clientSecret,
+      onConfirm: ({required makeDefault}) =>
+          _confirmSetupIntent(setupIntent.clientSecret, makeDefault: makeDefault),
+    );
+
+    if (!saved || !mounted) return;
+    await _load();
+  }
+
+  /// Hands the card off to Stripe and confirms the setup intent. Returns an
+  /// error message on failure (a decline, a network error, a provider
+  /// failure) or null on success — never a fake success for a card that was
+  /// not actually saved.
+  Future<String?> _confirmSetupIntent(
+    String clientSecret, {
+    required bool makeDefault,
+  }) async {
+    final confirmed = await stripe_sdk.Stripe.instance.confirmSetupIntent(
+      paymentIntentClientSecret: clientSecret,
+      params: const stripe_sdk.PaymentMethodParams.card(
+        paymentMethodData: stripe_sdk.PaymentMethodData(),
       ),
     );
+
+    // Stripe's status is a plain string ("Succeeded", "RequiresAction", …)
+    // rather than a typed enum in this SDK version - "Succeeded" is the only
+    // outcome that actually saved a usable card.
+    if (confirmed.status != 'Succeeded') {
+      return 'That card could not be saved. Try again.';
+    }
+
+    if (makeDefault && confirmed.paymentMethodId.isNotEmpty) {
+      final repo = ref.read(paymentMethodsRepositoryProvider);
+      final defaultResult = await repo.setDefault(confirmed.paymentMethodId);
+      if (defaultResult case Err(:final error)) {
+        // The card itself saved fine; only the "set as default" step
+        // failed. Say so rather than implying the whole add failed.
+        return 'Card saved, but could not be set as default: '
+            '${RiderErrorCopy.messageFor(error)}';
+      }
+    }
+
+    return null;
   }
 
   @override

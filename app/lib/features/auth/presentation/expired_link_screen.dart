@@ -43,10 +43,25 @@ class ExpiredLinkScreen extends StatelessWidget {
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: 32),
-          HoppinButton(
-            label: 'Try Again',
-            onPressed:
-                onRetry ?? () => Navigator.of(context).maybePop(),
+          // The design fills this button with the deep indigo header colour,
+          // not the lavender `buttonPrimary` every other primary button
+          // uses (confirmed by sampling `Expired-link.png`) — overridden
+          // locally rather than in the shared theme, which the rest of the
+          // app correctly keeps on `buttonPrimary`.
+          Theme(
+            data: Theme.of(context).copyWith(
+              filledButtonTheme: FilledButtonThemeData(
+                style: Theme.of(context).filledButtonTheme.style?.copyWith(
+                      backgroundColor:
+                          const WidgetStatePropertyAll(AppColors.primary),
+                    ),
+              ),
+            ),
+            child: HoppinButton(
+              label: 'Try Again',
+              onPressed:
+                  onRetry ?? () => Navigator.of(context).maybePop(),
+            ),
           ),
         ],
       ),
