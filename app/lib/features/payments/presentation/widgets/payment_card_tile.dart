@@ -55,9 +55,25 @@ class PaymentCardTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(card.displayLabel, style: theme.textTheme.bodyLarge),
+                Text(
+                  card.displayLabel,
+                  style: theme.textTheme.bodyLarge,
+                  // Without this the card details wrap one character per
+                  // line: "Make default" is wider than the default badge, so
+                  // on a narrow row it squeezed this column to almost nothing
+                  // and the number became an unreadable vertical stack.
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
+                ),
                 const SizedBox(height: 2),
-                Text('Expires $_expiry', style: theme.textTheme.bodyMedium),
+                Text(
+                  'Expires $_expiry',
+                  style: theme.textTheme.bodyMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
+                ),
               ],
             ),
           ),
@@ -86,7 +102,20 @@ class PaymentCardTile extends StatelessWidget {
           else
             TextButton(
               onPressed: onMakeDefault,
-              child: const Text('Make default'),
+              style: TextButton.styleFrom(
+                // Compact, so the action cannot crowd out the card number
+                // beside it — the one thing this row exists to show.
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                minimumSize: const Size(0, 36),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
+              ),
+              child: const Text(
+                'Make default',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 13),
+              ),
             ),
           IconButton(
             onPressed: onRemove,
