@@ -12,11 +12,12 @@ import 'widgets/auth_scaffold.dart';
 
 /// Create an account.
 ///
-/// Diverges from the design in three places: one full-name field rather than
-/// first and last (the backend stores one `full_name`, and a joined name
-/// cannot be reliably split back); a date picker rather than an "I am 18 or
-/// older" checkbox (self-certification enforces nothing, and the real
-/// threshold is 13); and a button labelled "Create account" rather than
+/// Diverges from the design in three places, each recorded with its reasoning
+/// in `docs/SCREEN-DECISIONS.md` at the repository root: one full-name field
+/// rather than first and last (the backend stores one `full_name`, and a
+/// joined name cannot be reliably split back); a date picker rather than an
+/// "I am 18 or older" checkbox (self-certification enforces nothing, and the
+/// real threshold is 13); and a button labelled "Create account" rather than
 /// "Login".
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});

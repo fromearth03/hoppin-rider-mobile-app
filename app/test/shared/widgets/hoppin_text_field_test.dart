@@ -3,8 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hoppin_rider/core/theme/app_theme.dart';
 import 'package:hoppin_rider/shared/widgets/hoppin_text_field.dart';
 
-Widget _wrap(Widget child) =>
-    MaterialApp(theme: AppTheme.light, home: Scaffold(body: child));
+Widget _wrap(Widget child, {Brightness brightness = Brightness.light}) =>
+    MaterialApp(
+      theme: brightness == Brightness.light ? AppTheme.light : AppTheme.dark,
+      home: Scaffold(body: child),
+    );
 
 void main() {
   group('HoppinTextField', () {
@@ -29,6 +32,33 @@ void main() {
       await tester.pumpWidget(_wrap(const HoppinTextField(
           label: 'Email', errorText: 'That email is already in use')));
       expect(find.text('That email is already in use'), findsOneWidget);
+    });
+
+    testWidgets('renders in dark mode', (tester) async {
+      // A rider fills this in from a dark cab at night as often as in daylight.
+      // The button had a dark-mode test from the start; this one did not.
+      await tester.pumpWidget(
+        _wrap(
+          const HoppinTextField(label: 'Email', hint: 'example@gmail.com'),
+          brightness: Brightness.dark,
+        ),
+      );
+
+      expect(find.text('Email'), findsOneWidget);
+      expect(find.text('example@gmail.com'), findsOneWidget);
+    });
+
+    testWidgets('error text stays visible in dark mode', (tester) async {
+      // The error colour is one token shared by both themes, so it is the most
+      // likely thing to disappear against a dark surface.
+      await tester.pumpWidget(
+        _wrap(
+          const HoppinTextField(label: 'Email', errorText: 'Something is wrong'),
+          brightness: Brightness.dark,
+        ),
+      );
+
+      expect(find.text('Something is wrong'), findsOneWidget);
     });
   });
 }
