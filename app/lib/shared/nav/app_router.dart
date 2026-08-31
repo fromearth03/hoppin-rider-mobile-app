@@ -40,9 +40,36 @@ String? redirectFor(AuthStatus status, String location) {
   }
 }
 
+/// Notifies `GoRouter` whenever the rider's auth status changes.
+///
+/// Without this the router evaluates `redirect` only when something else
+/// triggers navigation, so a successful sign-in would leave the rider sitting
+/// on the login screen — the status changes, and nothing asks the router to
+/// look again.
+///
+/// It fires on a change of STATUS only, not on every snapshot. `isBusy`
+/// flipping while a request is in flight is not a routing event, and
+/// re-running the redirect mid-request would be churn at best.
+class _AuthRouterRefresh extends ChangeNotifier {
+  AuthStatus _last;
+
+  _AuthRouterRefresh(Ref ref) : _last = ref.read(authControllerProvider).status {
+    ref.listen<AuthSnapshot>(authControllerProvider, (previous, next) {
+      if (next.status != _last) {
+        _last = next.status;
+        notifyListeners();
+      }
+    });
+  }
+}
+
 final appRouterProvider = Provider<GoRouter>((ref) {
+  final refresh = _AuthRouterRefresh(ref);
+  ref.onDispose(refresh.dispose);
+
   return GoRouter(
     initialLocation: AppRoutes.login,
+    refreshListenable: refresh,
     redirect: (context, state) {
       final status = ref.read(authControllerProvider).status;
       return redirectFor(status, state.matchedLocation);

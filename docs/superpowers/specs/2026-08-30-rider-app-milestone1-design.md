@@ -160,8 +160,14 @@ still-valid JWT, so a suspension takes effect immediately rather than at expiry.
 
 ### 4.2 Launch sequence
 
-1. `GET /api/v1/app-status` — **public, before login.** Force-update and
-   maintenance screens. Honoured on every cold start.
+1. `GET /api/v1/app-status?platform=ios|android&version=<semver>` — **public,
+   before login.** Force-update and maintenance screens. Honoured on every cold
+   start.
+
+   > **`platform` is required.** A bare call returns `400 VALIDATION_FAILED`
+   > ("platform must be 'ios' or 'android'") — `ride_handler.go:1416-1420`.
+   > An earlier draft of this spec described it as parameterless, which would
+   > have failed on every launch. Verified live 2026-08-31.
 2. Restore session from secure storage.
 3. `POST /me/device` — device check-in.
 4. `POST /me/session` — claim the single session.

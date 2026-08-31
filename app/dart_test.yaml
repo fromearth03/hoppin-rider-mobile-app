@@ -1,0 +1,14 @@
+# Tests tagged `live` talk to the real backend at api.hoppin.tech and need a
+# network. They are excluded from the default run so `flutter test` stays
+# hermetic and fast, and so CI does not depend on a production service being up.
+#
+# Run them deliberately:
+#   flutter test test/integration --run-skipped \
+#     --dart-define-from-file=../config/dev.json
+#
+# `--run-skipped` is what opts back in. `--tags live` alone will NOT run them:
+# a tag's `skip` applies regardless of selection, which is the behaviour that
+# keeps them out of an ordinary `flutter test`.
+tags:
+  live:
+    skip: "talks to the live backend — run with --run-skipped"
