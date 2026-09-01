@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-/// The Hoppin' lockup (red mark + wordmark) at the foot of the auth screens.
-///
-/// The supplied brand vector, with the "Admin" word the export accidentally
-/// carried trimmed off. The wordmark is outlined paths rather than text, so
-/// it needs no font and cannot reflow; the whole lockup stays sharp at any
-/// size.
+/// The "Hoppin' Go" lockup at the foot of the auth screens, extracted from
+/// the Login design frame (the standalone brand export wrongly carried the
+/// admin panel's wordmark). Outlined paths rather than text, so it needs no
+/// font and cannot reflow; the whole lockup stays sharp at any size.
 ///
 /// Two files rather than a runtime tint: the wordmark's near-black would
 /// disappear on a dark surface, but the mark's red must NOT change with it, so
@@ -18,7 +16,7 @@ class HoppinLogo extends StatelessWidget {
 
   const HoppinLogo({super.key, this.height = 34});
 
-  static const _aspect = 162 / 43;
+  static const _aspect = 166 / 37.1;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +29,7 @@ class HoppinLogo extends StatelessWidget {
       height: height,
       width: height * _aspect,
       fit: BoxFit.contain,
-      semanticsLabel: "Hoppin'",
+      semanticsLabel: "Hoppin' Go",
     );
   }
 }

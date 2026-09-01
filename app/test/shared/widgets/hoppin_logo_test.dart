@@ -40,13 +40,13 @@ void main() {
 
       final size = tester.getSize(find.byType(SvgPicture));
       expect(size.height, 64);
-      expect(size.width, closeTo(64 * 162 / 43, 0.5));
+      expect(size.width, closeTo(64 * 166 / 37.1, 0.5));
       expect(tester.takeException(), isNull);
     });
 
     testWidgets('is announced to screen readers', (tester) async {
       await tester.pumpWidget(_wrap(const HoppinLogo()));
-      expect(find.bySemanticsLabel("Hoppin'"), findsOneWidget);
+      expect(find.bySemanticsLabel("Hoppin' Go"), findsOneWidget);
     });
   });
 }
