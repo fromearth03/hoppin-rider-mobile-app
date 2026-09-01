@@ -1,43 +1,48 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/result.dart';
 import '../domain/notification_item.dart';
+import 'notifications_repository.dart';
 
-/// Where the Notifications screen gets its rows.
+/// What the Notifications screen loads.
 ///
-/// There is no notifications endpoint in this API - searched `app/lib` and
-/// the backend contracts recorded in `docs/SCREEN-DECISIONS.md`, neither has
-/// one. [NoNotificationsSource] is the only implementation today and always
-/// returns an empty list, so the screen renders its honest empty state
-/// rather than inventing rows that look live.
-///
-/// When a real endpoint exists, add a `RemoteNotificationsSource` here and
-/// swap the provider override below - the screen and controller do not
-/// change.
+/// A thin seam over [NotificationsRepository] so the screen and its goldens
+/// can be driven from a fake without a network. The repository owns the wire
+/// format; this owns nothing but the shape the controller wants. Failure
+/// stays a [Result] all the way to the controller, which renders the server's
+/// own words rather than a swallowed exception.
 abstract class NotificationsSource {
-  Future<List<NotificationItem>> list();
+  Future<Result<List<NotificationItem>>> list();
 
-  /// Marks one notification read. A no-op source has nothing to persist to,
-  /// so it simply returns - the controller still updates local state so the
-  /// UI reflects the tap.
-  Future<void> markRead(String id) async {}
+  Future<Result<void>> markRead(String id);
 
-  Future<void> markAllRead() async {}
+  Future<Result<void>> markAllRead();
+
+  /// Dismisses one row (soft-delete server-side).
+  Future<Result<void>> dismiss(String id);
 }
 
-/// The only implementation until a backend exists. Deliberately named so it
-/// cannot be mistaken for a real data source.
-class NoNotificationsSource implements NotificationsSource {
-  const NoNotificationsSource();
+/// The live implementation: `GET /me/notifications` and its mutations.
+class RemoteNotificationsSource implements NotificationsSource {
+  final NotificationsRepository _repo;
+  const RemoteNotificationsSource(this._repo);
 
   @override
-  Future<List<NotificationItem>> list() async => const [];
+  Future<Result<List<NotificationItem>>> list() async =>
+      switch (await _repo.list()) {
+        Ok(:final value) => Ok(value.items),
+        Err(:final error) => Err(error),
+      };
 
   @override
-  Future<void> markRead(String id) async {}
+  Future<Result<void>> markRead(String id) => _repo.markRead(id);
 
   @override
-  Future<void> markAllRead() async {}
+  Future<Result<void>> markAllRead() => _repo.markAllRead();
+
+  @override
+  Future<Result<void>> dismiss(String id) => _repo.dismiss(id);
 }
 
-final notificationsSourceProvider = Provider<NotificationsSource>(
-    (ref) => const NoNotificationsSource());
+final notificationsSourceProvider = Provider<NotificationsSource>((ref) =>
+    RemoteNotificationsSource(ref.watch(notificationsRepositoryProvider)));
