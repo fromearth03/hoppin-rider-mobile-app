@@ -122,6 +122,8 @@ void main() {
           estimatePence: any(named: 'estimatePence'),
           estimateDistanceMeters: any(named: 'estimateDistanceMeters'),
           estimateDurationSeconds: any(named: 'estimateDurationSeconds'),
+          pickupLabel: any(named: 'pickupLabel'),
+          dropoffLabel: any(named: 'dropoffLabel'),
         )).thenAnswer((_) async => const Ok(BookingRequest('req-42')));
 
     await tester.pumpWidget(harness());
@@ -155,6 +157,8 @@ void main() {
           estimatePence: any(named: 'estimatePence'),
           estimateDistanceMeters: any(named: 'estimateDistanceMeters'),
           estimateDurationSeconds: any(named: 'estimateDurationSeconds'),
+          pickupLabel: any(named: 'pickupLabel'),
+          dropoffLabel: any(named: 'dropoffLabel'),
         )).called(1);
   });
 
@@ -168,6 +172,8 @@ void main() {
           estimatePence: any(named: 'estimatePence'),
           estimateDistanceMeters: any(named: 'estimateDistanceMeters'),
           estimateDurationSeconds: any(named: 'estimateDurationSeconds'),
+          pickupLabel: any(named: 'pickupLabel'),
+          dropoffLabel: any(named: 'dropoffLabel'),
         )).thenAnswer((_) async => const Err(
           ApiException('NO_PAYMENT_METHOD', 'Add a payment card first.', 402),
         ));

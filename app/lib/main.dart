@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
 import 'core/config.dart';
+import 'core/push/push_registrar.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,6 +23,10 @@ Future<void> main() async {
     url: AppConfig.supabaseUrl,
     publishableKey: AppConfig.supabaseAnonKey,
   );
+
+  // Push boot — guarded, never fatal. Token registration itself happens on
+  // sign-in (see authControllerProvider's onSignedIn hook).
+  await initFirebaseGuarded();
 
   // flutter_stripe has no web platform implementation in the version this
   // app depends on - CardField is only ever shown on mobile (see

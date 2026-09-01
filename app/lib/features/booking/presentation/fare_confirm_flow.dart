@@ -46,6 +46,8 @@ class _FareConfirmFlowState extends ConsumerState<FareConfirmFlow> {
           estimatePence: estimate?.totalPence.value ?? 0,
           estimateDistanceMeters: estimate?.distanceMeters ?? 0,
           estimateDurationSeconds: estimate?.durationSeconds ?? 0,
+          pickupLabel: widget.route.pickup.label,
+          dropoffLabel: widget.route.dropoff.label,
         );
     if (!mounted) return;
     setState(() => _booking = false);

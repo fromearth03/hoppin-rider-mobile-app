@@ -448,6 +448,10 @@ class _CancelReasonSheetState extends State<_CancelReasonSheet> {
 
   String? _feeHint(RiderCancelReason r) {
     if (!r.appliesFee) return null;
+    // A fee the DRIVER pays (e.g. "Driver didn't show up") is not the
+    // rider's business as an amount — showing "£5.00 fee may apply" here
+    // read as a charge on the rider. Say only that it's free for them.
+    if (!r.riderPays) return 'No charge for you';
     final fee = r.feeAmount;
     final free = r.freeCancelSeconds;
     final feePart = fee != null && fee > 0

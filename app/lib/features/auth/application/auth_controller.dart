@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/device/device_checkin.dart';
+import '../../../core/push/push_registrar.dart';
 import '../../../core/result.dart';
 import '../data/auth_repository.dart';
 import '../data/profile_repository.dart';
@@ -191,12 +192,17 @@ final authControllerProvider =
   (ref) => AuthController(
     ref.watch(authRepositoryProvider),
     ref.watch(profileRepositoryProvider),
-    // Lazy and swallowed: the fingerprint report needs the live app
-    // bootstrap (Supabase session behind the API client) and must never
-    // break sign-in — or a test harness that has neither.
+    // Lazy and swallowed: both reports need the live app bootstrap
+    // (Supabase session behind the API client) and must never break
+    // sign-in — or a test harness that has neither. The push registration
+    // is what routes notifications to THIS device (it retires the
+    // account's other tokens server-side).
     onSignedIn: () async {
       try {
         await ref.read(deviceCheckinProvider).report();
+      } catch (_) {}
+      try {
+        await ref.read(pushRegistrarProvider).register();
       } catch (_) {}
     },
   ),

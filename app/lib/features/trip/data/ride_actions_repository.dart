@@ -17,13 +17,22 @@ class RiderCancelReason {
   final double? feeAmount;
   final int? freeCancelSeconds;
 
+  /// Whose pocket the fee hits — 'rider' or 'driver'. "Driver didn't show
+  /// up" carries a fee, but it is the DRIVER's penalty: the picker must not
+  /// show the rider an amount they will never pay.
+  final String feeChargedTo;
+
   const RiderCancelReason({
     required this.id,
     required this.label,
     required this.appliesFee,
     this.feeAmount,
     this.freeCancelSeconds,
+    this.feeChargedTo = 'rider',
   });
+
+  /// Whether the fee, if any, is the rider's own to pay.
+  bool get riderPays => feeChargedTo != 'driver';
 
   static RiderCancelReason? tryFromJson(Map<String, dynamic> json) {
     final id = json['id'];
@@ -34,6 +43,9 @@ class RiderCancelReason {
       appliesFee: json['applies_penalty_fee'] == true,
       feeAmount: (json['penalty_fee_amount'] as num?)?.toDouble(),
       freeCancelSeconds: (json['free_cancel_seconds'] as num?)?.toInt(),
+      // Older servers omit the field; assuming the picking actor pays keeps
+      // the previous (cautious) behaviour there.
+      feeChargedTo: (json['fee_charged_to'] as String?) ?? 'rider',
     );
   }
 }

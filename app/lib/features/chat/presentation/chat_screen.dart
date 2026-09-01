@@ -82,7 +82,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           return;
         }
         setState(() {
-          _messages.addAll(value);
+          _merge(value);
           // The cursor is the newest message we have actually seen. Messages
           // whose timestamp would not parse are dropped upstream, so this can
           // never be poisoned by one bad row.
@@ -97,6 +97,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         // A poll failure while the thread is already showing is not worth
         // interrupting the rider for; only a failure to load at all is.
         if (!_loadedOnce) setState(() => _error = error);
+    }
+  }
+
+  /// Merge by id instead of appending. The `since` cursor is inclusive
+  /// server-side AND a poll can be in flight while a send lands — either way
+  /// the just-sent message came back a second time and showed as a duplicate
+  /// bubble. A message we already hold is REPLACED, not dropped: the newer
+  /// copy may carry the flipped read status for the ticks.
+  void _merge(Iterable<RideMessage> incoming) {
+    for (final m in incoming) {
+      final i = _messages.indexWhere((e) => e.id == m.id);
+      if (i >= 0) {
+        _messages[i] = m;
+      } else {
+        _messages.add(m);
+      }
     }
   }
 
@@ -120,7 +136,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     switch (result) {
       case Ok(:final value):
         setState(() {
-          _messages.add(value);
+          _merge([value]);
           _since = value.createdAt;
           _input.clear();
           _sending = false;

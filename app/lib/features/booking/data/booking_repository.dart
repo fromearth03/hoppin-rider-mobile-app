@@ -45,6 +45,10 @@ class BookingRepository {
     int estimatePence = 0,
     int estimateDistanceMeters = 0,
     int estimateDurationSeconds = 0,
+    // The place names the rider picked — stored on the ride so history in
+    // BOTH apps shows addresses instead of bare coordinates.
+    String pickupLabel = '',
+    String dropoffLabel = '',
   }) async {
     if (waypoints.length > kMaxWaypoints) {
       return const Err(ApiException(
@@ -69,6 +73,9 @@ class BookingRepository {
           'estimate_distance_meters': estimateDistanceMeters,
         if (estimateDurationSeconds > 0)
           'estimate_duration_seconds': estimateDurationSeconds,
+        if (pickupLabel.trim().isNotEmpty) 'pickup_label': pickupLabel.trim(),
+        if (dropoffLabel.trim().isNotEmpty)
+          'dropoff_label': dropoffLabel.trim(),
       },
     );
 
