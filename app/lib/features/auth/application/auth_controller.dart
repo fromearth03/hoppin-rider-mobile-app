@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_exception.dart';
+import '../../../core/device/device_checkin.dart';
 import '../../../core/result.dart';
 import '../data/auth_repository.dart';
 import '../data/profile_repository.dart';
@@ -18,7 +19,14 @@ class AuthController extends StateNotifier<AuthSnapshot> {
   final AuthRepository _auth;
   final ProfileRepository _profiles;
 
-  AuthController(this._auth, this._profiles) : super(const AuthSnapshot());
+  /// Fired (and awaited by nobody) each time the rider lands on signedIn —
+  /// carries the device fingerprint check-in. Injected so tests need no
+  /// network.
+  final Future<void> Function()? _onSignedIn;
+
+  AuthController(this._auth, this._profiles, {Future<void> Function()? onSignedIn})
+      : _onSignedIn = onSignedIn,
+        super(const AuthSnapshot());
 
   /// Resolves the startup state, moving the app off [AuthStatus.unknown].
   ///
@@ -108,6 +116,7 @@ class AuthController extends StateNotifier<AuthSnapshot> {
           isBusy: false,
         ),
     };
+    if (state.status == AuthStatus.signedIn) _onSignedIn?.call();
   }
 
   Future<void> signOut() async {
@@ -173,6 +182,7 @@ class AuthController extends StateNotifier<AuthSnapshot> {
           error: error,
         ),
     };
+    if (state.status == AuthStatus.signedIn) _onSignedIn?.call();
   }
 }
 
@@ -181,5 +191,13 @@ final authControllerProvider =
   (ref) => AuthController(
     ref.watch(authRepositoryProvider),
     ref.watch(profileRepositoryProvider),
+    // Lazy and swallowed: the fingerprint report needs the live app
+    // bootstrap (Supabase session behind the API client) and must never
+    // break sign-in — or a test harness that has neither.
+    onSignedIn: () async {
+      try {
+        await ref.read(deviceCheckinProvider).report();
+      } catch (_) {}
+    },
   ),
 );

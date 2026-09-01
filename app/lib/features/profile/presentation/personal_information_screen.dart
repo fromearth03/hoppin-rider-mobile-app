@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -73,12 +74,30 @@ class _PersonalInformationScreenState
   /// Gallery pick → `POST /me/avatar/upload` → reload the profile so every
   /// avatar surface (this screen, the drawer) shows the new photo.
   Future<void> _pickAvatar() async {
-    final picked = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1024,
-      maxHeight: 1024,
-      imageQuality: 85,
-    );
+    final XFile? picked;
+    try {
+      picked = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        // The resize/re-encode pipeline is native-only: on web those
+        // parameters route the file through the plugin's canvas re-encoder,
+        // which crashes the pick in release builds — and the backend
+        // accepts the original file anyway, so web sends it untouched.
+        maxWidth: kIsWeb ? null : 1024,
+        maxHeight: kIsWeb ? null : 1024,
+        imageQuality: kIsWeb ? null : 85,
+      );
+    } catch (_) {
+      // A failed pick used to die as an uncaught error — nothing visible,
+      // "the button does nothing". Say it instead.
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text(
+                  'Could not open the photo picker. Please try again.')),
+        );
+      }
+      return;
+    }
     if (picked == null || !mounted) return;
 
     setState(() => _uploadingAvatar = true);

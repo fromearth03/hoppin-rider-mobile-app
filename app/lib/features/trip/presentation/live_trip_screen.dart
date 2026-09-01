@@ -230,7 +230,8 @@ class _LiveTripBody extends ConsumerWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => _CancelReasonSheet(reasons: reasons),
+      builder: (ctx) =>
+          PointerInterceptor(child: _CancelReasonSheet(reasons: reasons)),
     );
     if (outcome == null || outcome.$1 != true || !context.mounted) return;
 

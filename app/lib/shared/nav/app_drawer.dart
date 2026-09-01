@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 import '../../core/theme/colors.dart';
 import '../../features/auth/application/auth_controller.dart';
@@ -28,7 +29,11 @@ class AppDrawer extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(authControllerProvider).profile;
 
-    return Drawer(
+    // PointerInterceptor: on web the map behind is a DOM platform view, and
+    // touches on the open drawer (scrolling its list included) fell through
+    // and panned the map. No-op on native.
+    return PointerInterceptor(
+        child: Drawer(
       // The design's panel stops short of the right edge and rounds that
       // corner.
       shape: const RoundedRectangleBorder(
@@ -130,7 +135,7 @@ class AppDrawer extends ConsumerWidget {
           ],
         ),
       ),
-    );
+    ));
   }
 }
 
