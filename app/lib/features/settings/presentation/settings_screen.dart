@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../shared/nav/app_router.dart';
 import '../../../shared/nav/logout_confirm.dart';
 import '../../auth/application/auth_controller.dart';
+import '../application/preferences_controller.dart';
 import 'widgets/appearance_picker_sheet.dart';
 import 'widgets/settings_card.dart';
 import 'widgets/settings_header.dart';
@@ -12,20 +13,33 @@ import 'widgets/settings_rows.dart';
 
 /// Matches `Setting.png`: three grouped cards on a flat background.
 ///
-/// Every control here that has no real backing renders visibly disabled with
-/// a "Soon" badge, following the same disabled-until-later pattern used
-/// elsewhere for out-of-scope destinations. There is no settings/preferences
-/// repository anywhere in the app and `shared_preferences` is not a
-/// dependency, so a toggle here cannot remember its own state -- building one
-/// that resets the moment the rider leaves the screen would be a lie about a
-/// setting.
+/// Notification and Driver Arrived Sound are live: `GET`/`PATCH
+/// /me/preferences` stores per-user preferences as `users.preferences` JSONB,
+/// and the two toggles map onto the server's whitelisted keys
+/// `push_trip_updates` and `sound_offer_chime`. They persist across restarts
+/// because the server, not the device, holds them.
+///
+/// "Do not lock the screen" stays disabled: it is a device wakelock, not a
+/// server preference. The whitelist in `preferences_handler.go` has no key for
+/// it, and `wakelock_plus` is not a dependency — so there is nothing to write
+/// to and nothing to keep the screen awake with.
+///
+/// Both live toggles stay disabled until the first read succeeds. A switch
+/// rendered live over a failed read would let the rider "turn off" something
+/// whose real state the app never learned, then PATCH that guess over server
+/// truth.
+///
+/// Every other control here that has no real backing renders visibly disabled
+/// with a "Soon" badge, following the same disabled-until-later pattern used
+/// elsewhere for out-of-scope destinations.
 ///
 /// Appearance is the one row with a real effect: it opens a picker sheet
 /// (`appearance_picker_sheet.dart`) that writes to `themeModeProvider`,
 /// which `HoppinApp` reads for `MaterialApp.themeMode`. The choice changes
-/// the resolved theme immediately, for the current session only -- there is
-/// still no settings/preferences repository and `shared_preferences` is not
-/// a dependency, so nothing here claims to survive an app restart.
+/// the resolved theme immediately, for the current session only. The server
+/// does whitelist a `theme` key, but the picker predates this wiring and
+/// lives outside the two toggles this pass owns; persisting it is a separate
+/// change.
 ///
 /// Distance Units stays disabled: distance is rendered ad hoc inline in
 /// `trip_details_screen.dart` and `ride_complete_screen.dart` (both outside
@@ -40,11 +54,40 @@ import 'widgets/settings_rows.dart';
 ///
 /// Logout is the one other row with a real backend behind it: `AuthController`
 /// already exposes `signOut()`.
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // After the first frame: reading a StateNotifier during initState would
+    // rebuild a widget that is still being built.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(preferencesControllerProvider.notifier).load();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // A rolled-back switch snapping silently back to its old position looks
+    // like a bug; the server's own words say why it did.
+    ref.listen<PreferencesSnapshot>(preferencesControllerProvider,
+        (previous, next) {
+      final message = next.error;
+      if (message == null || message == previous?.error || !mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(message)));
+    });
+
+    final prefs = ref.watch(preferencesControllerProvider);
+    final prefsController = ref.read(preferencesControllerProvider.notifier);
+
     return Scaffold(
       appBar: const SettingsHeader(title: 'Setting'),
       body: SafeArea(
@@ -52,18 +95,27 @@ class SettingsScreen extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           children: [
             SettingsCard(children: [
-              const SettingsToggleRow(
+              SettingsToggleRow(
                 icon: Icons.notifications_none,
                 label: 'Notification',
-                value: false,
-                comingSoon: true,
+                value: prefs.pushTripUpdates,
+                // Null until the first read lands: the switch renders itself
+                // genuinely inert rather than inviting a tap we could not
+                // honestly save.
+                onChanged: prefs.isReady
+                    ? prefsController.setPushTripUpdates
+                    : null,
               ),
-              const SettingsToggleRow(
+              SettingsToggleRow(
                 icon: Icons.volume_up_outlined,
                 label: 'Driver Arrived Sound',
-                value: false,
-                comingSoon: true,
+                value: prefs.soundOfferChime,
+                onChanged: prefs.isReady
+                    ? prefsController.setSoundOfferChime
+                    : null,
               ),
+              // No server key and no wakelock plugin — genuinely nothing to
+              // write to, and nothing that would keep the screen awake.
               const SettingsToggleRow(
                 icon: Icons.lightbulb_outline,
                 label: 'Do not lock the screen',

@@ -6,6 +6,9 @@ import 'package:hoppin_rider/core/theme/theme_mode_provider.dart';
 import 'package:hoppin_rider/features/auth/application/auth_controller.dart';
 import 'package:hoppin_rider/features/auth/domain/auth_state.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hoppin_rider/core/api/api_exception.dart';
+import 'package:hoppin_rider/core/result.dart';
+import 'package:hoppin_rider/features/settings/data/preferences_repository.dart';
 import 'package:hoppin_rider/features/settings/presentation/delete_account_screen.dart';
 import 'package:hoppin_rider/features/settings/presentation/settings_screen.dart';
 import 'package:hoppin_rider/shared/nav/app_router.dart';
@@ -13,12 +16,19 @@ import 'package:mocktail/mocktail.dart';
 
 class _MockController extends Mock implements AuthController {}
 
+class _MockPrefsRepo extends Mock implements PreferencesRepository {}
+
+/// The screen loads preferences on its first frame, so every harness needs a
+/// repository. Defaults to a successful read with both toggles on.
+late PreferencesRepository prefsRepo;
+
 Widget _harness(AuthController controller,
         {Brightness brightness = Brightness.light,
         List<Override> extraOverrides = const []}) =>
     ProviderScope(
       overrides: [
         authControllerProvider.overrideWith((ref) => controller),
+        preferencesRepositoryProvider.overrideWithValue(prefsRepo),
         ...extraOverrides,
       ],
       child: MaterialApp(
@@ -31,6 +41,14 @@ void main() {
   late _MockController controller;
 
   setUp(() {
+    prefsRepo = _MockPrefsRepo();
+    when(() => prefsRepo.read()).thenAnswer((_) async => const Ok(
+        RiderPreferences(pushTripUpdates: true, soundOfferChime: true)));
+    when(() => prefsRepo.update(
+            pushTripUpdates: any(named: 'pushTripUpdates'),
+            soundOfferChime: any(named: 'soundOfferChime')))
+        .thenAnswer((_) async => const Ok(
+            RiderPreferences(pushTripUpdates: true, soundOfferChime: true)));
     controller = _MockController();
     when(() => controller.state).thenReturn(const AuthSnapshot());
     when(() => controller.signOut()).thenAnswer((_) async {});
@@ -70,27 +88,26 @@ void main() {
     expect(find.text('Delete Account'), findsOneWidget);
   });
 
+  /// Finds the Switch inside the row carrying [label].
+  Switch switchFor(WidgetTester tester, String label) {
+    final row = find.ancestor(
+      of: find.text(label),
+      matching: find.byType(Row),
+    );
+    return tester.widget<Switch>(
+        find.descendant(of: row, matching: find.byType(Switch)).first);
+  }
+
   testWidgets(
-      'toggles and chevron rows that have no backend are actually disabled, '
+      'chevron rows that have no backend are actually disabled, '
       'not just styled to look inert', (tester) async {
     await tester.pumpWidget(_harness(controller));
-
-    // Every Switch on this screen is unbacked -- none has a real
-    // preferences store to write to.
-    final switches =
-        tester.widgetList<Switch>(find.byType(Switch)).toList();
-    expect(switches, isNotEmpty);
-    for (final s in switches) {
-      expect(s.onChanged, isNull,
-          reason: 'a Switch with a non-null onChanged is a working toggle');
-    }
+    await tester.pumpAndSettle();
 
     // Distance Units and Map provider (under Navigation) have no shared
     // formatter / Maps SDK to back them -- they must stay genuinely inert.
     // Appearance is deliberately excluded here: it is now backed by
     // themeModeProvider and is covered by its own tests below.
-    await tester.tap(find.text('Notification'));
-    await tester.pump();
     await tester.tap(find.text('Navigation'));
     await tester.pump();
     await tester.tap(find.text('Distance Units'));
@@ -98,6 +115,106 @@ void main() {
 
     // Still on the settings screen -- nothing navigated away or blew up.
     expect(find.text('Setting'), findsOneWidget);
+  });
+
+  testWidgets(
+      '"Do not lock the screen" stays genuinely disabled: no server key '
+      'exists for it', (tester) async {
+    await tester.pumpWidget(_harness(controller));
+    await tester.pumpAndSettle();
+
+    expect(switchFor(tester, 'Do not lock the screen').onChanged, isNull,
+        reason: 'a Switch with a non-null onChanged is a working toggle');
+
+    await tester.tap(find.text('Do not lock the screen'));
+    await tester.pump();
+    expect(find.text('Setting'), findsOneWidget);
+  });
+
+  testWidgets('the two backed toggles come up live, showing server state',
+      (tester) async {
+    when(() => prefsRepo.read()).thenAnswer((_) async => const Ok(
+        RiderPreferences(pushTripUpdates: true, soundOfferChime: false)));
+
+    await tester.pumpWidget(_harness(controller));
+    await tester.pumpAndSettle();
+
+    final notification = switchFor(tester, 'Notification');
+    expect(notification.onChanged, isNotNull);
+    expect(notification.value, isTrue);
+
+    final sound = switchFor(tester, 'Driver Arrived Sound');
+    expect(sound.onChanged, isNotNull);
+    expect(sound.value, isFalse,
+        reason: 'the server said this rider had it off');
+  });
+
+  testWidgets('toggling Notification PATCHes push_trip_updates',
+      (tester) async {
+    when(() => prefsRepo.update(
+            pushTripUpdates: any(named: 'pushTripUpdates')))
+        .thenAnswer((_) async => const Ok(
+            RiderPreferences(pushTripUpdates: false, soundOfferChime: true)));
+
+    await tester.pumpWidget(_harness(controller));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(Switch).first);
+    await tester.pumpAndSettle();
+
+    verify(() => prefsRepo.update(pushTripUpdates: false)).called(1);
+    expect(switchFor(tester, 'Notification').value, isFalse);
+  });
+
+  testWidgets(
+      'a failed read leaves both backed toggles disabled rather than '
+      'guessing at their state', (tester) async {
+    when(() => prefsRepo.read()).thenAnswer((_) async =>
+        const Err<RiderPreferences>(
+            ApiException('INTERNAL', 'server error', 500)));
+
+    await tester.pumpWidget(_harness(controller));
+    await tester.pumpAndSettle();
+
+    expect(switchFor(tester, 'Notification').onChanged, isNull);
+    expect(switchFor(tester, 'Driver Arrived Sound').onChanged, isNull);
+  });
+
+  testWidgets('a refused toggle rolls back and says why, in server words',
+      (tester) async {
+    when(() => prefsRepo.update(
+            pushTripUpdates: any(named: 'pushTripUpdates')))
+        .thenAnswer((_) async => const Err<RiderPreferences>(
+            ApiException('INTERNAL', 'could not save', 500)));
+
+    await tester.pumpWidget(_harness(controller));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(Switch).first);
+    await tester.pumpAndSettle();
+
+    expect(switchFor(tester, 'Notification').value, isTrue,
+        reason: 'a switch left off would lie about what was saved');
+    expect(find.text('could not save'), findsOneWidget);
+  });
+
+  testWidgets('the two backed toggles no longer carry a Soon badge',
+      (tester) async {
+    await tester.pumpWidget(_harness(controller));
+    await tester.pumpAndSettle();
+
+    for (final label in ['Notification', 'Driver Arrived Sound']) {
+      final row =
+          find.ancestor(of: find.text(label), matching: find.byType(Row));
+      expect(find.descendant(of: row, matching: find.text('Soon')), findsNothing,
+          reason: '$label is backed by /me/preferences now');
+    }
+
+    // The wakelock row still is unbacked, and still says so.
+    final lockRow = find.ancestor(
+        of: find.text('Do not lock the screen'), matching: find.byType(Row));
+    expect(find.descendant(of: lockRow, matching: find.text('Soon')),
+        findsOneWidget);
   });
 
   testWidgets('tapping Delete Account navigates to the Delete Account screen',
@@ -118,7 +235,10 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [authControllerProvider.overrideWith((ref) => controller)],
+        overrides: [
+          authControllerProvider.overrideWith((ref) => controller),
+          preferencesRepositoryProvider.overrideWithValue(prefsRepo),
+        ],
         child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
       ),
     );
@@ -224,12 +344,18 @@ void main() {
   });
 
   testWidgets('back arrow pops the route', (tester) async {
+    // The scope wraps MaterialApp, as it does in the real app: a pushed route
+    // renders in the Navigator's overlay, so a scope nested *inside* the app
+    // would not be an ancestor of the screen under test.
     await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.light,
-        home: ProviderScope(
-          overrides: [authControllerProvider.overrideWith((ref) => controller)],
-          child: Builder(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith((ref) => controller),
+          preferencesRepositoryProvider.overrideWithValue(prefsRepo),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: Builder(
             builder: (context) => Scaffold(
               body: Center(
                 child: ElevatedButton(
