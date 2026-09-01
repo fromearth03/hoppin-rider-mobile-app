@@ -33,22 +33,92 @@ class RideContextRepository {
     };
   }
 
+  /// `GET /rides/:id/driver-location` — the assigned driver's last-known
+  /// position, or null whenever it is unavailable (no driver yet, telemetry
+  /// gap, terminal ride). Null is a normal state here, never an error: the
+  /// marker simply doesn't render.
+  Future<LatLng?> driverPosition(String rideId) async {
+    if (rideId.isEmpty) return null;
+    final result =
+        await _api.get<Map<String, dynamic>>('/rides/$rideId/driver-location');
+    return switch (result) {
+      Ok(:final value)
+          when value['lat'] is num && value['lng'] is num =>
+        LatLng(
+          (value['lat'] as num).toDouble(),
+          (value['lng'] as num).toDouble(),
+        ),
+      _ => null,
+    };
+  }
+
+  /// `GET /me/active-ride` — the rider's current non-terminal ride id, or
+  /// null while dispatch is still matching (no ride row exists yet).
+  Future<String?> activeRideId() async {
+    final result = await _api.get<Map<String, dynamic>>('/me/active-ride');
+    return switch (result) {
+      Ok(:final value) => switch (value['active_ride_id']) {
+          String s when s.isNotEmpty => s,
+          _ => null,
+        },
+      Err() => null,
+    };
+  }
+
   /// The documented fallback transport: a ~1 Hz poll (SSE for driver
   /// position and FCM for status arrive in a later pass; the poll is the
   /// spec's fallback, not an invention). Emits on every successful fetch;
   /// a transport error keeps the last emitted state rather than flapping
   /// the screen into an error it has no rendering for.
+  ///
+  /// `POST /rides/request` answers 202 with a DISPATCH request id — the ride
+  /// row is created asynchronously once a driver matches, so that id is never
+  /// a ride id and `GET /rides/{it}` is a guaranteed 404. The stream
+  /// therefore resolves the real id through `/me/active-ride`: immediately
+  /// when started with no id, and on any RIDE_NOT_FOUND when started with a
+  /// stale or non-ride id.
   Stream<LiveTripInfo> watch(String rideId,
       {Duration interval = const Duration(seconds: 2)}) async* {
+    var id = rideId;
     LiveTripInfo? last;
     while (true) {
-      final result = await fetch(rideId);
-      if (result case Ok(:final value)) {
-        last = value;
-        yield value;
-      } else if (last == null) {
-        yield LiveTripInfo.awaiting(rideId);
-        last = LiveTripInfo.awaiting(rideId);
+      if (id.isEmpty) {
+        id = await activeRideId() ?? '';
+        if (id.isEmpty) {
+          // Dispatch has the request but no ride row yet — honest matching
+          // state, then ask again next tick.
+          last ??= LiveTripInfo.awaiting(id);
+          yield last;
+          await Future<void>.delayed(interval);
+          continue;
+        }
+      }
+
+      final result = await fetch(id);
+      switch (result) {
+        case Ok(:final value):
+          last = value;
+          yield value;
+        case Err(:final error)
+            when error.status == 404 || error.code == 'RIDE_NOT_FOUND':
+          // The id we hold is not a ride (a dispatch request id, or a ride
+          // that vanished). Re-resolve rather than 404ing forever.
+          final resolved = await activeRideId();
+          if (resolved != null && resolved != id) {
+            id = resolved;
+            continue; // retry immediately with the real id
+          }
+          if (last == null) {
+            last = LiveTripInfo.awaiting(id);
+            yield last;
+          }
+        case Err():
+          // Transient transport error: keep the last emitted state rather
+          // than flapping the screen into an error it has no rendering for.
+          if (last == null) {
+            last = LiveTripInfo.awaiting(id);
+            yield last;
+          }
       }
       await Future<void>.delayed(interval);
     }
@@ -122,8 +192,11 @@ class RideContextRepository {
         'arriving' => LiveTripStatus.arriving,
         'started' => LiveTripStatus.started,
         'completed' => LiveTripStatus.completed,
-        // requested / matching / assigned / cancelled / unknown all render
-        // as the matching state — the screen's safest real rendering.
+        // Terminal: dispatch auto-cancelled (no driver) or someone cancelled.
+        // Rendering this as "matching" left riders spinning on a dead ride.
+        'cancelled' => LiveTripStatus.cancelled,
+        // requested / matching / assigned / unknown all render as the
+        // matching state — the screen's safest real rendering.
         _ => LiveTripStatus.matching,
       },
       driver: tripDriver,

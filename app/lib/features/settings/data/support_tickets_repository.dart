@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/api/api_exception.dart';
 import '../../../core/result.dart';
 
 /// One of the rider's support tickets, as `GET /me/support-tickets` returns
@@ -14,6 +15,12 @@ class SupportTicket {
   final String? body;
   final DateTime? createdAt;
 
+  /// The ride this complaint is about, when one was attached.
+  final String? rideId;
+
+  /// Staff-written outcome, shown once support resolves the ticket.
+  final String? resolutionNotes;
+
   const SupportTicket({
     required this.id,
     required this.subject,
@@ -21,6 +28,8 @@ class SupportTicket {
     required this.status,
     required this.body,
     required this.createdAt,
+    this.rideId,
+    this.resolutionNotes,
   });
 
   static SupportTicket? tryFromJson(Map<String, dynamic> json) {
@@ -42,8 +51,60 @@ class SupportTicket {
         String s => DateTime.tryParse(s)?.toUtc(),
         _ => null,
       },
+      rideId: switch (json['ride_id']) {
+        String s when s.isNotEmpty => s,
+        _ => null,
+      },
+      resolutionNotes: switch (json['resolution_notes']) {
+        String s when s.trim().isNotEmpty => s,
+        _ => null,
+      },
     );
   }
+}
+
+/// One message on a ticket thread — rider or staff.
+class TicketMessage {
+  final String id;
+  final bool isStaff;
+  final String body;
+  final DateTime? createdAt;
+
+  /// On the rider's OWN messages: 'sent' until staff read it, then 'read'.
+  final String? status;
+
+  const TicketMessage({
+    required this.id,
+    required this.isStaff,
+    required this.body,
+    required this.createdAt,
+    this.status,
+  });
+
+  static TicketMessage? tryFromJson(Map<String, dynamic> json) {
+    final id = json['id'];
+    if (id is! String || id.isEmpty) return null;
+    return TicketMessage(
+      id: id,
+      isStaff: json['is_staff'] == true,
+      body: (json['body'] as String?) ?? '',
+      createdAt: switch (json['created_at']) {
+        String s => DateTime.tryParse(s)?.toUtc(),
+        _ => null,
+      },
+      status: switch (json['status']) {
+        String s when s.isNotEmpty => s,
+        _ => null,
+      },
+    );
+  }
+}
+
+/// A ticket with its full message thread — `GET /me/support-tickets/:id`.
+class TicketDetail {
+  final SupportTicket ticket;
+  final List<TicketMessage> messages;
+  const TicketDetail({required this.ticket, required this.messages});
 }
 
 /// A typed complaint reason from `GET /complaint-types`; the chosen `code`
@@ -90,6 +151,7 @@ class SupportTicketsRepository {
     required String subject,
     String? typeCode,
     String? body,
+    String? rideId,
   }) async {
     final result = await _api.post<Map<String, dynamic>>(
       '/me/support-tickets',
@@ -97,7 +159,49 @@ class SupportTicketsRepository {
         'subject': subject,
         if (typeCode != null && typeCode.isNotEmpty) 'type_code': typeCode,
         if (body != null && body.trim().isNotEmpty) 'body': body.trim(),
+        // A complaint about a specific trip carries the trip.
+        if (rideId != null && rideId.isNotEmpty) 'ride_id': rideId,
       },
+    );
+    return switch (result) {
+      Ok() => const Ok(null),
+      Err(:final error) => Err(error),
+    };
+  }
+
+  /// One ticket + its whole thread. Opening it also marks the thread read
+  /// server-side.
+  Future<Result<TicketDetail>> get(String id) async {
+    final result =
+        await _api.get<Map<String, dynamic>>('/me/support-tickets/$id');
+    return switch (result) {
+      Ok(:final value) => () {
+          final ticket = value['ticket'] is Map
+              ? SupportTicket.tryFromJson(
+                  Map<String, dynamic>.from(value['ticket'] as Map))
+              : null;
+          if (ticket == null) {
+            return const Err<TicketDetail>(
+                ApiException('NOT_FOUND', 'ticket not found', 404));
+          }
+          final messages = ((value['messages'] as List?) ?? const [])
+              .whereType<Map>()
+              .map((row) =>
+                  TicketMessage.tryFromJson(Map<String, dynamic>.from(row)))
+              .whereType<TicketMessage>()
+              .toList(growable: false);
+          return Ok(TicketDetail(ticket: ticket, messages: messages));
+        }(),
+      Err(:final error) => Err(error),
+    };
+  }
+
+  /// `POST /me/support-tickets/:id/messages` — the rider's reply on the
+  /// thread.
+  Future<Result<void>> reply(String id, String body) async {
+    final result = await _api.post<Map<String, dynamic>>(
+      '/me/support-tickets/$id/messages',
+      body: {'body': body.trim()},
     );
     return switch (result) {
       Ok() => const Ok(null),

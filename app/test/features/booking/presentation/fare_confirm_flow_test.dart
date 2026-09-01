@@ -13,7 +13,7 @@ import 'package:hoppin_rider/features/booking/data/vehicle_repository.dart';
 import 'package:hoppin_rider/features/booking/presentation/fare_confirm_flow.dart';
 import 'package:hoppin_rider/features/booking/presentation/home_screen.dart';
 import 'package:hoppin_rider/features/booking/presentation/route_entry_screen.dart';
-import 'package:hoppin_rider/features/booking/presentation/widgets/fare_category_card.dart';
+import 'package:hoppin_rider/features/booking/presentation/widgets/vehicle_card.dart';
 import 'package:hoppin_rider/shared/nav/app_router.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -102,7 +102,7 @@ void main() {
     await tester.pumpWidget(harness());
     await tester.pumpAndSettle();
 
-    expect(find.byType(FareCategoryCard), findsOneWidget);
+    expect(find.byType(VehicleCard), findsOneWidget);
     final captured = verify(() => fares.estimate(
           pickup: captureAny(named: 'pickup'),
           dropoff: any(named: 'dropoff'),
@@ -119,23 +119,42 @@ void main() {
           dropoff: any(named: 'dropoff'),
           vehicleCategoryId: any(named: 'vehicleCategoryId'),
           waypoints: any(named: 'waypoints'),
+          estimatePence: any(named: 'estimatePence'),
+          estimateDistanceMeters: any(named: 'estimateDistanceMeters'),
+          estimateDurationSeconds: any(named: 'estimateDurationSeconds'),
         )).thenAnswer((_) async => const Ok(BookingRequest('req-42')));
 
     await tester.pumpWidget(harness());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(FareCategoryCard));
-    await tester.pump();
-    await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));
+    await tester.tap(find.byType(VehicleCard));
+    await tester.pumpAndSettle();
+    // Open the collapsible sheet fully, then scroll ITS list (the
+    // vehicle grid is also a Scrollable, so target the sheet's own).
+    await tester.drag(
+        find.text('Ride Details'), const Offset(0, -300));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Confirm Booking'), 80,
+        scrollable: find
+            .descendant(
+                of: find.byType(DraggableScrollableSheet),
+                matching: find.byType(Scrollable))
+            .first);
+    await tester.tap(find.text('Confirm Booking'));
     await tester.pumpAndSettle();
 
     expect(find.text('live trip'), findsOneWidget);
+    // The returned id IS the ride id (the server creates the ride at
+    // booking), so the trip screen binds to it directly.
     expect(location, contains('ride=req-42'));
     verify(() => booking.request(
           pickup: any(named: 'pickup'),
           dropoff: any(named: 'dropoff'),
           vehicleCategoryId: 'a',
           waypoints: any(named: 'waypoints'),
+          estimatePence: any(named: 'estimatePence'),
+          estimateDistanceMeters: any(named: 'estimateDistanceMeters'),
+          estimateDurationSeconds: any(named: 'estimateDurationSeconds'),
         )).called(1);
   });
 
@@ -146,6 +165,9 @@ void main() {
           dropoff: any(named: 'dropoff'),
           vehicleCategoryId: any(named: 'vehicleCategoryId'),
           waypoints: any(named: 'waypoints'),
+          estimatePence: any(named: 'estimatePence'),
+          estimateDistanceMeters: any(named: 'estimateDistanceMeters'),
+          estimateDurationSeconds: any(named: 'estimateDurationSeconds'),
         )).thenAnswer((_) async => const Err(
           ApiException('NO_PAYMENT_METHOD', 'Add a payment card first.', 402),
         ));
@@ -153,9 +175,20 @@ void main() {
     await tester.pumpWidget(harness());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(FareCategoryCard));
-    await tester.pump();
-    await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));
+    await tester.tap(find.byType(VehicleCard));
+    await tester.pumpAndSettle();
+    // Open the collapsible sheet fully, then scroll ITS list (the
+    // vehicle grid is also a Scrollable, so target the sheet's own).
+    await tester.drag(
+        find.text('Ride Details'), const Offset(0, -300));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Confirm Booking'), 80,
+        scrollable: find
+            .descendant(
+                of: find.byType(DraggableScrollableSheet),
+                matching: find.byType(Scrollable))
+            .first);
+    await tester.tap(find.text('Confirm Booking'));
     await tester.pumpAndSettle();
 
     expect(find.text('live trip'), findsNothing);

@@ -61,7 +61,7 @@ void main() {
       await tester.pumpWidget(_harness(repo));
       await tester.pump();
 
-      expect(find.text('Payment cards'), findsOneWidget);
+      expect(find.text('Payment Methods'), findsOneWidget);
       expect(find.textContaining('Select Payment Method'), findsNothing);
     });
 
@@ -124,7 +124,8 @@ void main() {
 
       expect(find.textContaining('4242'), findsOneWidget);
       expect(find.textContaining('12/30'), findsOneWidget);
-      expect(find.text('Default'), findsOneWidget);
+      // The frame's badge: green verified check on the default card.
+      expect(find.byIcon(Icons.verified), findsOneWidget);
     });
 
     testWidgets('offers Make default only on non-default cards',
@@ -137,7 +138,9 @@ void main() {
       await tester.pumpWidget(_harness(repo));
       await tester.pump();
 
-      expect(find.text('Make default'), findsOneWidget);
+      // The default card's badge is green and inert; the non-default card
+      // carries the tappable grey badge (tooltip 'Make default').
+      expect(find.byTooltip('Make default'), findsOneWidget);
     });
 
     testWidgets('tapping Make default calls the repository and refreshes',
@@ -150,7 +153,7 @@ void main() {
       await tester.pumpWidget(_harness(repo));
       await tester.pump();
 
-      await tester.tap(find.text('Make default'));
+      await tester.tap(find.byTooltip('Make default'));
       await tester.pump();
 
       verify(() => repo.setDefault('pm_2')).called(1);
@@ -219,7 +222,7 @@ void main() {
       await tester.pumpWidget(_harness(repo));
       await tester.pump();
 
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Add card'));
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Add Payment Methods'));
       await tester.pump();
 
       // No PCI-violating raw card-number entry, ever.
@@ -255,7 +258,7 @@ void main() {
     await tester.pumpWidget(_harness(repo, brightness: Brightness.dark));
     await tester.pump();
 
-    expect(find.text('Payment cards'), findsOneWidget);
+    expect(find.text('Payment Methods'), findsOneWidget);
     expect(find.textContaining('4242'), findsOneWidget);
   });
 
@@ -267,7 +270,7 @@ void main() {
     await tester.pumpWidget(_harness(repo, brightness: Brightness.dark));
     await tester.pump();
 
-    await tester.tap(find.widgetWithText(ElevatedButton, 'Add card'));
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Add Payment Methods'));
     await tester.pump();
 
     expect(find.widgetWithText(TextField, 'Card Number'), findsNothing);

@@ -29,7 +29,7 @@
              places and directions stay on the backend. -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyCus6vQ2840fYzAv_IcGnjDrSGSwTBOc2I" />
+            android:value="AIzaSyDG9fNLRR1P0aBsWox3tMBr7v0sq2ZP_Oo" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

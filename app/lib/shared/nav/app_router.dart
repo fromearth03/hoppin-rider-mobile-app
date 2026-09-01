@@ -258,8 +258,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.route,
         // extra 'pick' → confirming pops with the ChosenRoute instead of
         // pushing fare-confirm (the scheduling screen books its own way).
-        builder: (_, state) =>
-            RouteEntryScreen(pickMode: state.extra == 'pick'),
+        // extra ChosenRoute → pick mode with the fields pre-filled to EDIT
+        // that route rather than restarting from blank.
+        builder: (_, state) => RouteEntryScreen(
+          pickMode: state.extra == 'pick' || state.extra is ChosenRoute,
+          initial: state.extra is ChosenRoute
+              ? state.extra as ChosenRoute
+              : null,
+        ),
       ),
       GoRoute(
         path: AppRoutes.safety,

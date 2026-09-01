@@ -228,7 +228,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Wolverhampton'), findsNothing);
-    expect(find.textContaining('No rides yet'), findsOneWidget);
+    expect(find.textContaining('No rides in this period'), findsOneWidget);
   });
 
   testWidgets('a failure shows the server copy verbatim', (tester) async {

@@ -56,6 +56,21 @@ class ApiClient {
   Future<Result<T>> delete<T>(String path, {Object? body}) =>
       _send<T>(() => _dio.delete(path, data: body));
 
+  /// Multipart upload with the same auth the JSON calls get — the shape
+  /// `POST /me/avatar/upload` expects (`file` form field).
+  Future<Result<T>> postFile<T>(
+    String path, {
+    required Uint8List bytes,
+    String field = 'file',
+    String filename = 'upload.jpg',
+  }) =>
+      _send<T>(() => _dio.post(
+            path,
+            data: FormData.fromMap({
+              field: MultipartFile.fromBytes(bytes, filename: filename),
+            }),
+          ));
+
   /// Raw bytes with the same auth the JSON calls get. The image routes
   /// require a bearer token, which a plain `NetworkImage` (an `<img>` tag on
   /// web) cannot send — so images that need auth come through here instead.

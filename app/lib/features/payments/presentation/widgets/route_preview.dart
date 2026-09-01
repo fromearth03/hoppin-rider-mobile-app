@@ -1,104 +1,104 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 
 import '../../../../core/geo.dart';
 import '../../../../core/theme/colors.dart';
+import '../../../booking/presentation/widgets/map_markers.dart';
+import '../../../booking/presentation/widgets/rider_map.dart';
 
-/// The completed journey drawn from `GET /rides/:id`'s `geo.route` — the real
-/// polyline scaled into a rounded card, so the preview works on web without a
-/// Maps key and never fakes a shape. A dot marks the pickup, a pin the
-/// dropoff.
+/// The completed journey on the REAL map — `GET /rides/:id`'s `geo.route`
+/// drawn as a polyline over live tiles, camera fitted to the route, with the
+/// pickup (A) and dropoff (B) pinned. Non-interactive: it is a snapshot in a
+/// card, not a map to wander.
 ///
 /// Callers must not build this with fewer than two points; a route that short
 /// has no line to draw, and the screen omits the card instead.
-class RoutePreview extends StatelessWidget {
+class RoutePreview extends StatefulWidget {
   final List<LatLng> points;
   final double height;
 
   const RoutePreview({super.key, required this.points, this.height = 180});
 
   @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        height: height,
-        width: double.infinity,
-        color: const Color(0xFFEAE8F2),
-        child: CustomPaint(painter: _RoutePainter(points)),
-      ),
-    );
-  }
+  State<RoutePreview> createState() => _RoutePreviewState();
 }
 
-class _RoutePainter extends CustomPainter {
-  final List<LatLng> points;
-
-  const _RoutePainter(this.points);
+class _RoutePreviewState extends State<RoutePreview> {
+  Set<gmaps.Marker> _markers = const {};
 
   @override
-  void paint(Canvas canvas, Size size) {
-    if (points.length < 2) return;
+  void initState() {
+    super.initState();
+    _buildMarkers();
+  }
 
-    var minLat = points.first.lat, maxLat = points.first.lat;
-    var minLng = points.first.lng, maxLng = points.first.lng;
-    for (final p in points) {
+  Future<void> _buildMarkers() async {
+    // No engine, no bitmaps: tests and desktop render the placeholder.
+    if (!RiderMap.mapSupported || widget.points.length < 2) return;
+    final first = widget.points.first;
+    final last = widget.points.last;
+    final markers = <gmaps.Marker>{
+      gmaps.Marker(
+        markerId: const gmaps.MarkerId('pickup'),
+        position: gmaps.LatLng(first.lat, first.lng),
+        icon: await circleLabelMarker('A', AppColors.info),
+      ),
+      gmaps.Marker(
+        markerId: const gmaps.MarkerId('dropoff'),
+        position: gmaps.LatLng(last.lat, last.lng),
+        icon: await circleLabelMarker('B', AppColors.positive),
+      ),
+    };
+    if (mounted) setState(() => _markers = markers);
+  }
+
+  gmaps.LatLngBounds get _bounds {
+    var minLat = widget.points.first.lat, maxLat = widget.points.first.lat;
+    var minLng = widget.points.first.lng, maxLng = widget.points.first.lng;
+    for (final p in widget.points) {
       if (p.lat < minLat) minLat = p.lat;
       if (p.lat > maxLat) maxLat = p.lat;
       if (p.lng < minLng) minLng = p.lng;
       if (p.lng > maxLng) maxLng = p.lng;
     }
-
-    // A straight north–south or east–west route has zero extent on one axis;
-    // the epsilon keeps the division finite and centres the line instead.
-    const epsilon = 1e-9;
-    final latSpan = (maxLat - minLat).abs() < epsilon ? 1.0 : maxLat - minLat;
-    final lngSpan = (maxLng - minLng).abs() < epsilon ? 1.0 : maxLng - minLng;
-
-    const inset = 28.0;
-    final drawW = size.width - inset * 2;
-    final drawH = size.height - inset * 2;
-
-    Offset place(LatLng p) => Offset(
-          inset + (p.lng - minLng) / lngSpan * drawW,
-          // Higher latitude is further north — up the canvas, so y inverts.
-          inset + (1 - (p.lat - minLat) / latSpan) * drawH,
-        );
-
-    final path = Path()..moveTo(place(points.first).dx, place(points.first).dy);
-    for (final p in points.skip(1)) {
-      final o = place(p);
-      path.lineTo(o.dx, o.dy);
-    }
-
-    canvas.drawPath(
-      path,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 4
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round
-        ..color = AppColors.primary,
+    return gmaps.LatLngBounds(
+      southwest: gmaps.LatLng(minLat, minLng),
+      northeast: gmaps.LatLng(maxLat, maxLng),
     );
-
-    // Pickup: a solid dot with a white core.
-    final start = place(points.first);
-    canvas.drawCircle(start, 7, Paint()..color = AppColors.primary);
-    canvas.drawCircle(start, 3, Paint()..color = Colors.white);
-
-    // Dropoff: the map-pin teardrop, orange like the frames' markers.
-    final end = place(points.last);
-    final pin = Paint()..color = AppColors.accent;
-    canvas.drawCircle(end.translate(0, -10), 8, pin);
-    final tail = Path()
-      ..moveTo(end.dx - 5.5, end.dy - 6)
-      ..lineTo(end.dx + 5.5, end.dy - 6)
-      ..lineTo(end.dx, end.dy + 2)
-      ..close();
-    canvas.drawPath(tail, pin);
-    canvas.drawCircle(end.translate(0, -10), 3, Paint()..color = Colors.white);
   }
 
   @override
-  bool shouldRepaint(_RoutePainter oldDelegate) =>
-      oldDelegate.points != points;
+  Widget build(BuildContext context) {
+    final mid = widget.points[widget.points.length ~/ 2];
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: SizedBox(
+        height: widget.height,
+        width: double.infinity,
+        // A snapshot, not a viewport: touches scroll the page, never pan the
+        // map.
+        child: IgnorePointer(
+          child: RiderMap(
+            camera: gmaps.CameraPosition(
+              target: gmaps.LatLng(mid.lat, mid.lng),
+              zoom: 12,
+            ),
+            markers: _markers,
+            polylines: {
+              gmaps.Polyline(
+                polylineId: const gmaps.PolylineId('trip'),
+                points: [
+                  for (final p in widget.points) gmaps.LatLng(p.lat, p.lng),
+                ],
+                color: AppColors.navy,
+                width: 4,
+              ),
+            },
+            onMapCreated: (c) => c.fitBounds(_bounds, 28),
+          ),
+        ),
+      ),
+    );
+  }
 }

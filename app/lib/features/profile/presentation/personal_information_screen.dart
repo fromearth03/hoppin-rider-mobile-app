@@ -2,12 +2,15 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/api/error_codes.dart';
 import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
 import '../../../shared/widgets/hoppin_button.dart';
 import '../../../shared/widgets/hoppin_text_field.dart';
+import '../../../shared/widgets/profile_avatar.dart';
 import '../../auth/data/profile_repository.dart';
 import '../application/personal_information_controller.dart';
 import '../domain/personal_information_state.dart';
@@ -57,6 +60,7 @@ class _PersonalInformationScreenState
 
   RiderProfile? _loadedProfile;
   String? _nameError;
+  bool _uploadingAvatar = false;
 
   @override
   void dispose() {
@@ -64,6 +68,43 @@ class _PersonalInformationScreenState
     _phone.dispose();
     _email.dispose();
     super.dispose();
+  }
+
+  /// Gallery pick → `POST /me/avatar/upload` → reload the profile so every
+  /// avatar surface (this screen, the drawer) shows the new photo.
+  Future<void> _pickAvatar() async {
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 85,
+    );
+    if (picked == null || !mounted) return;
+
+    setState(() => _uploadingAvatar = true);
+    final bytes = await picked.readAsBytes();
+    final result = await ref
+        .read(profileRepositoryProvider)
+        .uploadAvatar(bytes, filename: picked.name);
+    if (!mounted) return;
+    setState(() => _uploadingAvatar = false);
+
+    switch (result) {
+      case Ok():
+        // The stored URL may be the same path with new bytes — drop every
+        // cached avatar (this screen's and the drawer's) rather than
+        // trusting the URL to change.
+        ref.invalidate(avatarBytesProvider);
+        ref.invalidate(profileAvatarBytesProvider);
+        ref.read(personalInformationControllerProvider.notifier).load();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile photo updated.')),
+        );
+      case Err(:final error):
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(RiderErrorCopy.messageFor(error))),
+        );
+    }
   }
 
   /// Seeds the editable fields the first time the profile arrives, and again
@@ -158,6 +199,33 @@ class _PersonalInformationScreenState
                           : null,
                     );
                   }),
+                  // The frame's edit badge — wired to the real
+                  // POST /me/avatar/upload.
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Material(
+                      color: AppColors.navy,
+                      shape: const CircleBorder(),
+                      elevation: 2,
+                      child: InkWell(
+                        onTap: _uploadingAvatar ? null : _pickAvatar,
+                        customBorder: const CircleBorder(),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: _uploadingAvatar
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Icon(Icons.edit,
+                                  size: 16, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),

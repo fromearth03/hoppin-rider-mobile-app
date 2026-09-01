@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/colors.dart';
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/data/profile_repository.dart';
+import '../widgets/profile_avatar.dart';
 import 'app_router.dart';
 import 'logout_confirm.dart';
 
@@ -147,20 +148,9 @@ class _Header extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 27,
-            backgroundColor: AppColors.primary,
-            child: Text(
-              (name == null || name.isEmpty)
-                  ? '?'
-                  : name.characters.first.toUpperCase(),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
+          // The real photo, fetched with the bearer token; initials only
+          // while it loads or when the rider has none.
+          ProfileAvatar(avatarUrl: profile?.avatarUrl, name: name),
           const SizedBox(width: 14),
           Expanded(
             child: Column(

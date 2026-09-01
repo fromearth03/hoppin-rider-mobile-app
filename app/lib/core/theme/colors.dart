@@ -12,13 +12,16 @@ class AppColors {
   static const primaryDark = Color(0xFF1E0550);
   static const accent = Color(0xFFF07A21);
 
-  /// Primary button fill, sampled from the auth screens in the design.
-  ///
-  /// Deliberately NOT [primary]: the design fills buttons with a muted lavender
-  /// and reserves the deep indigo for the header. Filling a button with
-  /// [primary] makes it disappear into that header.
-  static const buttonPrimary = Color(0xFF9480BD);
-  static const buttonPrimaryPressed = Color(0xFF7E68AC);
+  /// The dark navy the booking-flow designs use everywhere: filled buttons
+  /// ("Confirm Schedule", "Cancel Ride", "Done"), selected chips
+  /// ("Suggestion"), card borders and route polylines. Same value as
+  /// [logoWord] so the wordmark and the chrome read as one.
+  static const navy = Color(0xFF181C39);
+  static const navyPressed = Color(0xFF2A2F55);
+
+  /// Primary button fill — the navy from the booking-flow frames.
+  static const buttonPrimary = navy;
+  static const buttonPrimaryPressed = navyPressed;
 
   // Logo. The mark is red and the wordmark near-black in both modes — this is
   // a supplied brand asset, not a themed surface.

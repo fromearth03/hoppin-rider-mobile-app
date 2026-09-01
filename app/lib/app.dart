@@ -1,3 +1,5 @@
+import 'dart:ui' show PointerDeviceKind;
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -35,6 +37,11 @@ class _HoppinAppState extends ConsumerState<HoppinApp> {
     return MaterialApp.router(
       title: 'Hoppin Rider',
       debugShowCheckedModeBanner: false,
+      // Web/desktop testers use a MOUSE, and Flutter's default behavior
+      // ignores mouse drags on scrollables — which made every draggable
+      // bottom sheet impossible to collapse in a browser. Accept every
+      // pointer kind for drags, everywhere.
+      scrollBehavior: const _AllPointersScrollBehavior(),
       // LIGHT ONLY — Ismail's product decision (2026-09-01): the design
       // pack is light-only and the derived dark theme kept surfacing
       // unreviewed. No darkTheme, no themeMode: the OS setting cannot
@@ -61,4 +68,20 @@ class _HoppinAppState extends ConsumerState<HoppinApp> {
       },
     );
   }
+}
+
+/// Accept every pointer kind for scroll/sheet drags. Flutter's default
+/// excludes the mouse, which made the draggable bottom sheets impossible to
+/// collapse when testing the app in a browser.
+class _AllPointersScrollBehavior extends MaterialScrollBehavior {
+  const _AllPointersScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => const {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.stylus,
+        PointerDeviceKind.trackpad,
+        PointerDeviceKind.unknown,
+      };
 }

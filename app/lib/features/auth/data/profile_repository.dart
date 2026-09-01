@@ -1,6 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/api/api_exception.dart';
 import '../../../core/result.dart';
 
 /// The rider's own profile, mirroring what `GET /me/profile` returns and
@@ -67,6 +70,26 @@ class ProfileRepository {
     final result = await _api.get<Map<String, dynamic>>('/me/profile');
     return switch (result) {
       Ok(:final value) => Ok(RiderProfile.fromJson(value)),
+      Err(:final error) => Err(error),
+    };
+  }
+
+  /// `POST /me/avatar/upload` — multipart `file` in, the stored photo's URL
+  /// out. The server persists it to `users.avatar_url`, so a follow-up
+  /// profile fetch sees it everywhere avatars render.
+  Future<Result<String>> uploadAvatar(Uint8List bytes,
+      {String filename = 'avatar.jpg'}) async {
+    final result = await _api.postFile<Map<String, dynamic>>(
+      '/me/avatar/upload',
+      bytes: bytes,
+      filename: filename,
+    );
+    return switch (result) {
+      Ok(:final value) => switch (value['avatar_url']) {
+          String url when url.isNotEmpty => Ok(url),
+          _ => const Err(
+              ApiException('INTERNAL', 'upload returned no URL', 0)),
+        },
       Err(:final error) => Err(error),
     };
   }

@@ -32,6 +32,10 @@ class PaymentCardTile extends StatelessWidget {
         _ => Icons.credit_card,
       };
 
+  String get _brandName => card.brand.isEmpty
+      ? 'Card'
+      : card.brand[0].toUpperCase() + card.brand.substring(1);
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -49,27 +53,28 @@ class PaymentCardTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(_brandIcon, color: theme.colorScheme.onSurface),
+          Icon(_brandIcon, color: AppColors.navy),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  card.displayLabel,
-                  style: theme.textTheme.bodyLarge,
+                  _brandName,
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(fontSize: 15, color: AppColors.navy),
                   // Without this the card details wrap one character per
-                  // line: "Make default" is wider than the default badge, so
-                  // on a narrow row it squeezed this column to almost nothing
-                  // and the number became an unreadable vertical stack.
+                  // line on a squeezed row.
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   softWrap: false,
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Expires $_expiry',
-                  style: theme.textTheme.bodyMedium,
+                  // The frame masks everything but the tail; the expiry
+                  // rides along so the rider can still spot a dying card.
+                  '**** **** **** ${card.last4}   ·   $_expiry',
+                  style: theme.textTheme.bodyMedium?.copyWith(fontSize: 11.5),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   softWrap: false,
@@ -77,51 +82,29 @@ class PaymentCardTile extends StatelessWidget {
               ],
             ),
           ),
+          // The frame's badge: green scalloped check on the default card, a
+          // grey one on the rest — tapping the grey badge makes that card
+          // the default.
           if (card.isDefault)
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: AppColors.positive.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.check_circle,
-                      size: 16, color: AppColors.positive),
-                  SizedBox(width: 4),
-                  Text('Default',
-                      style: TextStyle(
-                          color: AppColors.positive,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12)),
-                ],
-              ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 6),
+              child:
+                  Icon(Icons.verified, size: 24, color: AppColors.positive),
             )
           else
-            TextButton(
+            IconButton(
               onPressed: onMakeDefault,
-              style: TextButton.styleFrom(
-                // Compact, so the action cannot crowd out the card number
-                // beside it — the one thing this row exists to show.
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                minimumSize: const Size(0, 36),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                visualDensity: VisualDensity.compact,
-              ),
-              child: const Text(
-                'Make default',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 13),
-              ),
+              icon: const Icon(Icons.verified,
+                  size: 24, color: AppColors.lightTextDisabled),
+              tooltip: 'Make default',
+              visualDensity: VisualDensity.compact,
             ),
           IconButton(
             onPressed: onRemove,
-            icon: const Icon(Icons.delete_outline),
-            color: AppColors.negative,
+            icon: const Icon(Icons.delete_outline, size: 20),
+            color: AppColors.lightTextSecondary,
             tooltip: 'Remove card',
+            visualDensity: VisualDensity.compact,
           ),
         ],
       ),

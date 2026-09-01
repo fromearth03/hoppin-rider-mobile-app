@@ -16,13 +16,16 @@ String? _orNull(Object? v) => switch (v) {
 /// `accepted`/`arriving`/`started` as the driving states where `geo.steps` can
 /// be populated. `matching` covers the pre-assignment state where `driver` is
 /// null -- a normal state, not an error.
-enum LiveTripStatus { matching, accepted, arriving, started, completed }
+enum LiveTripStatus { matching, accepted, arriving, started, completed, cancelled }
 
 LiveTripStatus _statusFromJson(Object? raw) => switch (raw) {
       'accepted' => LiveTripStatus.accepted,
       'arriving' => LiveTripStatus.arriving,
       'started' => LiveTripStatus.started,
       'completed' => LiveTripStatus.completed,
+      // Terminal: dispatch found no driver (auto-cancel) or someone
+      // cancelled. The screen must say so, never spin on "matching".
+      'cancelled' => LiveTripStatus.cancelled,
       // An unrecognised or missing status degrades to "still matching" rather
       // than throwing -- the screen already has a real rendering for that
       // state, so this is the safest unknown to fall into.

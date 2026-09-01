@@ -92,7 +92,7 @@ Widget _harness(
   Brightness brightness = Brightness.light,
   List<VehicleCategory> categories = const [_standard],
   List<LatLng> waypoints = const [],
-  ValueChanged<VehicleCategory>? onConfirm,
+  void Function(VehicleCategory, FareEstimate?)? onConfirm,
 }) =>
     ProviderScope(
       overrides: [
@@ -136,6 +136,10 @@ void main() {
     await tester.pumpWidget(_harness(repo));
     await tester.pump();
 
+    // The redesigned sheet quotes invisibly until a vehicle is selected;
+    // the in-flight state shows on the fare card once one is.
+    await tester.tap(find.text('Standard'));
+    await tester.pump();
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
     // Drain the pending timer so the widget tree has nothing outstanding
@@ -162,9 +166,18 @@ void main() {
       await tester.pumpWidget(_harness(repo, categories: const [_standard, _estate]));
       await tester.pumpAndSettle();
 
+      // Both categories render as cards; each one's REAL quote appears on
+      // the fare card as it is selected (`Ride Details.png` shows one fare
+      // at a time, for the chosen vehicle).
       expect(find.text('Standard'), findsOneWidget);
       expect(find.text('Estate'), findsOneWidget);
+
+      await tester.tap(find.text('Standard'));
+      await tester.pumpAndSettle();
       expect(find.text(Pence(2500).format()), findsOneWidget);
+
+      await tester.tap(find.text('Estate'));
+      await tester.pumpAndSettle();
       expect(find.text(Pence(3250).format()), findsOneWidget);
     });
 
@@ -182,7 +195,7 @@ void main() {
       expect(find.textContaining('4 Seats 2 Bags'), findsOneWidget);
     });
 
-    testWidgets('labels the fare "Recommended fare"', (tester) async {
+    testWidgets('shows the selected category\'s real total', (tester) async {
       when(() => repo.estimate(
             pickup: any(named: 'pickup'),
             dropoff: any(named: 'dropoff'),
@@ -193,14 +206,20 @@ void main() {
       await tester.pumpWidget(_harness(repo));
       await tester.pumpAndSettle();
 
-      expect(find.text('Recommended fare'), findsOneWidget);
+      await tester.tap(find.text('Standard'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Total'), findsOneWidget);
+      expect(find.text(Pence(2500).format()), findsOneWidget);
     });
 
-    testWidgets('the primary button says Confirm, never Choose a driver',
+    testWidgets('the primary button confirms a booking, never a driver pick',
         (tester) async {
       // The critical decision: dispatch assigns exactly one driver via a
       // Hungarian match. There is no candidate-driver endpoint, so this
-      // screen must never imply a driver marketplace.
+      // screen must never imply a driver marketplace. (The cancellation
+      // policy legitimately mentions driver ASSIGNMENT — the thing that must
+      // not exist is a choice.)
       when(() => repo.estimate(
             pickup: any(named: 'pickup'),
             dropoff: any(named: 'dropoff'),
@@ -211,9 +230,9 @@ void main() {
       await tester.pumpWidget(_harness(repo));
       await tester.pumpAndSettle();
 
-      expect(find.text('Confirm'), findsOneWidget);
-      expect(find.textContaining('driver'), findsNothing);
-      expect(find.textContaining('Driver'), findsNothing);
+      expect(find.text('Confirm Booking'), findsOneWidget);
+      expect(find.textContaining('Choose a driver'), findsNothing);
+      expect(find.textContaining('Choose your driver'), findsNothing);
     });
 
     testWidgets('tapping Confirm invokes onConfirm with the selected category',
@@ -227,12 +246,23 @@ void main() {
 
       VehicleCategory? confirmed;
       await tester.pumpWidget(
-          _harness(repo, onConfirm: (c) => confirmed = c));
+          _harness(repo, onConfirm: (c, _) => confirmed = c));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Standard'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Confirm'));
+      // Open the collapsible sheet fully, then scroll ITS list (the
+      // vehicle grid is also a Scrollable, so target the sheet's own).
+      await tester.drag(
+          find.text('Ride Details'), const Offset(0, -300));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('Confirm Booking'), 80,
+          scrollable: find
+              .descendant(
+                  of: find.byType(DraggableScrollableSheet),
+                  matching: find.byType(Scrollable))
+              .first);
+      await tester.tap(find.text('Confirm Booking'));
       await tester.pumpAndSettle();
 
       expect(confirmed, _standard);
@@ -376,7 +406,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Standard'), findsOneWidget);
-    expect(find.text('Confirm'), findsOneWidget);
+    expect(find.text('Confirm Booking'), findsOneWidget);
   });
 
   testWidgets('constructs with no arguments, for the router', (tester) async {

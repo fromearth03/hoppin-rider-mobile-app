@@ -20,6 +20,7 @@ class TripStatusBanner extends StatelessWidget {
         LiveTripStatus.arriving => 'Driver is Waiting for You',
         LiveTripStatus.started => 'Active Ride - Navigating to Destination',
         LiveTripStatus.completed => 'Ride complete',
+        LiveTripStatus.cancelled => 'Ride cancelled',
       };
 
   @override

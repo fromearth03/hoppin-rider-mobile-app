@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
@@ -7,11 +8,14 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/api/error_codes.dart';
 import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
+import '../../../shared/nav/app_drawer.dart';
 import '../../../shared/nav/app_router.dart';
 import '../../booking/data/fare_repository.dart';
 import '../../booking/data/vehicle_repository.dart';
 import '../../booking/presentation/route_entry_screen.dart'
     show ChosenRoute;
+import '../../booking/presentation/widgets/rider_map.dart';
+import '../../booking/presentation/widgets/vehicle_card.dart';
 import '../data/scheduled_rides_repository.dart';
 
 /// The rider's booked future rides, refreshed after every create/cancel.
@@ -51,19 +55,6 @@ final _vehicleCatalogueProvider =
   };
 });
 
-/// Icon keyed by category name, with a generic fallback -- mirrors
-/// `vehicle_card.dart`'s `_Artwork`. The API has no image field and
-/// categories are admin-editable, so a name this map has never heard of must
-/// still render something rather than nothing.
-IconData _iconFor(String name) => switch (name.toLowerCase().replaceAll(' ', '')) {
-      'standard' => Icons.directions_car,
-      'minicar' => Icons.directions_car_outlined,
-      'estate' => Icons.directions_car_filled,
-      'mpv' => Icons.airport_shuttle_outlined,
-      'minibus' => Icons.airport_shuttle,
-      'minitruck' => Icons.local_shipping_outlined,
-      _ => Icons.directions_car_outlined,
-    };
 
 /// Schedule Ride — matches `docs/figma/extracted/Schedule Ride.png`, wired
 /// to the live `POST/GET/DELETE /scheduled-rides` surface (verified in
@@ -91,7 +82,12 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
   String? _serverError;
 
   Future<void> _pickRoute() async {
-    final result = await context.push(AppRoutes.route, extra: 'pick');
+    // Editing an already-chosen route arrives pre-filled; only a first pick
+    // starts blank.
+    final result = await context.push(
+      AppRoutes.route,
+      extra: _route ?? 'pick',
+    );
     if (result is ChosenRoute && mounted) {
       setState(() {
         _route = result;
@@ -187,26 +183,35 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
         : DateFormat('MMMM d, yyyy  -  h:mm a').format(_scheduledFor!);
 
     return Scaffold(
+      drawer: const AppDrawer(),
       body: Stack(
         children: [
-          // Map placeholder behind the sheet, matching the drawn layout. The
-          // real map lives on the booking home screen; this feature owns no
-          // map integration.
-          Positioned.fill(
-            child: Container(
-              color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-            ),
-          ),
+          // The real map behind the sheet, as the frame draws it.
+          const Positioned.fill(child: RiderMap()),
           Positioned(
             top: MediaQuery.of(context).padding.top + 16,
             left: 16,
-            child: CircleAvatar(
-              backgroundColor:
-                  isDark ? AppColors.darkSurface : AppColors.lightSurface,
-              child: Icon(Icons.menu,
-                  color: isDark
-                      ? AppColors.darkTextPrimary
-                      : AppColors.lightTextPrimary),
+            // Builder: `Scaffold.of` needs a context BELOW this Scaffold.
+            // The hamburger opens the same side nav as Home — a drawn menu
+            // button that does nothing reads as broken.
+            child: Builder(
+              builder: (context) => Material(
+                color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                shape: const CircleBorder(),
+                elevation: 2,
+                child: InkWell(
+                  onTap: () => Scaffold.of(context).openDrawer(),
+                  customBorder: const CircleBorder(),
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Icon(Icons.menu,
+                        size: 22,
+                        color: isDark
+                            ? AppColors.darkTextPrimary
+                            : AppColors.lightTextPrimary),
+                  ),
+                ),
+              ),
             ),
           ),
           // This screen is PUSHED from the drawer; without an exit the rider
@@ -231,8 +236,12 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
           ),
           DraggableScrollableSheet(
             initialChildSize: 0.82,
-            minChildSize: 0.82,
+            // Collapsible to a peek so the rider can actually see and use
+            // the map behind the form; snaps between peek / open / full.
+            minChildSize: 0.16,
             maxChildSize: 0.95,
+            snap: true,
+            snapSizes: const [0.16, 0.82],
             builder: (context, scrollController) {
               return Container(
                 decoration: BoxDecoration(
@@ -272,25 +281,14 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
                       isDark: isDark,
                     ),
                     const SizedBox(height: 20),
-                    Text('From', style: theme.textTheme.titleMedium),
+                    Text('Route', style: theme.textTheme.titleMedium),
                     const SizedBox(height: 8),
-                    _FieldTile(
-                      label: _route?.pickup.label ?? 'Pickup location',
-                      isPlaceholder: _route == null,
-                      trailingIcon: Icons.edit_outlined,
-                      onTap: _pickRoute,
-                      isDark: isDark,
-                    ),
-                    const SizedBox(height: 20),
-                    Text('To', style: theme.textTheme.titleMedium),
-                    const SizedBox(height: 8),
-                    _FieldTile(
-                      label: _route?.dropoff.label ?? 'Destination',
-                      isPlaceholder: _route == null,
-                      trailingIcon: Icons.edit_outlined,
-                      onTap: _pickRoute,
-                      isDark: isDark,
-                    ),
+                    // ONE bar, exactly like Home's "Where to?": tap once,
+                    // pick pickup + destination together; afterwards it
+                    // shows "From → To" and tapping edits pre-filled. Two
+                    // fields that both opened the same both-ends picker
+                    // read as broken.
+                    _RouteBar(route: _route, onTap: _pickRoute),
                     const SizedBox(height: 24),
                     Text('Ride Type', style: theme.textTheme.titleMedium),
                     const SizedBox(height: 8),
@@ -603,49 +601,133 @@ class _HeaderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
+    // The frame's header: the orange car in a white rounded square, beside a
+    // navy-bordered card carrying the calendar icon + title/subtitle.
     return Row(
       children: [
-        Container(
-          width: 56,
-          height: 56,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            border: Border.all(color: border),
-            borderRadius: BorderRadius.circular(16),
+        // The orange car is the way BACK to a normal (now) booking — the
+        // calendar card beside it is this screen's own mode.
+        Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          child: InkWell(
+            onTap: () => context.go(AppRoutes.home),
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              width: 56,
+              height: 56,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                border: Border.all(color: border),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: SvgPicture.asset('assets/vehicles/car_orange.svg',
+                  width: 34, height: 24),
+            ),
           ),
-          child: const Icon(Icons.directions_car, color: AppColors.accent),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              border: Border.all(color: border),
-              borderRadius: BorderRadius.circular(16),
+              color: Colors.white,
+              border: Border.all(color: AppColors.navy, width: 1.2),
+              borderRadius: BorderRadius.circular(14),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.calendar_month,
-                        size: 18, color: AppColors.primary),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text('Schedule Ride',
-                          style: theme.textTheme.titleMedium,
+                SvgPicture.asset('assets/icons/schedule_ride.svg',
+                    width: 26, height: 28),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Schedule Ride',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                              fontSize: 15, color: AppColors.navy),
                           overflow: TextOverflow.ellipsis),
-                    ),
-                  ],
+                      Text('Book your ride in advance',
+                          style: theme.textTheme.bodyMedium
+                              ?.copyWith(fontSize: 11.5),
+                          overflow: TextOverflow.ellipsis),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 2),
-                Text('Book your ride in advance',
-                    style: theme.textTheme.bodyMedium),
               ],
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Home's "Where to?" bar, reused for the scheduled route: one tap opens the
+/// route picker once; a chosen route renders as "From → To" and tapping
+/// again edits it pre-filled.
+class _RouteBar extends StatelessWidget {
+  final ChosenRoute? route;
+  final VoidCallback onTap;
+
+  const _RouteBar({required this.route, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final chosen = route;
+
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      elevation: 1,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          child: Row(
+            children: [
+              Icon(
+                chosen == null ? Icons.search : Icons.route_outlined,
+                color: chosen == null
+                    ? theme.textTheme.bodyMedium?.color
+                    : AppColors.navy,
+                size: 22,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: chosen == null
+                    ? Text('Where to & from?',
+                        style:
+                            theme.textTheme.bodyMedium?.copyWith(fontSize: 14),
+                        overflow: TextOverflow.ellipsis)
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(chosen.pickup.label,
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                  fontSize: 13.5, color: AppColors.navy),
+                              overflow: TextOverflow.ellipsis),
+                          Text(
+                            '→ ${chosen.dropoff.label}'
+                            '${chosen.stops.isNotEmpty ? '  ·  ${chosen.stops.length} stop${chosen.stops.length == 1 ? '' : 's'}' : ''}',
+                            style: theme.textTheme.bodyMedium
+                                ?.copyWith(fontSize: 12),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+              ),
+              const Icon(Icons.edit_outlined,
+                  size: 18, color: AppColors.lightTextSecondary),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -717,54 +799,9 @@ class _VehicleTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
-    final surface = isDark ? AppColors.darkSurface : AppColors.lightSurface;
-    final selectedFill =
-        isDark ? AppColors.darkBorder : AppColors.lightBorder;
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: selected ? selectedFill : surface,
-          border: Border.all(
-            color: selected ? AppColors.primary : border,
-            width: selected ? 1.5 : 1,
-          ),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Row(
-          children: [
-            Icon(_iconFor(category.name),
-                color: isDark
-                    ? AppColors.darkTextPrimary
-                    : AppColors.lightTextPrimary),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(category.name,
-                      style: theme.textTheme.labelLarge,
-                      overflow: TextOverflow.ellipsis),
-                  // Same rule as the vehicle picker: a category configured
-                  // with neither seats nor bags shows no capacity line
-                  // rather than "0 Seats 0 Bags".
-                  if (category.hasCapacity)
-                    Text('${category.seats} Seats ${category.bags} Bags',
-                        style: theme.textTheme.bodyMedium,
-                        overflow: TextOverflow.ellipsis),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    // Same tile as the home picker (`Select Vehicle.png`): white card, the
+    // supplied car render, grey fill when selected. One widget, one look.
+    return VehicleCard(category: category, selected: selected, onTap: onTap);
   }
 }
 

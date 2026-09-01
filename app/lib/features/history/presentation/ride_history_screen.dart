@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
@@ -10,9 +11,22 @@ import '../../../core/theme/colors.dart';
 import '../../../shared/nav/app_router.dart';
 import '../data/trip_history_repository.dart';
 
+/// First day of the month the list is filtered to; null = all time.
+/// Defaults to the current month, as the frame's "This Month" card shows.
+final _monthProvider = StateProvider<DateTime?>((_) {
+  final now = DateTime.now();
+  return DateTime(now.year, now.month);
+});
+
 final _historyProvider =
     FutureProvider.autoDispose<TripHistoryPage>((ref) async {
-  final result = await ref.watch(tripHistoryRepositoryProvider).myTrips();
+  final month = ref.watch(_monthProvider);
+  final result = await ref.watch(tripHistoryRepositoryProvider).myTrips(
+        limit: 50,
+        from: month,
+        // End-exclusive: the first instant of the next month.
+        to: month == null ? null : DateTime(month.year, month.month + 1),
+      );
   return switch (result) {
     Ok(:final value) => value,
     Err(:final error) => throw error,
@@ -53,29 +67,153 @@ class RideHistoryScreen extends ConsumerWidget {
           onPressed: () => Navigator.of(context).maybePop(),
         ),
       ),
-      body: history.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => _HistoryMessage(
-          icon: Icons.error_outline,
-          // Server copy wins; RiderErrorCopy is only the net for a malformed
-          // envelope.
-          message: e is ApiException
-              ? RiderErrorCopy.messageFor(e)
-              : 'Could not load your ride history.',
-          tone: AppColors.negative,
-        ),
-        data: (page) => page.trips.isEmpty
-            ? const _HistoryMessage(
-                icon: Icons.history,
-                message: 'No rides yet',
-                detail: 'Trips you take will appear here.',
-              )
-            : RefreshIndicator(
-                onRefresh: () async => ref.refresh(_historyProvider.future),
-                child: _HistoryList(trips: page.trips),
+      body: Column(
+        children: [
+          const _MonthFilterCard(),
+          Expanded(
+            child: history.when(
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (e, _) => _HistoryMessage(
+                icon: Icons.error_outline,
+                // Server copy wins; RiderErrorCopy is only the net for a
+                // malformed envelope.
+                message: e is ApiException
+                    ? RiderErrorCopy.messageFor(e)
+                    : 'Could not load your ride history.',
+                tone: AppColors.negative,
               ),
+              data: (page) => page.trips.isEmpty
+                  ? const _HistoryMessage(
+                      icon: Icons.history,
+                      message: 'No rides in this period',
+                      detail: 'Trips you take will appear here.',
+                    )
+                  : RefreshIndicator(
+                      onRefresh: () async =>
+                          ref.refresh(_historyProvider.future),
+                      child: _HistoryList(trips: page.trips),
+                    ),
+            ),
+          ),
+        ],
       ),
     );
+  }
+}
+
+/// The frame's period card under the title: "This Month / 1 Aug - 31 Aug,
+/// 2026 ▾". Tapping opens a picker of recent months plus All time; the list
+/// refetches server-side (`GET /rides?from&to`) on change.
+class _MonthFilterCard extends ConsumerWidget {
+  const _MonthFilterCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final month = ref.watch(_monthProvider);
+    final now = DateTime.now();
+
+    final String title;
+    final String range;
+    if (month == null) {
+      title = 'All time';
+      range = 'Every trip you have taken';
+    } else {
+      final isThisMonth = month.year == now.year && month.month == now.month;
+      title = isThisMonth ? 'This Month' : DateFormat('MMMM yyyy').format(month);
+      final last = DateTime(month.year, month.month + 1, 0);
+      range = '${DateFormat('d MMM').format(month)} - '
+          '${DateFormat('d MMM, yyyy').format(last)}';
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        elevation: 1,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _pick(context, ref, month),
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              children: [
+                SvgPicture.asset('assets/icons/schedule_ride.svg',
+                    width: 24, height: 26),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(title,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                              fontSize: 15, color: AppColors.navy)),
+                      Text(range,
+                          style: theme.textTheme.bodyMedium
+                              ?.copyWith(fontSize: 11.5)),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.keyboard_arrow_down,
+                    color: AppColors.lightTextSecondary),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pick(
+      BuildContext context, WidgetRef ref, DateTime? current) async {
+    final now = DateTime.now();
+    final months = [
+      for (var i = 0; i < 12; i++) DateTime(now.year, now.month - i),
+    ];
+
+    final chosen = await showModalBottomSheet<Object>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          children: [
+            ListTile(
+              title: const Text('All time'),
+              trailing: current == null
+                  ? const Icon(Icons.check, color: AppColors.navy)
+                  : null,
+              onTap: () => Navigator.of(ctx).pop('all'),
+            ),
+            for (final m in months)
+              ListTile(
+                title: Text(
+                  m.year == now.year && m.month == now.month
+                      ? 'This Month'
+                      : DateFormat('MMMM yyyy').format(m),
+                ),
+                trailing: current != null &&
+                        current.year == m.year &&
+                        current.month == m.month
+                    ? const Icon(Icons.check, color: AppColors.navy)
+                    : null,
+                onTap: () => Navigator.of(ctx).pop(m),
+              ),
+          ],
+        ),
+      ),
+    );
+
+    if (chosen == null) return;
+    ref.read(_monthProvider.notifier).state =
+        chosen == 'all' ? null : chosen as DateTime;
   }
 }
 

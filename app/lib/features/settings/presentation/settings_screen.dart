@@ -157,7 +157,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               SettingsActionRow(
                 icon: Icons.delete_outline,
                 label: 'Delete Account',
-                destructive: true,
+                // The frame draws this as a plain navy row with the trash
+                // glyph — the destructive red lives on the confirm screen
+                // behind it, not here.
                 onTap: () => context.push(AppRoutes.deleteAccount),
               ),
             ]),

@@ -41,7 +41,7 @@ void main() {
 
       expect(tester.takeException(), isNull);
 
-      final label = find.text(_card.displayLabel);
+      final label = find.text('Mastercard');
       expect(label, findsOneWidget);
 
       // The details column must keep a usable share of the row rather than
@@ -84,7 +84,9 @@ void main() {
         ),
       ));
 
-      expect(find.text('Default'), findsOneWidget);
+      // The frame's badge: the green verified check marks the default card;
+      // there is no re-default affordance on it.
+      expect(find.byIcon(Icons.verified), findsOneWidget);
       expect(find.text('Make default'), findsNothing);
     });
   });

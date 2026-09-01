@@ -6,6 +6,7 @@ import '../../../core/api/error_codes.dart';
 import '../../../core/result.dart';
 import '../../../shared/nav/app_router.dart';
 import '../data/booking_repository.dart';
+import '../data/fare_repository.dart' show FareEstimate;
 import '../data/vehicle_repository.dart';
 import 'fare_confirm_screen.dart';
 import 'home_screen.dart' show vehicleCategoriesProvider;
@@ -31,7 +32,7 @@ class FareConfirmFlow extends ConsumerStatefulWidget {
 class _FareConfirmFlowState extends ConsumerState<FareConfirmFlow> {
   bool _booking = false;
 
-  Future<void> _book(VehicleCategory category) async {
+  Future<void> _book(VehicleCategory category, FareEstimate? estimate) async {
     if (_booking) return; // a double-tap on Confirm must not book twice
     setState(() => _booking = true);
 
@@ -40,13 +41,21 @@ class _FareConfirmFlowState extends ConsumerState<FareConfirmFlow> {
           dropoff: widget.route.dropoff.position,
           vehicleCategoryId: category.id,
           waypoints: [for (final stop in widget.route.stops) stop.position],
+          // The confirmed quote rides along so the booking-created ride
+          // carries the exact fare the rider agreed to.
+          estimatePence: estimate?.totalPence.value ?? 0,
+          estimateDistanceMeters: estimate?.distanceMeters ?? 0,
+          estimateDurationSeconds: estimate?.durationSeconds ?? 0,
         );
     if (!mounted) return;
     setState(() => _booking = false);
 
     switch (result) {
       case Ok(:final value):
-        context.go('${AppRoutes.liveTrip}?ride=${value.requestId}');
+        // The returned id IS the ride id now (the server creates the ride at
+        // booking), so the trip screen binds to it instantly; /me/active-ride
+        // stays as the fallback resolver for stale links.
+        context.go('${AppRoutes.liveTrip}?ride=${value.rideId}');
       case Err(:final error):
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(RiderErrorCopy.messageFor(error))),
@@ -86,6 +95,11 @@ class _FareConfirmFlowState extends ConsumerState<FareConfirmFlow> {
         dropoff: widget.route.dropoff.position,
         waypoints: [for (final stop in widget.route.stops) stop.position],
         categories: list,
+        routeLabels: [
+          widget.route.pickup.label,
+          for (final stop in widget.route.stops) stop.label,
+          widget.route.dropoff.label,
+        ],
         onConfirm: _book,
       ),
     );

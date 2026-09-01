@@ -11,11 +11,15 @@ import '../../../core/result.dart';
 
 /// The acknowledgement from `POST /api/v1/rides/request`.
 ///
-/// Booking is fire-and-forget: a 202 means dispatch has the request, not that
-/// a driver exists. The trip screen watches for the match.
+/// The returned id IS the ride id: the server creates the ride at booking
+/// (status matching), so it is immediately visible in history, cancellable,
+/// and pollable — dispatch attaches a driver to it as one matches.
 class BookingRequest {
   final String requestId;
   const BookingRequest(this.requestId);
+
+  /// The booking-created ride's id (same value as [requestId]).
+  String get rideId => requestId;
 
   factory BookingRequest.fromJson(Map<String, dynamic> json) =>
       BookingRequest((json['request_id'] as String?) ?? '');
@@ -36,6 +40,11 @@ class BookingRepository {
     required LatLng dropoff,
     required String vehicleCategoryId,
     List<LatLng> waypoints = const [],
+    // The estimate the rider confirmed, carried onto the booking-created
+    // ride so estimate = quote = charge from the first moment.
+    int estimatePence = 0,
+    int estimateDistanceMeters = 0,
+    int estimateDurationSeconds = 0,
   }) async {
     if (waypoints.length > kMaxWaypoints) {
       return const Err(ApiException(
@@ -55,6 +64,11 @@ class BookingRepository {
         'vehicle_category_id': vehicleCategoryId,
         if (waypoints.isNotEmpty)
           'waypoints': waypoints.map((w) => w.toJson()).toList(),
+        if (estimatePence > 0) 'estimate_pence': estimatePence,
+        if (estimateDistanceMeters > 0)
+          'estimate_distance_meters': estimateDistanceMeters,
+        if (estimateDurationSeconds > 0)
+          'estimate_duration_seconds': estimateDurationSeconds,
       },
     );
 

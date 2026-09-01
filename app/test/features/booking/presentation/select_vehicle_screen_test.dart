@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show SemanticsFlag;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hoppin_rider/core/api/api_exception.dart';
@@ -204,13 +205,19 @@ void main() {
     await tester.pumpWidget(_harness(repo));
     await tester.pumpAndSettle();
 
-    // Nothing selected yet - no check indicator anywhere.
-    expect(find.byIcon(Icons.check_circle), findsNothing);
+    // Nothing selected yet — no card announces itself selected. The frame
+    // marks selection with a grey fill, carried to assistive tech via
+    // Semantics rather than a check glyph.
+    bool isSelected(String label) => tester
+        .getSemantics(find.bySemanticsLabel(RegExp(label)).first)
+        .hasFlag(SemanticsFlag.isSelected);
+
+    expect(isSelected('Standard'), isFalse);
 
     await tester.tap(find.text('Standard'));
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.check_circle), findsOneWidget);
+    expect(isSelected('Standard'), isTrue);
   });
 
   testWidgets('selecting a category invokes the onSelected callback',
@@ -239,7 +246,12 @@ void main() {
     await tester.tap(find.text('Estate'));
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.check_circle), findsOneWidget);
+    bool isSelected(String label) => tester
+        .getSemantics(find.bySemanticsLabel(RegExp(label)).first)
+        .hasFlag(SemanticsFlag.isSelected);
+
+    expect(isSelected('Standard'), isFalse);
+    expect(isSelected('Estate'), isTrue);
   });
 
   testWidgets('renders in dark mode', (tester) async {

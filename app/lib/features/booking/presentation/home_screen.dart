@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_exception.dart';
@@ -8,6 +9,9 @@ import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
 import '../../../shared/nav/app_drawer.dart';
 import '../../../shared/nav/app_router.dart';
+import '../../trip/data/ride_context_repository.dart';
+import '../application/booking_draft.dart';
+import '../data/saved_locations_repository.dart';
 import '../data/vehicle_repository.dart';
 import 'widgets/rider_map.dart';
 import 'widgets/vehicle_card.dart';
@@ -26,10 +30,23 @@ final vehicleCategoriesProvider =
   };
 });
 
-/// Home: a full-bleed map with a booking sheet over it.
+/// Saved places shown under the search pill — the frame's recents list.
+final homeSavedLocationsProvider =
+    FutureProvider.autoDispose<List<SavedLocation>>((ref) async {
+  final result = await ref.watch(savedLocationsRepositoryProvider).list();
+  return switch (result) {
+    Ok(:final value) => value,
+    // Recents are decoration on Home; an error here should never block the
+    // screen, so it degrades to an empty list.
+    Err() => const <SavedLocation>[],
+  };
+});
+
+/// Home — `Ride Type.png` collapsed, `Select Vehicle.png` expanded.
 ///
-/// The map is a placeholder until a Maps SDK key exists; everything else here
-/// is live against the real backend.
+/// A full-bleed map with a white booking sheet over it. Tapping the
+/// "Ride Type" card toggles the vehicle grid, exactly as the two frames draw
+/// the same screen in its two states.
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -38,17 +55,50 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  /// One check per app launch: a rider who reopens the app mid-ride must land
+  /// ON that ride, nowhere else. Static so in-app navigation back to Home
+  /// (e.g. from a completed trip) never bounces them again.
+  static bool _resumeCheckedThisLaunch = false;
+
   String? _selectedCategoryId;
+  bool _pickerOpen = false;
+  RiderMapController? _map;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!_resumeCheckedThisLaunch) {
+      _resumeCheckedThisLaunch = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _resumeActiveRide());
+    }
+  }
+
+  Future<void> _resumeActiveRide() async {
+    final String? id;
+    try {
+      id = await ref.read(rideContextRepositoryProvider).activeRideId();
+    } catch (_) {
+      // The provider graph needs a live app bootstrap (Supabase session for
+      // the token interceptor); in harnesses without one the resume check is
+      // simply skipped — never a crash on the home screen.
+      return;
+    }
+    if (!mounted || id == null) return;
+    context.go('${AppRoutes.liveTrip}?ride=$id');
+  }
 
   @override
   Widget build(BuildContext context) {
     final categories = ref.watch(vehicleCategoriesProvider);
+    final saved = ref.watch(homeSavedLocationsProvider);
 
     return Scaffold(
       drawer: const AppDrawer(),
       body: Stack(
         children: [
-          const Positioned.fill(child: RiderMap()),
+          Positioned.fill(
+            child: RiderMap(onMapCreated: (c) => _map = c),
+          ),
           Positioned(
             top: MediaQuery.of(context).padding.top + 12,
             left: 16,
@@ -56,7 +106,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             // Scaffold, and this screen's own context sits above it. Without
             // the Builder the menu button throws instead of opening.
             child: Builder(
-              builder: (context) => _CircleButton(
+              builder: (context) => MapCircleButton(
                 icon: Icons.menu,
                 onTap: () => Scaffold.of(context).openDrawer(),
               ),
@@ -64,10 +114,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
           Align(
             alignment: Alignment.bottomCenter,
-            child: _BookingSheet(
-              categories: categories,
-              selectedId: _selectedCategoryId,
-              onSelect: (id) => setState(() => _selectedCategoryId = id),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // The frame's locate control: white circle, navigation arrow,
+                // sat just above the sheet on the right.
+                Padding(
+                  padding: const EdgeInsets.only(right: 16, bottom: 12),
+                  child: MapCircleButton(
+                    icon: Icons.navigation_outlined,
+                    onTap: () => _map?.moveTo(RiderMap.initialCamera),
+                  ),
+                ),
+                _BookingSheet(
+                  categories: categories,
+                  saved: saved,
+                  selectedId: _selectedCategoryId,
+                  pickerOpen: _pickerOpen,
+                  onSelect: (id) {
+                    setState(() => _selectedCategoryId = id);
+                    // Carried into fare-confirm so the rider is never asked
+                    // to pick the same vehicle twice.
+                    ref.read(draftVehicleCategoryProvider.notifier).state =
+                        id;
+                  },
+                  onTogglePicker: () =>
+                      setState(() => _pickerOpen = !_pickerOpen),
+                ),
+              ],
             ),
           ),
         ],
@@ -76,16 +151,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-class _CircleButton extends StatelessWidget {
+/// The white circular button the frames float over the map (menu, locate).
+class MapCircleButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
 
-  const _CircleButton({required this.icon, required this.onTap});
+  const MapCircleButton({super.key, required this.icon, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Theme.of(context).colorScheme.surface,
+      color: Colors.white,
       shape: const CircleBorder(),
       elevation: 2,
       child: InkWell(
@@ -93,7 +169,7 @@ class _CircleButton extends StatelessWidget {
         customBorder: const CircleBorder(),
         child: Padding(
           padding: const EdgeInsets.all(12),
-          child: Icon(icon, size: 22),
+          child: Icon(icon, size: 22, color: AppColors.navy),
         ),
       ),
     );
@@ -102,24 +178,32 @@ class _CircleButton extends StatelessWidget {
 
 class _BookingSheet extends StatelessWidget {
   final AsyncValue<List<VehicleCategory>> categories;
+  final AsyncValue<List<SavedLocation>> saved;
   final String? selectedId;
+  final bool pickerOpen;
   final ValueChanged<String> onSelect;
+  final VoidCallback onTogglePicker;
 
   const _BookingSheet({
     required this.categories,
+    required this.saved,
     required this.selectedId,
+    required this.pickerOpen,
     required this.onSelect,
+    required this.onTogglePicker,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Container(
       width: double.infinity,
-      decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: const BoxDecoration(
+        color: Color(0xFFF7F7FA),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        boxShadow: [
+          BoxShadow(
+              color: Color(0x1F000000), blurRadius: 18, offset: Offset(0, -4)),
+        ],
       ),
       padding: EdgeInsets.fromLTRB(
         16,
@@ -127,72 +211,148 @@ class _BookingSheet extends StatelessWidget {
         16,
         MediaQuery.of(context).padding.bottom + 16,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const _ModeRow(),
-          const SizedBox(height: 14),
-          _Categories(
-            categories: categories,
-            selectedId: selectedId,
-            onSelect: onSelect,
-          ),
-          const SizedBox(height: 14),
-          const _SearchField(),
-        ],
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        alignment: Alignment.topCenter,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _ModeRow(pickerOpen: pickerOpen, onTogglePicker: onTogglePicker),
+            if (pickerOpen) ...[
+              const SizedBox(height: 12),
+              _Categories(
+                categories: categories,
+                selectedId: selectedId,
+                onSelect: onSelect,
+              ),
+            ],
+            const SizedBox(height: 12),
+            const _SearchField(),
+            _SavedList(saved: saved),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// "Ride Type" and "Schedule Ride", as drawn.
+/// "Ride Type" and "Schedule Ride", in both frame states.
+///
+/// Collapsed (`Ride Type.png`): a wide bordered card with the orange car and
+/// the "Pick the vehicle that fits your trip" line, plus a square schedule
+/// button. Expanded (`Select Vehicle.png`): two labelled chips side by side.
 class _ModeRow extends StatelessWidget {
-  const _ModeRow();
+  final bool pickerOpen;
+  final VoidCallback onTogglePicker;
+
+  const _ModeRow({required this.pickerOpen, required this.onTogglePicker});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.primary, width: 1.5),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.directions_car,
-                    color: AppColors.accent, size: 26),
-                const SizedBox(width: 10),
+    final rideTypeCard = Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTogglePicker,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: EdgeInsets.symmetric(
+              horizontal: 12, vertical: pickerOpen ? 12 : 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.navy, width: 1.4),
+          ),
+          child: Row(
+            children: [
+              SvgPicture.asset('assets/vehicles/car_orange.svg',
+                  width: 34, height: 24),
+              const SizedBox(width: 10),
+              if (pickerOpen)
+                Text('Ride Type',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                        fontSize: 14.5, color: AppColors.navy))
+              else
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('Ride Type', style: theme.textTheme.titleMedium),
+                      Text('Ride Type',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                              fontSize: 14.5, color: AppColors.navy)),
                       Text('Pick the vehicle that fits your trip',
-                          style: theme.textTheme.bodyMedium,
+                          style: theme.textTheme.bodyMedium
+                              ?.copyWith(fontSize: 10.5),
                           overflow: TextOverflow.ellipsis),
                     ],
                   ),
                 ),
-              ],
-            ),
+            ],
           ),
         ),
-        const SizedBox(width: 10),
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(14),
+      ),
+    );
+
+    final scheduleIcon =
+        SvgPicture.asset('assets/icons/schedule_ride.svg', width: 26, height: 28);
+
+    void scheduleTap() => context.push(AppRoutes.scheduleRide);
+
+    if (!pickerOpen) {
+      return Row(
+        children: [
+          Expanded(child: rideTypeCard),
+          const SizedBox(width: 10),
+          Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            elevation: 1,
+            child: InkWell(
+              onTap: scheduleTap,
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                  padding: const EdgeInsets.all(11), child: scheduleIcon),
+            ),
           ),
-          child: const Icon(Icons.event, color: AppColors.primary, size: 26),
+        ],
+      );
+    }
+
+    return Row(
+      children: [
+        Expanded(child: rideTypeCard),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            elevation: 1,
+            child: InkWell(
+              onTap: scheduleTap,
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    scheduleIcon,
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text('Schedule Ride',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                              fontSize: 14.5, color: AppColors.navy),
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
       ],
     );
@@ -246,7 +406,7 @@ class _Categories extends StatelessWidget {
             crossAxisCount: 2,
             mainAxisSpacing: 10,
             crossAxisSpacing: 10,
-            mainAxisExtent: 74,
+            mainAxisExtent: 66,
           ),
           itemBuilder: (_, i) {
             final c = list[i];
@@ -272,10 +432,11 @@ class _SearchField extends StatelessWidget {
     // Material + InkWell rather than Container: the whole bar is the way
     // into route entry, and a tap target should ripple.
     return Material(
-      color: theme.colorScheme.surface,
-      borderRadius: BorderRadius.circular(14),
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      elevation: 1,
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         onTap: () => context.push(AppRoutes.route),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -287,7 +448,7 @@ class _SearchField extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Where to & for how much?',
-                  style: theme.textTheme.bodyMedium,
+                  style: theme.textTheme.bodyMedium?.copyWith(fontSize: 14),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -295,6 +456,48 @@ class _SearchField extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The saved places under the search pill — the frame lists them plainly with
+/// an outline pin, no card chrome.
+class _SavedList extends StatelessWidget {
+  final AsyncValue<List<SavedLocation>> saved;
+
+  const _SavedList({required this.saved});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final places = saved.valueOrNull ?? const <SavedLocation>[];
+    if (places.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final p in places.take(2))
+          InkWell(
+            onTap: () => context.push(AppRoutes.route),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 11),
+              child: Row(
+                children: [
+                  const Icon(Icons.location_on_outlined,
+                      size: 20, color: AppColors.lightTextSecondary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      p.label,
+                      style: theme.textTheme.bodyMedium?.copyWith(fontSize: 14),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

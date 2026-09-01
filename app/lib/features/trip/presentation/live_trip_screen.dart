@@ -1,11 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 
 import '../../../core/api/error_codes.dart';
+import '../../../core/geo.dart' as geo;
 import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
 import '../../../shared/nav/app_router.dart';
+import '../../booking/presentation/widgets/map_markers.dart';
 import '../../booking/presentation/widgets/rider_map.dart';
 import '../data/live_trip_source.dart';
 import '../data/ride_actions_repository.dart';
@@ -70,7 +75,13 @@ class LiveTripScreen extends ConsumerWidget {
           info: LiveTripInfo.awaiting(rideId),
           rideId: rideId,
         ),
-        data: (info) => _LiveTripBody(info: info, rideId: rideId),
+        // Prefer the payload's own id: the route param may be a dispatch
+        // request id (or empty straight after booking), and chat / safety /
+        // cancel must hit the REAL ride.
+        data: (info) => _LiveTripBody(
+          info: info,
+          rideId: info.rideId.isNotEmpty ? info.rideId : rideId,
+        ),
       ),
     );
   }
@@ -90,10 +101,11 @@ class _LiveTripBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final topInset = MediaQuery.of(context).padding.top + 12;
+    final cancelled = info.status == LiveTripStatus.cancelled;
 
     return Stack(
       children: [
-        const Positioned.fill(child: RiderMap()),
+        Positioned.fill(child: _TripMap(info: info, rideId: rideId)),
         Positioned(
           top: topInset,
           left: 16,
@@ -113,17 +125,61 @@ class _LiveTripBody extends ConsumerWidget {
               // remain a real safety control throughout matching, not only
               // once a driver exists to message. Stacked below the status
               // banner rather than beside it, so the two never overlap, and
-              // right-aligned within the full-width column above.
-              Align(
-                alignment: Alignment.centerRight,
-                child: _QuickActions(
-                  rideId: rideId,
-                  driverName: info.driver?.name,
+              // right-aligned within the full-width column above. A dead
+              // ride has nobody to chat with and nothing to escalate.
+              if (!cancelled)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: _QuickActions(
+                    rideId: rideId,
+                    driverName: info.driver?.name,
+                  ),
                 ),
-              ),
             ],
           ),
         ),
+        // Terminal state: say it plainly and offer the way forward, instead
+        // of spinning on "finding your driver" for a ride that died.
+        if (cancelled)
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: SafeArea(
+              minimum: const EdgeInsets.all(16),
+              child: Material(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                elevation: 8,
+                child: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text('This ride was cancelled',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(
+                                  fontSize: 17, color: AppColors.navy)),
+                      const SizedBox(height: 6),
+                      Text(
+                        'No driver could be found nearby, or the ride was '
+                        'cancelled. You have not been charged.',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 14),
+                      FilledButton(
+                        onPressed: () => context.go(AppRoutes.home),
+                        child: const Text('Book again'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
         if (info.status == LiveTripStatus.started &&
             info.destinationLabel != null)
           Positioned(
@@ -132,12 +188,13 @@ class _LiveTripBody extends ConsumerWidget {
             bottom: 220,
             child: _DestinationBar(label: info.destinationLabel!),
           ),
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: DriverInfoCard(
-            driver: info.driver,
-            totalPence: info.totalPence,
-            currency: info.currency,
+        if (!cancelled)
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: DriverInfoCard(
+              driver: info.driver,
+              totalPence: info.totalPence,
+              currency: info.currency,
             onChat: () => context.push(
               '${AppRoutes.chat}?ride=$rideId&driver=${Uri.encodeComponent(info.driver?.name ?? 'Driver')}',
             ),
@@ -183,11 +240,187 @@ class _LiveTripBody extends ConsumerWidget {
           const SnackBar(content: Text('Ride cancelled.')),
         );
         context.go(AppRoutes.home);
+      // The ride is already terminal — dispatch auto-cancelled it (no
+      // driver) a moment before the tap, or it completed. From the rider's
+      // seat that IS a successful cancel, not an error to apologise for.
+      case Err(:final error) when error.code == 'ILLEGAL_TRANSITION':
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('This ride has already ended.')),
+        );
+        context.go(AppRoutes.home);
       case Err(:final error):
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(RiderErrorCopy.messageFor(error))),
         );
     }
+  }
+}
+
+/// The map layer of `Driver Arrived.png` / `Start Ride.png`: the ride's
+/// route polyline, its pickup/stop/dropoff pins and the driver's live
+/// position over the shared [RiderMap].
+///
+/// Owns two pieces of state the stateless body cannot: the camera (fit to the
+/// route exactly once per route, not on every poll tick) and the ~3s driver
+/// position poll off `GET /rides/:id/driver-location`.
+class _TripMap extends ConsumerStatefulWidget {
+  final LiveTripInfo info;
+  final String rideId;
+
+  const _TripMap({required this.info, required this.rideId});
+
+  @override
+  ConsumerState<_TripMap> createState() => _TripMapState();
+}
+
+class _TripMapState extends ConsumerState<_TripMap> {
+  RiderMapController? _controller;
+  Timer? _driverPoll;
+  gmaps.LatLng? _driverPos;
+
+  /// The route the camera was last fitted to; refit only when it changes.
+  int _fittedRouteLength = -1;
+
+  /// Labeled waypoint pins (A / 1 / 2 / B), built async once per waypoint
+  /// set — the rider must see exactly where each stop sits.
+  int _builtWpCount = -1;
+  Set<gmaps.Marker> _wpMarkers = const {};
+
+  @override
+  void initState() {
+    super.initState();
+    _driverPoll = Timer.periodic(
+        const Duration(seconds: 3), (_) => _pollDriver());
+  }
+
+  @override
+  void dispose() {
+    _driverPoll?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _pollDriver() async {
+    final id = widget.rideId;
+    if (id.isEmpty) return;
+    // Only while a driver actually exists on a live ride: polling during
+    // matching (no driver yet) or after a terminal state is a guaranteed
+    // 409 every three seconds.
+    final status = widget.info.status;
+    if (widget.info.driver == null ||
+        status == LiveTripStatus.matching ||
+        status == LiveTripStatus.completed ||
+        status == LiveTripStatus.cancelled) {
+      if (_driverPos != null && mounted) setState(() => _driverPos = null);
+      return;
+    }
+    final pos =
+        await ref.read(rideContextRepositoryProvider).driverPosition(id);
+    if (!mounted) return;
+    setState(() =>
+        _driverPos = pos == null ? null : gmaps.LatLng(pos.lat, pos.lng));
+  }
+
+  gmaps.LatLng _g(geo.LatLng p) => gmaps.LatLng(p.lat, p.lng);
+
+  @override
+  Widget build(BuildContext context) {
+    final route = widget.info.route;
+    final waypoints = widget.info.waypoints;
+
+    final polylines = <gmaps.Polyline>{
+      if (route != null && route.length >= 2)
+        gmaps.Polyline(
+          polylineId: const gmaps.PolylineId('route'),
+          points: [for (final p in route) _g(p)],
+          color: AppColors.navy,
+          width: 5,
+        ),
+    };
+
+    _maybeBuildWpMarkers(waypoints);
+    final markers = <gmaps.Marker>{..._wpMarkers};
+    if (_driverPos != null) {
+      markers.add(gmaps.Marker(
+        markerId: const gmaps.MarkerId('driver'),
+        position: _driverPos!,
+        icon: gmaps.BitmapDescriptor.defaultMarkerWithHue(
+            gmaps.BitmapDescriptor.hueViolet),
+        infoWindow: const gmaps.InfoWindow(title: 'Your driver'),
+        anchor: const Offset(0.5, 0.5),
+      ));
+    }
+
+    _maybeFitCamera(route);
+
+    return RiderMap(
+      markers: markers,
+      polylines: polylines,
+      onMapCreated: (c) {
+        _controller = c;
+        _fittedRouteLength = -1; // fit once the controller exists
+        _maybeFitCamera(route);
+      },
+      // Keep Google's chrome clear of the driver card.
+      padding: const EdgeInsets.only(bottom: 180),
+    );
+  }
+
+  void _maybeBuildWpMarkers(List<TripWaypoint> waypoints) {
+    // No engine, no bitmaps: tests and desktop render the placeholder, and
+    // the canvas futures would outlive a test's teardown.
+    if (!RiderMap.mapSupported) return;
+    if (waypoints.length == _builtWpCount) return;
+    _builtWpCount = waypoints.length;
+    _buildWpMarkers(List.of(waypoints));
+  }
+
+  Future<void> _buildWpMarkers(List<TripWaypoint> waypoints) async {
+    final markers = <gmaps.Marker>{};
+    for (var i = 0; i < waypoints.length; i++) {
+      final pos = waypoints[i].position;
+      if (pos == null) continue;
+      final isFirst = i == 0;
+      final isLast = i == waypoints.length - 1;
+      // Pickup A (blue), stops numbered (orange), dropoff B (green).
+      final label = isFirst ? 'A' : (isLast ? 'B' : '$i');
+      final color = isFirst
+          ? AppColors.info
+          : (isLast ? AppColors.positive : AppColors.accent);
+      markers.add(gmaps.Marker(
+        markerId: gmaps.MarkerId(
+            isFirst ? 'pickup' : (isLast ? 'dropoff' : 'stop$i')),
+        position: _g(pos),
+        icon: await circleLabelMarker(label, color),
+        infoWindow: gmaps.InfoWindow(
+            title: isFirst || isLast
+                ? waypoints[i].label
+                : 'Stop $i — ${waypoints[i].label}'),
+      ));
+    }
+    if (mounted) setState(() => _wpMarkers = markers);
+  }
+
+  void _maybeFitCamera(List<geo.LatLng>? route) {
+    final c = _controller;
+    if (c == null || route == null || route.length < 2) return;
+    if (_fittedRouteLength == route.length) return;
+    _fittedRouteLength = route.length;
+
+    var minLat = route.first.lat, maxLat = route.first.lat;
+    var minLng = route.first.lng, maxLng = route.first.lng;
+    for (final p in route) {
+      if (p.lat < minLat) minLat = p.lat;
+      if (p.lat > maxLat) maxLat = p.lat;
+      if (p.lng < minLng) minLng = p.lng;
+      if (p.lng > maxLng) maxLng = p.lng;
+    }
+    c.fitBounds(
+      gmaps.LatLngBounds(
+        southwest: gmaps.LatLng(minLat, minLng),
+        northeast: gmaps.LatLng(maxLat, maxLng),
+      ),
+      64,
+    );
   }
 }
 

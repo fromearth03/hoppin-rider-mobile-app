@@ -6,7 +6,12 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/api/error_codes.dart';
 import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
+import '../../../shared/widgets/profile_avatar.dart';
 import '../../payments/data/receipts_repository.dart';
+import '../../payments/presentation/ride_complete_screen.dart'
+    show rideCompleteContextProvider;
+import '../../payments/presentation/widgets/route_preview.dart';
+import '../../trip/data/live_trip_source.dart' show LiveTripInfo;
 
 final _receiptProvider =
     FutureProvider.autoDispose.family<Receipt, String>((ref, rideId) async {
@@ -39,6 +44,9 @@ class TripDetailsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final receipt = ref.watch(_receiptProvider(rideId));
+    // Route + driver enrichment off `GET /rides/:id` — best-effort; its
+    // failure never takes the receipt down with it.
+    final detail = ref.watch(rideCompleteContextProvider(rideId));
 
     return Scaffold(
       appBar: AppBar(title: const Text('Trip Details')),
@@ -56,7 +64,8 @@ class TripDetailsScreen extends ConsumerWidget {
             ),
           ),
         ),
-        data: (r) => _TripDetailsBody(receipt: r),
+        data: (r) =>
+            _TripDetailsBody(receipt: r, detail: detail.valueOrNull),
       ),
     );
   }
@@ -64,7 +73,8 @@ class TripDetailsScreen extends ConsumerWidget {
 
 class _TripDetailsBody extends StatelessWidget {
   final Receipt receipt;
-  const _TripDetailsBody({required this.receipt});
+  final LiveTripInfo? detail;
+  const _TripDetailsBody({required this.receipt, required this.detail});
 
   /// Both timestamps are nullable and independently absent. Only render a
   /// duration when both are actually present - anything else would be a
@@ -87,10 +97,17 @@ class _TripDetailsBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final duration = _duration;
+    final route = detail?.route;
+    final driver = detail?.driver;
 
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
+        // The frame's route snapshot above the summary.
+        if (route != null && route.length >= 2) ...[
+          RoutePreview(points: route),
+          const SizedBox(height: 16),
+        ],
         Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -165,6 +182,51 @@ class _TripDetailsBody extends StatelessWidget {
             ),
           ),
         ),
+        // The frame's Your Driver card, when the ride detail carries one.
+        if (driver != null) ...[
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  ProfileAvatar(
+                      avatarUrl: driver.avatarUrl,
+                      name: driver.name,
+                      radius: 26),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Your Driver',
+                            style: theme.textTheme.bodyMedium
+                                ?.copyWith(fontSize: 12)),
+                        Text(driver.name,
+                            style: theme.textTheme.titleMedium
+                                ?.copyWith(fontSize: 17)),
+                        if (driver.hasRating)
+                          Row(
+                            children: [
+                              const Icon(Icons.star_rounded,
+                                  size: 16, color: AppColors.warning),
+                              const SizedBox(width: 3),
+                              Text(
+                                '${driver.rating!.toStringAsFixed(1)}'
+                                '${driver.ratingCount > 0 ? ' (${driver.ratingCount})' : ''}',
+                                style: theme.textTheme.bodyMedium
+                                    ?.copyWith(fontSize: 12),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
         if (receipt.pickupTime != null) ...[
           const SizedBox(height: 16),
           Card(

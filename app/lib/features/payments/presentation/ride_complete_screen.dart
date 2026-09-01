@@ -9,6 +9,7 @@ import '../../../core/theme/colors.dart';
 import '../../../shared/nav/app_router.dart';
 import '../../../shared/widgets/bottom_scroll_fade.dart';
 import '../../../shared/widgets/hoppin_button.dart';
+import '../../../shared/widgets/profile_avatar.dart';
 import '../../trip/data/live_trip_source.dart';
 import '../../trip/data/ride_actions_repository.dart';
 import '../../trip/data/ride_context_repository.dart';
@@ -236,22 +237,12 @@ class _RideCompleteBody extends StatelessWidget {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      CircleAvatar(
+                      // Fetched WITH the bearer token — a plain NetworkImage
+                      // (an <img> on web) cannot send it and 401s silently.
+                      ProfileAvatar(
+                        avatarUrl: driver.avatarUrl,
+                        name: driver.name,
                         radius: 24,
-                        backgroundColor:
-                            AppColors.buttonPrimary.withValues(alpha: 0.25),
-                        foregroundImage: driver.avatarUrl != null
-                            ? NetworkImage(driver.avatarUrl!)
-                            : null,
-                        child: Text(
-                          driver.name.isNotEmpty
-                              ? driver.name[0].toUpperCase()
-                              : '?',
-                          style: const TextStyle(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(

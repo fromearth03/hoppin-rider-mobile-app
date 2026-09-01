@@ -3,13 +3,35 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_stripe/flutter_stripe.dart' as stripe_sdk;
 
+import 'package:intl/intl.dart';
+
 import '../../../core/api/error_codes.dart';
 import '../../../core/config.dart';
 import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
+import '../../history/data/trip_history_repository.dart';
 import '../data/payment_methods_repository.dart';
 import 'widgets/add_card_sheet.dart';
 import 'widgets/payment_card_tile.dart';
+
+/// The frame's "Recent Payments" list — real charged rides off `GET /rides`,
+/// newest first. There is no dedicated transactions endpoint; a completed
+/// ride with a total IS the payment record.
+final _recentPaymentsProvider =
+    FutureProvider.autoDispose<List<TripHistoryItem>>((ref) async {
+  final result = await ref
+      .watch(tripHistoryRepositoryProvider)
+      .myTrips(status: 'completed', limit: 10);
+  return switch (result) {
+    Ok(:final value) => [
+        for (final t in value.trips)
+          if (t.totalPence != null) t,
+      ],
+    // Decoration on this screen; an error renders as an empty section, never
+    // as a failure that hides the rider's cards.
+    Err() => const <TripHistoryItem>[],
+  };
+});
 
 /// Card management, not a per-ride payment picker.
 ///
@@ -234,7 +256,7 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
           onPressed: () => Navigator.of(context).maybePop(),
           icon: const Icon(Icons.arrow_back),
         ),
-        title: const Text('Payment cards'),
+        title: const Text('Payment Methods'),
         centerTitle: true,
       ),
       body: SafeArea(
@@ -248,10 +270,10 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
               ElevatedButton.icon(
                 onPressed: _startAddCard,
                 icon: const Icon(Icons.add),
-                label: const Text('Add card'),
+                label: const Text('Add Payment Methods'),
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size.fromHeight(56),
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: AppColors.navy,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(28)),
@@ -304,20 +326,97 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
       );
     }
 
+    final recent = ref.watch(_recentPaymentsProvider).valueOrNull ??
+        const <TripHistoryItem>[];
+
     return RefreshIndicator(
-      onRefresh: _load,
-      child: ListView.builder(
-        itemCount: _cards.length,
-        itemBuilder: (context, index) {
-          final card = _cards[index];
-          final busy = _busyCardId == card.paymentMethodId;
-          return PaymentCardTile(
-            card: card,
-            onMakeDefault:
-                (card.isDefault || busy) ? null : () => _makeDefault(card),
-            onRemove: busy ? () {} : () => _confirmRemove(card),
-          );
-        },
+      onRefresh: () async {
+        ref.invalidate(_recentPaymentsProvider);
+        await _load();
+      },
+      child: ListView(
+        children: [
+          for (final card in _cards)
+            Builder(builder: (context) {
+              final busy = _busyCardId == card.paymentMethodId;
+              return PaymentCardTile(
+                card: card,
+                onMakeDefault: (card.isDefault || busy)
+                    ? null
+                    : () => _makeDefault(card),
+                onRemove: busy ? () {} : () => _confirmRemove(card),
+              );
+            }),
+          // `Payment Methods.png`'s Recent Payments block, from real charged
+          // rides.
+          if (recent.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text('Recent Payments',
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontSize: 15, color: AppColors.navy)),
+            const SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Column(
+                children: [
+                  for (var i = 0; i < recent.length; i++) ...[
+                    if (i > 0)
+                      Divider(
+                          height: 1,
+                          color: theme.dividerColor.withValues(alpha: 0.5)),
+                    _RecentPaymentRow(trip: recent[i]),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _RecentPaymentRow extends StatelessWidget {
+  final TripHistoryItem trip;
+  const _RecentPaymentRow({required this.trip});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final when = (trip.dropoffTime ?? trip.pickupTime ?? trip.requestedAt)
+        .toLocal();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  trip.dropoffLabel ?? trip.pickupLabel ?? 'Ride',
+                  style: theme.textTheme.bodyLarge
+                      ?.copyWith(fontSize: 14, color: AppColors.navy),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(DateFormat('d MMM, yyyy').format(when),
+                    style:
+                        theme.textTheme.bodyMedium?.copyWith(fontSize: 11.5)),
+              ],
+            ),
+          ),
+          Text(
+            // A charge leaving the rider's card, as the frame signs it.
+            '-${trip.totalPence!.format(currency: trip.currency)}',
+            style: theme.textTheme.titleMedium
+                ?.copyWith(fontSize: 13.5, color: AppColors.negative),
+          ),
+        ],
       ),
     );
   }
