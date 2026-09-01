@@ -97,6 +97,11 @@ String? redirectFor(AuthStatus status, String location) {
       // The account exists but is unusable. Signup carries the recovery UI.
       return location == AppRoutes.signup ? null : AppRoutes.signup;
     case AuthStatus.signedIn:
+      // EXCEPT reset-password: verifying the emailed recovery code signs the
+      // rider in (a recovery session) BEFORE they have typed the new
+      // password — bouncing them home here would abort the reset mid-flow.
+      // The screen navigates home itself once the password is set.
+      if (location == AppRoutes.resetPassword) return null;
       return onAuthScreen ? AppRoutes.home : null;
     case AuthStatus.unknown:
       return null;
@@ -197,7 +202,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.resetPassword,
-        builder: (_, __) => const ResetPasswordScreen(),
+        // ?email= carries the address the recovery code was sent to.
+        builder: (_, state) => ResetPasswordScreen(
+          email: state.uri.queryParameters['email'] ?? '',
+        ),
       ),
       GoRoute(
         path: AppRoutes.fareConfirm,

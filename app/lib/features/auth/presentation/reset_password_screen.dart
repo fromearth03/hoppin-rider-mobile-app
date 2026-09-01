@@ -1,148 +1,169 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/api/error_codes.dart';
 import '../../../core/theme/colors.dart';
+import '../../../shared/nav/app_router.dart';
 import '../../../shared/widgets/hoppin_button.dart';
 import '../../../shared/widgets/hoppin_text_field.dart';
+import '../application/auth_controller.dart';
 import 'widgets/auth_scaffold.dart';
 
-/// Set a new password — `Reset Password.png`.
+/// Set a new password — `Reset Password.png` — completed with the 6-digit
+/// CODE from the recovery email, never the emailed link.
 ///
-/// **`AuthRepository` has no method to complete a password reset.** Supabase
-/// completes recovery through `GoTrueClient.updateUser` against the recovery
-/// session the emailed link creates, but that call does not exist anywhere in
-/// this codebase (`auth_repository.dart` only has `signIn`, `signUp`,
-/// `requestPasswordReset` and `signOut`), and `data/` is out of scope for this
-/// change. Rather than invent that endpoint here, [onSubmit] defaults to
-/// null, and submitting with no callback supplied surfaces a plain message
-/// that the reset path is not wired up yet — never a fake success. A caller
-/// that does have a way to complete the reset (once the repository grows one)
-/// can pass [onSubmit] and this screen will use it.
+/// The Supabase project is shared with the admin panel, whose site URL owns
+/// where the emailed link lands — riders tapping it were routed into the
+/// admin reset page. The code printed in the same email works everywhere
+/// (web and APK) with zero auth-config changes: `verifyOTP` (type recovery)
+/// signs the rider in on a recovery session, `updateUser` sets the password,
+/// and this screen then navigates home itself (the router deliberately does
+/// not bounce a signed-in rider off this one screen mid-reset).
 ///
 /// Design says the minimum is 8 characters. Supabase's own floor is 6, so
 /// enforcing 8 here is stricter, not looser, than the backend — it can never
 /// reject a password the server would have accepted.
-class ResetPasswordScreen extends StatefulWidget {
+class ResetPasswordScreen extends ConsumerStatefulWidget {
   static const minLength = 8;
 
-  /// Called with the new password once both fields are valid and matching.
-  /// Return true on success. Null means no completion path exists yet.
-  final Future<bool> Function(String password)? onSubmit;
+  /// Where the recovery code was emailed. Arrives via `?email=` from the
+  /// Forgot Password screen; editable here for a rider who lands directly.
+  final String email;
 
-  const ResetPasswordScreen({super.key, this.onSubmit});
+  const ResetPasswordScreen({super.key, this.email = ''});
 
   @override
-  State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
+  ConsumerState<ResetPasswordScreen> createState() =>
+      _ResetPasswordScreenState();
 }
 
-class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
+class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
+  late final _email = TextEditingController(text: widget.email);
+  final _code = TextEditingController();
   final _password = TextEditingController();
   final _confirm = TextEditingController();
 
   bool _submitting = false;
-  String? _unavailable;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _password.addListener(_onChanged);
-    _confirm.addListener(_onChanged);
+    for (final c in [_email, _code, _password, _confirm]) {
+      c.addListener(_onChanged);
+    }
   }
 
   void _onChanged() => setState(() {});
 
   @override
   void dispose() {
-    _password.removeListener(_onChanged);
-    _confirm.removeListener(_onChanged);
-    _password.dispose();
-    _confirm.dispose();
+    for (final c in [_email, _code, _password, _confirm]) {
+      c.dispose();
+    }
     super.dispose();
   }
 
-  /// Null when valid, otherwise the message to show under the confirm field.
-  String? get _validationError {
-    if (_password.text.isEmpty || _confirm.text.isEmpty) return null;
-    if (_password.text.length < ResetPasswordScreen.minLength) {
-      return 'Password must be at least ${ResetPasswordScreen.minLength} '
-          'characters';
-    }
-    if (_password.text != _confirm.text) {
-      return 'Passwords do not match';
-    }
-    return null;
-  }
-
-  bool get _canSubmit =>
-      _password.text.isNotEmpty &&
-      _confirm.text.isNotEmpty &&
+  bool get _valid =>
+      _email.text.trim().isNotEmpty &&
+      _code.text.trim().length >= 6 &&
       _password.text.length >= ResetPasswordScreen.minLength &&
       _password.text == _confirm.text;
 
-  Future<void> _submit() async {
-    if (!_canSubmit) return;
+  String? get _mismatch =>
+      _confirm.text.isNotEmpty && _password.text != _confirm.text
+          ? 'Passwords do not match'
+          : null;
 
-    final onSubmit = widget.onSubmit;
-    if (onSubmit == null) {
-      setState(() => _unavailable =
-          'Completing a password reset from inside the app is not yet '
-          'available. Please use the link from your email on a browser, or '
-          'try again shortly.');
+  Future<void> _submit() async {
+    if (!_valid || _submitting) return;
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+
+    final ok =
+        await ref.read(authControllerProvider.notifier).resetPasswordWithCode(
+              email: _email.text,
+              code: _code.text,
+              newPassword: _password.text,
+            );
+    if (!mounted) return;
+
+    if (ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Password updated — you are signed in.')),
+      );
+      context.go(AppRoutes.home);
       return;
     }
 
+    final error = ref.read(authControllerProvider).error;
     setState(() {
-      _submitting = true;
-      _unavailable = null;
+      _submitting = false;
+      // The most common failure by far is a mistyped or expired code — say
+      // that plainly rather than a raw auth message.
+      _error = switch (error?.code) {
+        'otp_expired' || 'invalid_otp' =>
+          'That code is invalid or has expired. Request a new one from '
+              'Forgot Password.',
+        _ => error != null
+            ? RiderErrorCopy.messageFor(error)
+            : 'Could not reset the password. Check the code and try again.',
+      };
     });
-    final ok = await onSubmit(_password.text);
-    if (!mounted) return;
-    setState(() => _submitting = false);
-    if (!ok) {
-      setState(() => _unavailable = 'That did not work. Try again.');
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final error = _validationError;
-
     return AuthScaffold(
       title: 'Reset Password',
-      subtitle: 'Enter your new password (must be atleast '
-          '${ResetPasswordScreen.minLength} characters)',
+      subtitle:
+          'Enter the 6-digit code we emailed you, then choose a new password.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           HoppinTextField(
-            label: 'Set New Password',
-            controller: _password,
-            hint: 'Enter your New Password',
-            obscurable: true,
-            prefixIcon: const Icon(Icons.lock_outline),
-            textInputAction: TextInputAction.next,
+            label: 'Email',
+            controller: _email,
+            hint: 'abc@hoppins.com',
           ),
           const SizedBox(height: 16),
           HoppinTextField(
-            label: 'Confirm New Password',
-            controller: _confirm,
-            hint: 'Confirm your New Password',
-            obscurable: true,
-            prefixIcon: const Icon(Icons.lock_outline),
-            errorText: error,
-            textInputAction: TextInputAction.done,
+            label: 'Reset code',
+            controller: _code,
+            hint: '6-digit code from the email',
           ),
-          if (_unavailable != null) ...[
+          const SizedBox(height: 16),
+          HoppinTextField(
+            label: 'New password',
+            controller: _password,
+            obscurable: true,
+            hint: 'At least ${ResetPasswordScreen.minLength} characters',
+          ),
+          const SizedBox(height: 16),
+          HoppinTextField(
+            label: 'Confirm password',
+            controller: _confirm,
+            obscurable: true,
+            errorText: _mismatch,
+          ),
+          if (_error != null) ...[
             const SizedBox(height: 12),
-            Text(
-              _unavailable!,
-              style: const TextStyle(color: AppColors.negative),
-            ),
+            Text(_error!,
+                style: const TextStyle(color: AppColors.negative)),
           ],
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
           HoppinButton(
-            label: 'Reset Password',
-            isLoading: _submitting,
-            onPressed: _canSubmit ? _submit : null,
+            label: _submitting ? 'Resetting…' : 'Reset Password',
+            onPressed: _valid && !_submitting ? _submit : null,
+          ),
+          const SizedBox(height: 12),
+          TextButton(
+            onPressed: () => context.go(AppRoutes.forgotPassword),
+            child: const Text('Send a new code'),
           ),
         ],
       ),

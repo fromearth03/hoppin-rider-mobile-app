@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/api/error_codes.dart';
 import '../../../core/theme/colors.dart';
+import '../../../shared/nav/app_router.dart';
 import '../../../shared/widgets/hoppin_button.dart';
 import '../../../shared/widgets/hoppin_text_field.dart';
 import '../application/auth_controller.dart';
@@ -47,7 +49,15 @@ class _ForgotPasswordScreenState
     final ok = await ref
         .read(authControllerProvider.notifier)
         .requestPasswordReset(_email.text);
-    if (ok && mounted) setState(() => _sent = true);
+    if (!ok || !mounted) return;
+    setState(() => _sent = true);
+    // Straight to the code entry: the email carries a 6-digit reset code
+    // (the emailed LINK belongs to the admin panel's site URL and must not
+    // be part of the rider flow).
+    context.go(
+      '${AppRoutes.resetPassword}'
+      '?email=${Uri.encodeComponent(_email.text.trim())}',
+    );
   }
 
   @override

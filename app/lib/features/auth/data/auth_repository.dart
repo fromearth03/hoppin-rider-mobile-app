@@ -85,6 +85,34 @@ class AuthRepository {
     }
   }
 
+  /// Completes recovery WITHOUT any emailed link: the 6-digit code from the
+  /// recovery email is verified (`verifyOTP` type recovery — this signs the
+  /// rider in on a recovery session) and the new password set immediately.
+  ///
+  /// Redirect-URL-free by design: the Supabase project is shared with the
+  /// admin panel, whose site URL owns the emailed LINK — riders tapping it
+  /// landed on the admin reset page. The code printed in the same email
+  /// works everywhere (web and APK) with zero auth-config changes.
+  Future<Result<void>> resetPasswordWithCode({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    try {
+      await _auth.verifyOTP(
+        type: OtpType.recovery,
+        email: email.trim(),
+        token: code.trim(),
+      );
+      await _auth.updateUser(UserAttributes(password: newPassword));
+      return const Ok(null);
+    } on AuthException catch (e) {
+      return Err(_map(e));
+    } catch (e) {
+      return Err(ApiException('INTERNAL', e.toString(), 0));
+    }
+  }
+
   /// Always reports success: the SDK clears local state before the network
   /// call, so a server error still leaves the rider signed out locally, which
   /// is the outcome they asked for.

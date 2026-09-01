@@ -10,7 +10,6 @@ import '../../history/data/trip_history_repository.dart';
 import '../data/support_tickets_repository.dart';
 import 'ticket_thread_screen.dart';
 import 'widgets/settings_card.dart';
-import 'widgets/settings_header.dart';
 
 /// The rider's tickets, refreshed after every submission.
 final _ticketsProvider =
