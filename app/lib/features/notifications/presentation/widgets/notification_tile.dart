@@ -13,11 +13,19 @@ class NotificationTile extends StatelessWidget {
   final Color accent;
   final VoidCallback? onTap;
 
+  /// True while the screen is in the design's "Select" mode. The frame draws
+  /// no checkbox, so selection reads as a ring on the card the tile already
+  /// draws rather than as new furniture the design does not have.
+  final bool selectable;
+  final bool selected;
+
   const NotificationTile({
     super.key,
     required this.item,
     required this.accent,
     this.onTap,
+    this.selectable = false,
+    this.selected = false,
   });
 
   @override
@@ -34,7 +42,9 @@ class NotificationTile extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: Border(left: BorderSide(color: accent, width: 4)),
+            border: selectable && selected
+                ? Border.all(color: accent, width: 2)
+                : Border(left: BorderSide(color: accent, width: 4)),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Column(
@@ -44,11 +54,15 @@ class NotificationTile extends StatelessWidget {
                 item.title,
                 style: theme.textTheme.titleMedium,
               ),
-              const SizedBox(height: 4),
-              Text(
-                item.body,
-                style: theme.textTheme.bodyMedium,
-              ),
+              // COALESCE means the server can send a title with no body; the
+              // line is dropped rather than reserving empty space for it.
+              if (item.body.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  item.body,
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ],
             ],
           ),
         ),

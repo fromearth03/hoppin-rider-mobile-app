@@ -1,29 +1,25 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/result.dart';
 import '../domain/promotion_item.dart';
+import 'promotions_repository.dart';
 
-/// Where the Promotional screen gets its rows.
+/// What the Promotional screen loads.
 ///
-/// There is no promotions endpoint in this API - searched `app/lib` and the
-/// backend contracts recorded in `docs/SCREEN-DECISIONS.md`, neither has one.
-/// [NoPromotionsSource] is the only implementation today and always returns
-/// an empty list, so the screen renders its honest empty state rather than
-/// inventing offers that look live.
-///
-/// When a real endpoint exists, add a `RemotePromotionsSource` here and swap
-/// the provider override below - the screen and controller do not change.
+/// A thin seam over [PromotionsRepository] so the screen and its goldens can
+/// be driven from a fake without a network.
 abstract class PromotionsSource {
-  Future<List<PromotionItem>> list();
+  Future<Result<List<PromotionItem>>> list();
 }
 
-/// The only implementation until a backend exists. Deliberately named so it
-/// cannot be mistaken for a real data source.
-class NoPromotionsSource implements PromotionsSource {
-  const NoPromotionsSource();
+/// The live implementation: `GET /promotions` (rider-facing offers).
+class RemotePromotionsSource implements PromotionsSource {
+  final PromotionsRepository _repo;
+  const RemotePromotionsSource(this._repo);
 
   @override
-  Future<List<PromotionItem>> list() async => const [];
+  Future<Result<List<PromotionItem>>> list() => _repo.list();
 }
 
-final promotionsSourceProvider =
-    Provider<PromotionsSource>((ref) => const NoPromotionsSource());
+final promotionsSourceProvider = Provider<PromotionsSource>(
+    (ref) => RemotePromotionsSource(ref.watch(promotionsRepositoryProvider)));

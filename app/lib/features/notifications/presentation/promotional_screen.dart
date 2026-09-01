@@ -4,13 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../application/promotional_controller.dart';
 import 'widgets/promotion_card.dart';
 
-/// Promotional offers list.
+/// Promotional offers list, backed by `GET /promotions` (rider-facing).
 ///
-/// There is no promotions endpoint anywhere in this API - see
-/// [PromotionsSource]. The list is driven entirely by whatever source is
-/// wired to [promotionsSourceProvider], which defaults to
-/// [NoPromotionsSource] and therefore renders empty until a real backend
-/// exists. Nothing on this screen is invented.
+/// Every card comes from the server, including its Active / Availed / Expire
+/// pill, which the server owns as `state`. With no offers the honest empty
+/// state renders rather than invented cards.
 class PromotionalScreen extends ConsumerStatefulWidget {
   const PromotionalScreen({super.key});
 
@@ -43,42 +41,57 @@ class _PromotionalScreenState extends ConsumerState<PromotionalScreen> {
       body: state.isLoading
           ? const Center(child: CircularProgressIndicator())
           : state.items.isEmpty
-              ? _EmptyState(theme: theme)
-              : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                  itemCount: state.items.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 16),
-                  itemBuilder: (context, index) =>
-                      PromotionCard(item: state.items[index]),
+              ? _EmptyState(theme: theme, error: state.error)
+              : RefreshIndicator(
+                  onRefresh:
+                      ref.read(promotionalControllerProvider.notifier).load,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                    itemCount: state.items.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 16),
+                    itemBuilder: (context, index) =>
+                        PromotionCard(item: state.items[index]),
+                  ),
                 ),
     );
   }
 }
 
+/// No cards to show. Either there are genuinely no offers, or the load failed
+/// - in which case the server's own sentence renders, rather than telling the
+/// rider to "check back later" for offers that may well exist.
 class _EmptyState extends StatelessWidget {
   final ThemeData theme;
-  const _EmptyState({required this.theme});
+  final String? error;
+
+  const _EmptyState({required this.theme, this.error});
 
   @override
   Widget build(BuildContext context) {
+    final failed = error != null;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.local_offer_outlined,
+            Icon(failed ? Icons.cloud_off : Icons.local_offer_outlined,
                 size: 56,
                 color: Theme.of(context).textTheme.bodyMedium?.color),
             const SizedBox(height: 16),
             Text(
-              'No promotions right now',
+              failed
+                  ? 'Promotions could not be loaded'
+                  : 'No promotions right now',
               style: theme.textTheme.titleMedium,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              "Check back later for offers and discounts on your rides.",
+              failed
+                  ? error!
+                  : "Check back later for offers and discounts on your rides.",
               style: theme.textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),

@@ -4,6 +4,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hoppin_rider/core/api/api_exception.dart';
+import 'package:hoppin_rider/core/result.dart';
 import 'package:hoppin_rider/core/theme/app_theme.dart';
 import 'package:hoppin_rider/features/notifications/data/notifications_source.dart';
 import 'package:hoppin_rider/features/notifications/data/promotions_source.dart';
@@ -21,10 +23,12 @@ class _MockPromotionsSource extends Mock implements PromotionsSource {}
 /// with `docs/figma/extracted/`. See `auth_render_test.dart` for why these
 /// are renders, not assertions.
 void main() {
-  Future<void> shoot(
+  /// Renders, runs an optional interaction, then shoots.
+  Future<void> shootWith(
     WidgetTester tester,
     Widget screen,
-    String name, {
+    String name,
+    Future<void> Function(WidgetTester)? interact, {
     Brightness brightness = Brightness.light,
     // The Figma frames are 430x932. A 320-wide render is not a Figma frame —
     // it exists to surface the class of bug a fixed-height Row with a
@@ -43,11 +47,23 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
+    if (interact != null) await interact(tester);
+
     await expectLater(
       find.byType(MaterialApp),
       matchesGoldenFile('shots/$name.png'),
     );
   }
+
+  Future<void> shoot(
+    WidgetTester tester,
+    Widget screen,
+    String name, {
+    Brightness brightness = Brightness.light,
+    double width = 430,
+  }) =>
+      shootWith(tester, screen, name, null,
+          brightness: brightness, width: width);
 
   final notifications = [
     NotificationItem(
@@ -108,65 +124,104 @@ void main() {
     ),
   ];
 
-  testWidgets('notifications light', (t) async {
+  /// A source loaded with rows, as the live one returns them.
+  _MockNotificationsSource notificationsSource(
+      [List<NotificationItem>? rows]) {
     final source = _MockNotificationsSource();
-    when(() => source.list()).thenAnswer((_) async => notifications);
-    when(() => source.markRead(any())).thenAnswer((_) async {});
-    when(() => source.markAllRead()).thenAnswer((_) async {});
+    when(() => source.list()).thenAnswer(
+        (_) async => Ok<List<NotificationItem>>(rows ?? notifications));
+    when(() => source.markRead(any())).thenAnswer((_) async => const Ok(null));
+    when(() => source.markAllRead()).thenAnswer((_) async => const Ok(null));
+    when(() => source.dismiss(any())).thenAnswer((_) async => const Ok(null));
+    return source;
+  }
 
-    await shoot(
-      t,
-      ProviderScope(
+  _MockPromotionsSource promotionsSource([List<PromotionItem>? rows]) {
+    final source = _MockPromotionsSource();
+    when(() => source.list())
+        .thenAnswer((_) async => Ok<List<PromotionItem>>(rows ?? promotions));
+    return source;
+  }
+
+  Widget notificationsScreen(NotificationsSource source) => ProviderScope(
         overrides: [notificationsSourceProvider.overrideWithValue(source)],
         child: const NotificationsScreen(),
-      ),
-      'notifications_light',
-    );
+      );
+
+  Widget promotionalScreen(PromotionsSource source) => ProviderScope(
+        overrides: [promotionsSourceProvider.overrideWithValue(source)],
+        child: const PromotionalScreen(),
+      );
+
+  testWidgets('notifications light', (t) async {
+    await shoot(t, notificationsScreen(notificationsSource()),
+        'notifications_light');
+  });
+
+  testWidgets('notifications dark', (t) async {
+    await shoot(t, notificationsScreen(notificationsSource()),
+        'notifications_dark',
+        brightness: Brightness.dark);
   });
 
   testWidgets('notifications narrow', (t) async {
-    final source = _MockNotificationsSource();
-    when(() => source.list()).thenAnswer((_) async => notifications);
-    when(() => source.markRead(any())).thenAnswer((_) async {});
-    when(() => source.markAllRead()).thenAnswer((_) async {});
+    await shoot(t, notificationsScreen(notificationsSource()),
+        'notifications_narrow',
+        width: 320);
+  });
 
-    await shoot(
-      t,
-      ProviderScope(
-        overrides: [notificationsSourceProvider.overrideWithValue(source)],
-        child: const NotificationsScreen(),
-      ),
-      'notifications_narrow',
-      width: 320,
-    );
+  testWidgets('notifications empty', (t) async {
+    // With zero rows the honest empty state renders - no invented cards.
+    await shoot(t, notificationsScreen(notificationsSource(const [])),
+        'notifications_empty');
+  });
+
+  testWidgets('notifications load failure', (t) async {
+    final source = _MockNotificationsSource();
+    when(() => source.list()).thenAnswer((_) async =>
+        const Err<List<NotificationItem>>(
+            ApiException('INTERNAL', 'internal server error', 500)));
+
+    await shoot(t, notificationsScreen(source), 'notifications_error');
+  });
+
+  testWidgets('notifications select mode', (t) async {
+    // The footer's Select button, with one row chosen: Cancel / Delete and
+    // the selected card ringed.
+    final source = notificationsSource();
+    await shootWith(t, notificationsScreen(source), 'notifications_selecting',
+        (tester) async {
+      await tester.tap(find.text('Select'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Driver Arrived'));
+      await tester.pumpAndSettle();
+    });
   });
 
   testWidgets('promotional light', (t) async {
-    final source = _MockPromotionsSource();
-    when(() => source.list()).thenAnswer((_) async => promotions);
+    await shoot(t, promotionalScreen(promotionsSource()), 'promotional_light');
+  });
 
-    await shoot(
-      t,
-      ProviderScope(
-        overrides: [promotionsSourceProvider.overrideWithValue(source)],
-        child: const PromotionalScreen(),
-      ),
-      'promotional_light',
-    );
+  testWidgets('promotional dark', (t) async {
+    await shoot(t, promotionalScreen(promotionsSource()), 'promotional_dark',
+        brightness: Brightness.dark);
   });
 
   testWidgets('promotional narrow', (t) async {
-    final source = _MockPromotionsSource();
-    when(() => source.list()).thenAnswer((_) async => promotions);
+    await shoot(t, promotionalScreen(promotionsSource()), 'promotional_narrow',
+        width: 320);
+  });
 
-    await shoot(
-      t,
-      ProviderScope(
-        overrides: [promotionsSourceProvider.overrideWithValue(source)],
-        child: const PromotionalScreen(),
-      ),
-      'promotional_narrow',
-      width: 320,
-    );
+  testWidgets('promotional empty', (t) async {
+    await shoot(t, promotionalScreen(promotionsSource(const [])),
+        'promotional_empty');
+  });
+
+  testWidgets('promotional load failure', (t) async {
+    final source = _MockPromotionsSource();
+    when(() => source.list()).thenAnswer((_) async => const Err<List<PromotionItem>>(
+        ApiException('INTERNAL', 'internal server error', 500)));
+
+    await shoot(t, promotionalScreen(source), 'promotional_error');
   });
 }

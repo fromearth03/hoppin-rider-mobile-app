@@ -29,15 +29,21 @@ class PromotionCard extends StatelessWidget {
           _StatusPill(status: item.status),
           const SizedBox(height: 16),
           Text(item.title, style: theme.textTheme.titleMedium),
-          const SizedBox(height: 6),
-          Text(item.description, style: theme.textTheme.bodyMedium),
-          const SizedBox(height: 14),
-          Text(
-            'Valid Until: ${DateFormat('dd MMMM, yyyy').format(item.validUntil)}',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontStyle: FontStyle.italic,
+          if (item.description.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(item.description, style: theme.textTheme.bodyMedium),
+          ],
+          // An open-ended offer has no expiry. The design always draws this
+          // line, but a fabricated date is worse than no line at all.
+          if (item.validUntil case final validUntil?) ...[
+            const SizedBox(height: 14),
+            Text(
+              'Valid Until: ${DateFormat('dd MMMM, yyyy').format(validUntil)}',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontStyle: FontStyle.italic,
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );

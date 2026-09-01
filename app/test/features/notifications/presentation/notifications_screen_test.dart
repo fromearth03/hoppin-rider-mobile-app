@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hoppin_rider/core/api/api_exception.dart';
+import 'package:hoppin_rider/core/result.dart';
 import 'package:hoppin_rider/core/theme/app_theme.dart';
 import 'package:hoppin_rider/features/notifications/data/notifications_source.dart';
 import 'package:hoppin_rider/features/notifications/domain/notification_item.dart';
@@ -45,9 +47,11 @@ void main() {
 
   setUp(() {
     source = _MockSource();
-    when(() => source.list()).thenAnswer((_) async => const []);
-    when(() => source.markRead(any())).thenAnswer((_) async {});
-    when(() => source.markAllRead()).thenAnswer((_) async {});
+    when(() => source.list())
+        .thenAnswer((_) async => const Ok<List<NotificationItem>>([]));
+    when(() => source.markRead(any())).thenAnswer((_) async => const Ok(null));
+    when(() => source.markAllRead()).thenAnswer((_) async => const Ok(null));
+    when(() => source.dismiss(any())).thenAnswer((_) async => const Ok(null));
   });
 
   testWidgets('has a const constructor taking only a key', (tester) async {
@@ -55,7 +59,14 @@ void main() {
     expect(screen.key, const Key('n'));
   });
 
-  testWidgets('renders an honest empty state when the source has nothing',
+  testWidgets('loads from the live source on open', (tester) async {
+    await tester.pumpWidget(_harness(source));
+    await tester.pumpAndSettle();
+
+    verify(() => source.list()).called(1);
+  });
+
+  testWidgets('renders an honest empty state when the feed is empty',
       (tester) async {
     await tester.pumpWidget(_harness(source));
     await tester.pumpAndSettle();
@@ -66,9 +77,23 @@ void main() {
     expect(find.textContaining('No notifications'), findsOneWidget);
   });
 
+  testWidgets('a failed load renders the server copy verbatim', (tester) async {
+    when(() => source.list()).thenAnswer((_) async =>
+        const Err<List<NotificationItem>>(
+            ApiException('INTERNAL', 'internal server error', 500)));
+
+    await tester.pumpWidget(_harness(source));
+    await tester.pumpAndSettle();
+
+    expect(find.text('internal server error'), findsOneWidget);
+    // and NOT the cheerful empty copy, which would be a lie here
+    expect(find.textContaining("all caught up"), findsNothing);
+  });
+
   testWidgets('renders populated notifications grouped under a day label',
       (tester) async {
-    when(() => source.list()).thenAnswer((_) async => _sampleItems);
+    when(() => source.list())
+        .thenAnswer((_) async => Ok<List<NotificationItem>>(_sampleItems));
 
     await tester.pumpWidget(_harness(source));
     await tester.pumpAndSettle();
@@ -79,7 +104,8 @@ void main() {
   });
 
   testWidgets('All / Read / Unread tabs filter the list', (tester) async {
-    when(() => source.list()).thenAnswer((_) async => _sampleItems);
+    when(() => source.list())
+        .thenAnswer((_) async => Ok<List<NotificationItem>>(_sampleItems));
 
     await tester.pumpWidget(_harness(source));
     await tester.pumpAndSettle();
@@ -103,8 +129,23 @@ void main() {
     expect(find.text('New Message'), findsOneWidget);
   });
 
-  testWidgets('Mark all as read calls through to the source', (tester) async {
-    when(() => source.list()).thenAnswer((_) async => _sampleItems);
+  testWidgets('tapping a row marks it read against the endpoint',
+      (tester) async {
+    when(() => source.list())
+        .thenAnswer((_) async => Ok<List<NotificationItem>>(_sampleItems));
+
+    await tester.pumpWidget(_harness(source));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Driver Arrived'));
+    await tester.pumpAndSettle();
+
+    verify(() => source.markRead('1')).called(1);
+  });
+
+  testWidgets('Mark all as read calls read-all', (tester) async {
+    when(() => source.list())
+        .thenAnswer((_) async => Ok<List<NotificationItem>>(_sampleItems));
 
     await tester.pumpWidget(_harness(source));
     await tester.pumpAndSettle();
@@ -113,6 +154,83 @@ void main() {
     await tester.pumpAndSettle();
 
     verify(() => source.markAllRead()).called(1);
+  });
+
+  testWidgets('Mark all as read is disabled once nothing is unread',
+      (tester) async {
+    when(() => source.list()).thenAnswer(
+        (_) async => Ok<List<NotificationItem>>([_sampleItems[1]]));
+
+    await tester.pumpWidget(_harness(source));
+    await tester.pumpAndSettle();
+
+    final button = tester.widget<OutlinedButton>(
+        find.widgetWithText(OutlinedButton, 'Mark all as read'));
+
+    expect(button.onPressed, isNull);
+  });
+
+  testWidgets('Select is disabled with no rows to select', (tester) async {
+    await tester.pumpWidget(_harness(source));
+    await tester.pumpAndSettle();
+
+    final button = tester
+        .widget<OutlinedButton>(find.widgetWithText(OutlinedButton, 'Select'));
+
+    expect(button.onPressed, isNull);
+  });
+
+  testWidgets('Select mode dismisses the chosen rows', (tester) async {
+    when(() => source.list())
+        .thenAnswer((_) async => Ok<List<NotificationItem>>(_sampleItems));
+
+    await tester.pumpWidget(_harness(source));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Select'));
+    await tester.pumpAndSettle();
+
+    // The footer swaps to Cancel / Delete, and Delete waits for a selection.
+    expect(find.text('Cancel'), findsOneWidget);
+    expect(
+        tester
+            .widget<OutlinedButton>(
+                find.widgetWithText(OutlinedButton, 'Delete'))
+            .onPressed,
+        isNull);
+
+    await tester.tap(find.text('Driver Arrived'));
+    await tester.pumpAndSettle();
+    // In select mode a tap selects; it must NOT quietly mark the row read.
+    verifyNever(() => source.markRead(any()));
+
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+
+    verify(() => source.dismiss('1')).called(1);
+    expect(find.text('Driver Arrived'), findsNothing);
+    expect(find.text('New Message'), findsOneWidget);
+    expect(find.text('Select'), findsOneWidget);
+  });
+
+  testWidgets('Cancel leaves select mode without dismissing anything',
+      (tester) async {
+    when(() => source.list())
+        .thenAnswer((_) async => Ok<List<NotificationItem>>(_sampleItems));
+
+    await tester.pumpWidget(_harness(source));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Select'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Driver Arrived'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    verifyNever(() => source.dismiss(any()));
+    expect(find.text('Mark all as read'), findsOneWidget);
+    expect(find.text('Driver Arrived'), findsOneWidget);
   });
 
   testWidgets('renders in dark mode', (tester) async {
