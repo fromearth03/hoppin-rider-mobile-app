@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/colors.dart';
+import '../../../shared/nav/app_router.dart';
 import 'widgets/settings_card.dart';
 import 'widgets/settings_header.dart';
 
@@ -79,8 +81,8 @@ class HelpSupportScreen extends StatelessWidget {
                   child: Text('Contact to Support',
                       style: theme.textTheme.titleMedium),
                 ),
-                const Padding(
-                  padding: EdgeInsets.all(16),
+                Padding(
+                  padding: const EdgeInsets.all(16),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -89,11 +91,13 @@ class HelpSupportScreen extends StatelessWidget {
                           icon: Icons.find_in_page_outlined,
                           title: 'Open Ticket',
                           subtitle: 'Representative will respond in 24 Hours',
-                          enabled: false,
+                          enabled: true,
+                          // Live: POST /me/support-tickets exists now.
+                          onTap: () => context.push(AppRoutes.supportTicket),
                         ),
                       ),
-                      SizedBox(width: 12),
-                      Expanded(
+                      const SizedBox(width: 12),
+                      const Expanded(
                         child: _ContactCard(
                           icon: Icons.mail_outline,
                           title: 'Email',
@@ -203,12 +207,14 @@ class _ContactCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool enabled;
+  final VoidCallback? onTap;
 
   const _ContactCard({
     required this.icon,
     required this.title,
     required this.subtitle,
     required this.enabled,
+    this.onTap,
   });
 
   @override
@@ -224,7 +230,7 @@ class _ContactCard extends StatelessWidget {
         ? theme.textTheme.bodyMedium?.color
         : theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5);
 
-    return Container(
+    final card = Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkBackground : AppColors.lightBackground,
@@ -256,6 +262,13 @@ class _ContactCard extends StatelessWidget {
                   theme.textTheme.bodyMedium?.copyWith(color: subtitleColor)),
         ],
       ),
+    );
+
+    if (onTap == null) return card;
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: onTap,
+      child: card,
     );
   }
 }

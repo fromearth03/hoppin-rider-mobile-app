@@ -68,8 +68,9 @@ void main() {
     );
     expect(find.text('Terms of Services'), findsOneWidget);
     expect(find.text('Privacy Policy'), findsOneWidget);
-    // One Soon per disabled surface: Open Ticket + two legal rows.
-    expect(find.text('Soon'), findsNWidgets(3));
+    // One Soon per disabled surface: the two legal rows. Open Ticket is
+    // live now — POST /me/support-tickets exists.
+    expect(find.text('Soon'), findsNWidgets(2));
   });
 
   testWidgets('back arrow pops the route', (tester) async {
