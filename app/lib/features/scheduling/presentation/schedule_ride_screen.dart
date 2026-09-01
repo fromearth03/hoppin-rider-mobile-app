@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/api/api_exception.dart';
@@ -242,8 +243,12 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
             maxChildSize: 0.95,
             snap: true,
             snapSizes: const [0.16, 0.82],
+            // PointerInterceptor: on web the map is a DOM platform view and
+            // touches over the sheet can fall through and pan it. No-op on
+            // native.
             builder: (context, scrollController) {
-              return Container(
+              return PointerInterceptor(
+                  child: Container(
                 decoration: BoxDecoration(
                   color: isDark
                       ? AppColors.darkBackground
@@ -323,7 +328,7 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
                     _upcomingList(theme, isDark),
                   ],
                 ),
-              );
+              ));
             },
           ),
         ],

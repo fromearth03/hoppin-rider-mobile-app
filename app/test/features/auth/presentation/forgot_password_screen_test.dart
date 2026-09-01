@@ -13,25 +13,17 @@ import 'package:mocktail/mocktail.dart';
 
 class _MockController extends Mock implements AuthController {}
 
-String? _lastLocation;
 
 Widget _harness(AuthController controller,
     {Brightness brightness = Brightness.light}) {
-  // A real router: success now navigates ON to the code-entry screen (the
-  // emailed LINK belongs to the admin panel; the rider flow uses the code).
+  // A real router: success swaps to the in-place confirmation (the emailed
+  // LINK completes the reset on the hosted page — the app navigates nowhere).
   final router = GoRouter(
     initialLocation: AppRoutes.forgotPassword,
     routes: [
       GoRoute(
         path: AppRoutes.forgotPassword,
         builder: (_, __) => const ForgotPasswordScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.resetPassword,
-        builder: (_, state) {
-          _lastLocation = state.uri.toString();
-          return const Scaffold(body: Text('reset screen'));
-        },
       ),
     ],
   );
@@ -100,9 +92,8 @@ void main() {
     verify(() => controller.requestPasswordReset('ada@example.com')).called(1);
   });
 
-  testWidgets('success continues to the code screen carrying the email',
+  testWidgets('success confirms in place that the link email was sent',
       (tester) async {
-    _lastLocation = null;
     await tester.pumpWidget(_harness(controller));
 
     await tester.enterText(find.byType(TextField), 'ada@example.com');
@@ -110,8 +101,8 @@ void main() {
     await tester.tap(find.widgetWithText(HoppinButton, 'Reset Password'));
     await tester.pumpAndSettle();
 
-    expect(find.text('reset screen'), findsOneWidget);
-    expect(_lastLocation, contains('email=ada%40example.com'));
+    expect(find.text('Check your email'), findsOneWidget);
+    expect(find.textContaining('ada@example.com'), findsOneWidget);
   });
 
   testWidgets('shows the server message and stays put on failure',

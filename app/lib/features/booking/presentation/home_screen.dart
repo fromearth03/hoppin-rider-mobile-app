@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/api/error_codes.dart';
@@ -127,20 +128,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     onTap: () => _map?.moveTo(RiderMap.initialCamera),
                   ),
                 ),
-                _BookingSheet(
-                  categories: categories,
-                  saved: saved,
-                  selectedId: _selectedCategoryId,
-                  pickerOpen: _pickerOpen,
-                  onSelect: (id) {
-                    setState(() => _selectedCategoryId = id);
-                    // Carried into fare-confirm so the rider is never asked
-                    // to pick the same vehicle twice.
-                    ref.read(draftVehicleCategoryProvider.notifier).state =
-                        id;
-                  },
-                  onTogglePicker: () =>
-                      setState(() => _pickerOpen = !_pickerOpen),
+                // PointerInterceptor: on web the map is a DOM platform view
+                // and touches over the sheet can fall through and pan the
+                // map. No-op on native.
+                PointerInterceptor(
+                  child: _BookingSheet(
+                    categories: categories,
+                    saved: saved,
+                    selectedId: _selectedCategoryId,
+                    pickerOpen: _pickerOpen,
+                    onSelect: (id) {
+                      setState(() => _selectedCategoryId = id);
+                      // Carried into fare-confirm so the rider is never
+                      // asked to pick the same vehicle twice.
+                      ref
+                          .read(draftVehicleCategoryProvider.notifier)
+                          .state = id;
+                    },
+                    onTogglePicker: () =>
+                        setState(() => _pickerOpen = !_pickerOpen),
+                  ),
                 ),
               ],
             ),

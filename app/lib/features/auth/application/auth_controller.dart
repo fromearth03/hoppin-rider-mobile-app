@@ -121,33 +121,6 @@ class AuthController extends StateNotifier<AuthSnapshot> {
   /// "check your inbox" state. This deliberately does NOT touch [AuthStatus]:
   /// the rider is signed out before and after, and moving the status would
   /// bounce them through the router mid-flow.
-  /// Verifies the emailed 6-digit recovery code and sets the new password in
-  /// one step. Success leaves the rider SIGNED IN (the recovery session) —
-  /// the router's reset-password exception keeps them on the screen until
-  /// it navigates home itself.
-  Future<bool> resetPasswordWithCode({
-    required String email,
-    required String code,
-    required String newPassword,
-  }) async {
-    state = state.copyWith(isBusy: true, clearError: true);
-
-    final result = await _auth.resetPasswordWithCode(
-      email: email,
-      code: code,
-      newPassword: newPassword,
-    );
-    return switch (result) {
-      Ok() => () {
-          state = state.copyWith(isBusy: false, clearError: true);
-          return true;
-        }(),
-      Err(:final error) => () {
-          state = state.copyWith(isBusy: false, error: error);
-          return false;
-        }(),
-    };
-  }
 
   Future<bool> requestPasswordReset(String email) async {
     state = state.copyWith(isBusy: true, clearError: true);

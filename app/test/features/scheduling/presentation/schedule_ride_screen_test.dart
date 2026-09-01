@@ -111,12 +111,13 @@ void main() {
     expect(find.text('Book your ride in advance'), findsOneWidget);
   });
 
-  testWidgets('renders From and To fields', (tester) async {
+  testWidgets('renders the single route bar prompt', (tester) async {
     await tester.pumpWidget(_harness());
     await tester.pumpAndSettle();
 
-    expect(find.text('From'), findsOneWidget);
-    expect(find.text('To'), findsOneWidget);
+    // One Where-to bar, not separate From/To fields: both ends are picked
+    // on the route screen in one visit.
+    expect(find.text('Where to & from?'), findsOneWidget);
   });
 
   testWidgets('renders the Schedule for field', (tester) async {

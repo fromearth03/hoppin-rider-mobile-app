@@ -11,7 +11,6 @@ import 'package:hoppin_rider/core/result.dart';
 import 'package:hoppin_rider/core/theme/app_theme.dart';
 import 'package:hoppin_rider/features/auth/presentation/expired_link_screen.dart';
 import 'package:hoppin_rider/features/auth/presentation/link_sent_screen.dart';
-import 'package:hoppin_rider/features/auth/presentation/reset_password_screen.dart';
 import 'package:hoppin_rider/features/booking/data/fare_repository.dart';
 import 'package:hoppin_rider/features/booking/data/places_repository.dart';
 import 'package:hoppin_rider/features/booking/data/saved_locations_repository.dart';
@@ -205,10 +204,6 @@ void main() {
       ),
       'saved_places_light',
     );
-  });
-
-  testWidgets('reset password light', (t) async {
-    await shoot(t, const ResetPasswordScreen(), 'reset_password_light');
   });
 
   testWidgets('link sent light', (t) async {

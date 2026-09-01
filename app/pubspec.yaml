@@ -22,6 +22,7 @@ dependencies:
   # Fallback map when the Google JS SDK fails to load (key/billing/offline):
   # the same OSM raster tiles the admin panel's MapLibre stack renders.
   flutter_map: ^8.1.1
+  pointer_interceptor: ^0.10.1
   latlong2: ^0.9.1
   # Avatar picking for POST /me/avatar/upload — gallery on Android, file
   # dialog on web.

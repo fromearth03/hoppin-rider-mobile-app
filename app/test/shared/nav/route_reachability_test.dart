@@ -31,7 +31,6 @@ void main() {
     AppRoutes.forgotPassword,
     AppRoutes.linkSent,
     AppRoutes.expiredLink,
-    AppRoutes.resetPassword,
   ];
 
   const bookingFlow = <String>[

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 import '../../core/theme/colors.dart';
 
@@ -45,7 +46,12 @@ class CollapsibleSheet extends StatelessWidget {
       maxChildSize: maxSize,
       snap: true,
       snapSizes: [minSize, initialSize],
-      builder: (context, scrollController) => Material(
+      // PointerInterceptor: on web the map is a platform view (a real DOM
+      // element), and touches over Flutter widgets can fall through to it —
+      // dragging the sheet also panned the map. This puts an invisible DOM
+      // shield under the sheet; everywhere else it is a no-op passthrough.
+      builder: (context, scrollController) =>
+          PointerInterceptor(child: Material(
         color: color,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         clipBehavior: Clip.antiAlias,
@@ -104,7 +110,7 @@ class CollapsibleSheet extends StatelessWidget {
             ...children,
           ],
         ),
-      ),
+      )),
     );
   }
 }

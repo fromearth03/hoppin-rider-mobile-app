@@ -1,9 +1,35 @@
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/auth/token_store.dart';
+import '../../../core/config.dart';
 import '../../../core/result.dart';
+
+/// Where the reset email's link should land — the hosted set-password page.
+///
+/// Never localhost: GoTrue falls back to the project Site URL for redirects
+/// it can't honour, and that is the admin panel. A public web origin (the
+/// deployed rider web app) keeps the reset on the same host; everything
+/// else — the APK included — goes to the production page.
+String hoppinPasswordResetRedirect() {
+  const configured = String.fromEnvironment('PASSWORD_RESET_REDIRECT');
+  if (_isPublicRedirect(configured)) return configured;
+  if (kIsWeb) {
+    final origin = Uri.base.origin;
+    if (_isPublicRedirect(origin)) return '$origin/reset';
+  }
+  return 'https://rider.hoppin.tech/reset';
+}
+
+bool _isPublicRedirect(String url) {
+  if (url.isEmpty) return false;
+  final u = url.toLowerCase();
+  if (u.contains('localhost') || u.contains('127.0.0.1')) return false;
+  return u.startsWith('http://') || u.startsWith('https://');
+}
 
 /// Wraps `supabase_flutter`'s auth client so the rest of the app sees the same
 /// `Result` + `{code}` contract it uses for the ride service.
@@ -74,40 +100,39 @@ class AuthRepository {
     }
   }
 
+  /// Sends the branded "Set your Hoppin Rider password" email whose LINK
+  /// lands on the hosted reset page (rider.hoppin.tech/reset), where the
+  /// rider types the new password. Do NOT use `resetPasswordForEmail` —
+  /// that renders the project-wide Reset Password template, which is the
+  /// admin panel's OTP email. The magic-link template is a URL. The raw
+  /// request also bypasses the SDK's PKCE generation, because a link
+  /// requested inside the APK may be opened in any browser.
   Future<Result<void>> requestPasswordReset(String email) async {
     try {
-      await _auth.resetPasswordForEmail(email.trim());
-      return const Ok(null);
-    } on AuthException catch (e) {
-      return Err(_map(e));
-    } catch (e) {
-      return Err(ApiException('INTERNAL', e.toString(), 0));
-    }
-  }
-
-  /// Completes recovery WITHOUT any emailed link: the 6-digit code from the
-  /// recovery email is verified (`verifyOTP` type recovery — this signs the
-  /// rider in on a recovery session) and the new password set immediately.
-  ///
-  /// Redirect-URL-free by design: the Supabase project is shared with the
-  /// admin panel, whose site URL owns the emailed LINK — riders tapping it
-  /// landed on the admin reset page. The code printed in the same email
-  /// works everywhere (web and APK) with zero auth-config changes.
-  Future<Result<void>> resetPasswordWithCode({
-    required String email,
-    required String code,
-    required String newPassword,
-  }) async {
-    try {
-      await _auth.verifyOTP(
-        type: OtpType.recovery,
-        email: email.trim(),
-        token: code.trim(),
+      final base = AppConfig.supabaseUrl.replaceFirst(RegExp(r'/$'), '');
+      await Dio().post<void>(
+        '$base/auth/v1/otp',
+        queryParameters: {'redirect_to': hoppinPasswordResetRedirect()},
+        options: Options(
+          headers: {
+            'apikey': AppConfig.supabaseAnonKey,
+            'Content-Type': 'application/json',
+          },
+        ),
+        data: {
+          'email': email.trim(),
+          'create_user': false,
+          'data': <String, dynamic>{},
+        },
       );
-      await _auth.updateUser(UserAttributes(password: newPassword));
       return const Ok(null);
-    } on AuthException catch (e) {
-      return Err(_map(e));
+    } on DioException catch (e) {
+      final status = e.response?.statusCode ?? 0;
+      return Err(ApiException(
+        'AUTH_ERROR',
+        'Could not send the reset email. Check the address and try again.',
+        status,
+      ));
     } catch (e) {
       return Err(ApiException('INTERNAL', e.toString(), 0));
     }

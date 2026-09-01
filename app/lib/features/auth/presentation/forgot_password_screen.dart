@@ -50,14 +50,9 @@ class _ForgotPasswordScreenState
         .read(authControllerProvider.notifier)
         .requestPasswordReset(_email.text);
     if (!ok || !mounted) return;
+    // The email carries a one-tap LINK to the hosted set-password page
+    // (rider.hoppin.tech/reset) — nothing more happens in the app.
     setState(() => _sent = true);
-    // Straight to the code entry: the email carries a 6-digit reset code
-    // (the emailed LINK belongs to the admin panel's site URL and must not
-    // be part of the rider flow).
-    context.go(
-      '${AppRoutes.resetPassword}'
-      '?email=${Uri.encodeComponent(_email.text.trim())}',
-    );
   }
 
   @override
@@ -102,7 +97,7 @@ class _ForgotPasswordScreenState
                 const SizedBox(height: 12),
                 Center(
                   child: TextButton(
-                    onPressed: () => Navigator.of(context).maybePop(),
+                    onPressed: () => _backToLogin(context),
                     child: Text(
                       'Back to login',
                       style: theme.textTheme.bodyMedium,
@@ -145,9 +140,19 @@ class _Sent extends StatelessWidget {
         const SizedBox(height: 24),
         HoppinButton(
           label: 'Back to login',
-          onPressed: () => Navigator.of(context).maybePop(),
+          onPressed: () => _backToLogin(context),
         ),
       ],
     );
+  }
+}
+
+/// Pops back where possible; a rider who deep-linked straight here has no
+/// stack to pop, so fall through to the login route instead of doing nothing.
+void _backToLogin(BuildContext context) {
+  if (Navigator.of(context).canPop()) {
+    Navigator.of(context).pop();
+  } else {
+    context.go(AppRoutes.login);
   }
 }

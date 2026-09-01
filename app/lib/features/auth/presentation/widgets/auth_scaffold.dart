@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/colors.dart';
+import '../../../../shared/nav/app_router.dart';
 import '../../../../shared/widgets/hoppin_logo.dart';
 
 /// The curved indigo header both auth screens share.
@@ -54,7 +56,16 @@ class AuthScaffold extends StatelessWidget {
               children: [
                 if (showBack)
                   IconButton(
-                    onPressed: () => Navigator.of(context).maybePop(),
+                    // `go` navigation leaves nothing to pop — the arrow was
+                    // dead on Forgot/Reset. Fall back to Login.
+                    onPressed: () {
+                      final nav = Navigator.of(context);
+                      if (nav.canPop()) {
+                        nav.pop();
+                      } else {
+                        context.go(AppRoutes.login);
+                      }
+                    },
                     icon: const Icon(Icons.arrow_back, color: Colors.white),
                     style: IconButton.styleFrom(
                       backgroundColor: Colors.white.withValues(alpha: 0.15),

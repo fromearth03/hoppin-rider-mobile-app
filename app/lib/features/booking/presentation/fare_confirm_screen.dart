@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/api/error_codes.dart';
@@ -244,7 +245,10 @@ class _FareConfirmScreenState extends ConsumerState<FareConfirmScreen> {
             maxChildSize: 0.92,
             snap: true,
             snapSizes: const [0.14, 0.62],
-            builder: (context, scrollController) => _Sheet(
+            // PointerInterceptor: on web the map is a DOM platform view and
+            // touches over the sheet can fall through and pan it underneath.
+            builder: (context, scrollController) =>
+                PointerInterceptor(child: _Sheet(
               scrollController: scrollController,
               categories: widget.categories,
               resolved: _resolved,
@@ -263,7 +267,7 @@ class _FareConfirmScreenState extends ConsumerState<FareConfirmScreen> {
                 );
                 widget.onConfirm?.call(category, _selectedEstimate);
               },
-            ),
+            )),
           ),
         ],
       ),

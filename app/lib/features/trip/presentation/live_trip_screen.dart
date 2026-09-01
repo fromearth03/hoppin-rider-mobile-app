@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 import '../../../core/api/error_codes.dart';
 import '../../../core/geo.dart' as geo;
@@ -143,7 +144,8 @@ class _LiveTripBody extends ConsumerWidget {
         if (cancelled)
           Align(
             alignment: Alignment.bottomCenter,
-            child: SafeArea(
+            child: PointerInterceptor(
+                child: SafeArea(
               minimum: const EdgeInsets.all(16),
               child: Material(
                 color: Colors.white,
@@ -178,7 +180,7 @@ class _LiveTripBody extends ConsumerWidget {
                   ),
                 ),
               ),
-            ),
+            )),
           ),
         if (info.status == LiveTripStatus.started &&
             info.destinationLabel != null)
@@ -191,17 +193,22 @@ class _LiveTripBody extends ConsumerWidget {
         if (!cancelled)
           Align(
             alignment: Alignment.bottomCenter,
-            child: DriverInfoCard(
-              driver: info.driver,
-              totalPence: info.totalPence,
-              currency: info.currency,
-            onChat: () => context.push(
-              '${AppRoutes.chat}?ride=$rideId&driver=${Uri.encodeComponent(info.driver?.name ?? 'Driver')}',
+            // PointerInterceptor: on web the map is a DOM platform view and
+            // touches over this card can fall through and pan the map.
+            child: PointerInterceptor(
+              child: DriverInfoCard(
+                driver: info.driver,
+                totalPence: info.totalPence,
+                currency: info.currency,
+                onChat: () => context.push(
+                  '${AppRoutes.chat}?ride=$rideId&driver=${Uri.encodeComponent(info.driver?.name ?? 'Driver')}',
+                ),
+                onSafety: () =>
+                    context.push('${AppRoutes.safety}?ride=$rideId'),
+                onCancel: () => _confirmCancel(context, ref),
+              ),
             ),
-            onSafety: () => context.push('${AppRoutes.safety}?ride=$rideId'),
-            onCancel: () => _confirmCancel(context, ref),
           ),
-        ),
       ],
     );
   }

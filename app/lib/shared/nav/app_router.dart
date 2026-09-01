@@ -7,7 +7,6 @@ import '../../features/auth/domain/auth_state.dart';
 import '../../features/auth/presentation/expired_link_screen.dart';
 import '../../features/auth/presentation/forgot_password_screen.dart';
 import '../../features/auth/presentation/link_sent_screen.dart';
-import '../../features/auth/presentation/reset_password_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/signup_screen.dart';
 import '../../features/booking/presentation/fare_confirm_flow.dart';
@@ -55,7 +54,6 @@ class AppRoutes {
   static const savedPlaces = '/saved-places';
   static const linkSent = '/link-sent';
   static const expiredLink = '/expired-link';
-  static const resetPassword = '/reset-password';
   static const liveTrip = '/live-trip';
   static const fareConfirm = '/fare-confirm';
   static const transactions = '/transactions';
@@ -87,8 +85,7 @@ String? redirectFor(AuthStatus status, String location) {
       location == AppRoutes.signup ||
       location == AppRoutes.forgotPassword ||
       location == AppRoutes.linkSent ||
-      location == AppRoutes.expiredLink ||
-      location == AppRoutes.resetPassword;
+      location == AppRoutes.expiredLink;
 
   switch (status) {
     case AuthStatus.signedOut:
@@ -97,11 +94,6 @@ String? redirectFor(AuthStatus status, String location) {
       // The account exists but is unusable. Signup carries the recovery UI.
       return location == AppRoutes.signup ? null : AppRoutes.signup;
     case AuthStatus.signedIn:
-      // EXCEPT reset-password: verifying the emailed recovery code signs the
-      // rider in (a recovery session) BEFORE they have typed the new
-      // password — bouncing them home here would abort the reset mid-flow.
-      // The screen navigates home itself once the password is set.
-      if (location == AppRoutes.resetPassword) return null;
       return onAuthScreen ? AppRoutes.home : null;
     case AuthStatus.unknown:
       return null;
@@ -199,13 +191,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.expiredLink,
         builder: (_, __) => const ExpiredLinkScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.resetPassword,
-        // ?email= carries the address the recovery code was sent to.
-        builder: (_, state) => ResetPasswordScreen(
-          email: state.uri.queryParameters['email'] ?? '',
-        ),
       ),
       GoRoute(
         path: AppRoutes.fareConfirm,
