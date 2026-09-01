@@ -9,6 +9,7 @@ import '../../../shared/nav/app_router.dart';
 import '../../booking/presentation/widgets/rider_map.dart';
 import '../data/live_trip_source.dart';
 import '../data/ride_actions_repository.dart';
+import '../data/ride_context_repository.dart';
 import 'widgets/driver_info_card.dart';
 import 'widgets/trip_status_banner.dart';
 import 'widgets/turn_banner.dart';
@@ -20,7 +21,10 @@ import 'widgets/turn_banner.dart';
 /// `rideReceiptProvider` and `emergencyContactsProvider` elsewhere in the app.
 final liveTripInfoProvider =
     StreamProvider.autoDispose.family<LiveTripInfo, String>(
-  (ref, rideId) => const LiveTripSource().watch(rideId),
+  // The real `GET /rides/:id` poll — the spec's documented fallback
+  // transport. The moment dispatch assigns a driver, this stream carries
+  // the driver card onto the screen.
+  (ref, rideId) => ref.watch(rideContextRepositoryProvider).watch(rideId),
 );
 
 /// Driver Arrived / Start Ride / trip-in-progress, combined into one screen
