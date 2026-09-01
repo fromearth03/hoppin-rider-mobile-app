@@ -130,6 +130,8 @@ class _LiveTripBody extends ConsumerWidget {
           alignment: Alignment.bottomCenter,
           child: DriverInfoCard(
             driver: info.driver,
+            totalPence: info.totalPence,
+            currency: info.currency,
             onChat: () => context.push(
               '${AppRoutes.chat}?ride=$rideId&driver=${Uri.encodeComponent(info.driver?.name ?? 'Driver')}',
             ),

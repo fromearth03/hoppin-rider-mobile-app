@@ -1,7 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/money.dart';
+import '../../../../core/result.dart';
 import '../../../../core/theme/colors.dart';
+import '../../../payments/data/payment_methods_repository.dart';
+import '../../../payments/presentation/widgets/payment_method_sheet.dart';
 import '../../data/live_trip_source.dart';
+
+/// The rider's default card, for the chip the frame draws under the fare.
+/// Null (chip hidden) on any failure — a payment chip must never guess.
+final _defaultCardProvider =
+    FutureProvider.autoDispose<SavedCard?>((ref) async {
+  final result = await ref.watch(paymentMethodsRepositoryProvider).list();
+  return switch (result) {
+    Ok(:final value) => value.where((c) => c.isDefault).firstOrNull ??
+        value.firstOrNull,
+    Err() => null,
+  };
+});
 
 /// The bottom card on `Driver Arrived.png` / `Start Ride.png`: driver photo,
 /// name, rating with count, chat / safety shortcuts and Cancel Ride.
@@ -14,11 +31,17 @@ import '../../data/live_trip_source.dart';
 /// exposes no phone number (`ride_context_repo.go:20-38`), so a button here
 /// would do nothing -- worse than its absence, since a rider taps it when
 /// they need the driver most. Deferred to phase 2 per SCREEN-DECISIONS.md.
-class DriverInfoCard extends StatelessWidget {
+class DriverInfoCard extends ConsumerWidget {
   final TripDriver? driver;
   final VoidCallback onChat;
   final VoidCallback onSafety;
   final VoidCallback onCancel;
+
+  /// The fare block from `GET /rides/:id` — estimate/total only; this
+  /// endpoint has no base/surge split, so the card shows the real number
+  /// and invents nothing (frame deviation recorded in SCREEN-DECISIONS.md).
+  final Pence? totalPence;
+  final String currency;
 
   const DriverInfoCard({
     super.key,
@@ -26,10 +49,12 @@ class DriverInfoCard extends StatelessWidget {
     required this.onChat,
     required this.onSafety,
     required this.onCancel,
+    this.totalPence,
+    this.currency = 'GBP',
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final d = driver;
 
@@ -51,13 +76,47 @@ class DriverInfoCard extends StatelessWidget {
         children: [
           if (d == null)
             _AwaitingDriverRow(theme: theme)
-          else
+          else ...[
+            // `Ride Details.png`: centred card title above the driver row.
+            Center(
+              child:
+                  Text('Ride Details', style: theme.textTheme.titleMedium),
+            ),
+            const SizedBox(height: 12),
             _AssignedDriverRow(
               driver: d,
               theme: theme,
               onChat: onChat,
               onSafety: onSafety,
             ),
+            const SizedBox(height: 12),
+            const Divider(height: 1),
+            const SizedBox(height: 4),
+            _SpecRow(label: 'Complete Rides', value: '${d.tripsCompleted}'),
+            if (d.hasRating)
+              _SpecRow(
+                  label: 'Driver Review',
+                  value: '${d.rating!.toStringAsFixed(1)} Rating'),
+            if (d.plate != null)
+              _SpecRow(label: 'Vehicle Number', value: d.plate!),
+            if (d.vehicleType != null)
+              _SpecRow(label: 'Vehicle Type', value: d.vehicleType!),
+            if (d.hasCapacity)
+              _SpecRow(
+                  label: 'Capacity',
+                  value: '${d.seats} Seats ${d.bags} Bags'),
+            if (totalPence != null) ...[
+              const SizedBox(height: 4),
+              const Divider(height: 1),
+              const SizedBox(height: 4),
+              _SpecRow(
+                label: 'Total',
+                value: totalPence!.format(currency: currency),
+                emphasised: true,
+              ),
+            ],
+            _DefaultCardChip(theme: theme),
+          ],
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: onCancel,
@@ -69,9 +128,87 @@ class DriverInfoCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: const Text('Cancel Ride'),
+            // The frame labels the pre-pickup action Cancel Booking.
+            child: Text(d == null ? 'Cancel Ride' : 'Cancel Booking'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// One "label ......... value" line of the frame's spec block.
+class _SpecRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool emphasised;
+
+  const _SpecRow({
+    required this.label,
+    required this.value,
+    this.emphasised = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final style =
+        emphasised ? theme.textTheme.titleMedium : theme.textTheme.bodyMedium;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
+          const SizedBox(width: 12),
+          Text(value,
+              style: style?.copyWith(
+                  color: theme.textTheme.bodyLarge?.color)),
+        ],
+      ),
+    );
+  }
+}
+
+/// The default card chip under the fare, per the frame ("Visa Classic ····
+/// ✓"). Tapping opens the payment sheet; hidden entirely when no card
+/// could be read — a payment chip must never guess.
+class _DefaultCardChip extends ConsumerWidget {
+  final ThemeData theme;
+  const _DefaultCardChip({required this.theme});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final card = ref.watch(_defaultCardProvider).valueOrNull;
+    if (card == null) return const SizedBox.shrink();
+
+    final isDark = theme.brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => showPaymentMethodSheet(context),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+                color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.credit_card,
+                  size: 20, color: theme.textTheme.bodyLarge?.color),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(card.displayLabel,
+                    style: theme.textTheme.bodyLarge),
+              ),
+              const Icon(Icons.check_circle,
+                  color: AppColors.positive, size: 18),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -5,6 +5,7 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/api/error_codes.dart';
 import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
+import '../../payments/presentation/widgets/payment_method_sheet.dart';
 import '../data/fare_repository.dart';
 import '../data/vehicle_repository.dart';
 import 'widgets/fare_category_card.dart';
@@ -140,7 +141,12 @@ class _FareConfirmScreenState extends ConsumerState<FareConfirmScreen> {
               minimum: const EdgeInsets.fromLTRB(20, 0, 20, 16),
               child: Row(
                 children: [
-                  _RoundIconButton(icon: Icons.credit_card_outlined, onTap: () {}),
+                  _RoundIconButton(
+                    icon: Icons.credit_card_outlined,
+                    // The frame's payment affordance beside Confirm: pick
+                    // (make default) the card the booking will charge.
+                    onTap: () => showPaymentMethodSheet(context),
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: FilledButton(
