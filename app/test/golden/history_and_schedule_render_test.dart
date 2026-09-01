@@ -73,9 +73,9 @@ void main() {
     );
   }
 
-  testWidgets('ride history light', (t) async {
-    await shoot(t, const RideHistoryScreen(), 'ride_history_light');
-  });
+  // Ride history's goldens live in ride_history_render_test.dart, which
+  // overrides the trip-history repository so the shots capture real list
+  // states rather than a loading spinner.
 
   testWidgets('trip details light', (t) async {
     const rideId = 'r1';

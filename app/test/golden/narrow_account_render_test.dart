@@ -135,9 +135,8 @@ void main() {
     );
   });
 
-  testWidgets('ride history narrow', (t) async {
-    await shoot(t, const RideHistoryScreen(), 'ride_history_narrow');
-  });
+  // Ride history's narrow golden lives in ride_history_render_test.dart
+  // with the repository overridden — see that file.
 
   testWidgets('trip details narrow', (t) async {
     const rideId = 'r1';
