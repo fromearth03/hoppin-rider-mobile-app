@@ -406,8 +406,12 @@ Collected as they arise, to be sent in one batch rather than piecemeal.
     ticket flow, and is a ticket flow wanted for riders at all?
 12. The Logout dialog's body says "You've been signed out successfully" before
     logout happens — pre-action dialog, post-action copy. Which is intended?
+    **Resolved 2026-09-01**: Ismail instructed the frame UI be taken verbatim;
+    the frame copy now ships as drawn.
 13. Delete Account's Delete button is coral `#FB868B`, not the app's error red.
     Deliberate, or should destructive actions share one red?
+    **Resolved 2026-09-01**: frame-exact per Ismail — the button wears
+    `#FB868B` as sampled from the frame.
 
 ---
 
@@ -422,9 +426,32 @@ Recorded so they are not silently lost.
 | Chat voice notes | Same, plus audio capture and playback. |
 | Driver "Online" presence | Presence tracking that exists nowhere today. |
 | Add a card | The Stripe SDK card element and a `pk_test_` key. The setup-intent call is already wired; only collection is missing. |
-| Rider rating a ride | A ratings repository and `POST /rides/:id/rating`. Drawn on Ride Complete; no client exists yet. |
+| ~~Rider rating a ride~~ | **Built 2026-09-01**: `RideActionsRepository.rateRide` posts `POST /rides/:id/rating`; the 1–5 star prompt lives on Ride Complete and is editable in place. |
 | Notifications list | Any notifications endpoint. None exists in the API. |
 | Promotions list | Any promotions endpoint. None exists in the API. |
+
+---
+
+## Frame-exact revisit 2026-09-01 — Logout + Delete Account
+
+Ismail re-sent both frames with the instruction to take their UI verbatim.
+Changes from the earlier builds:
+
+- **Logout** now carries the See-you-Again illustration (cropped from
+  `Logout.png` into `assets/illustrations/logout_see_you_again.png`), the
+  close X, and the frame's body copy verbatim — reversing the earlier
+  decision to drop the premature past tense (question 12, resolved).
+- **Delete Account** now uses the frame copy verbatim ("Temporarily
+  Deletion" / "Permanent Deletion", swapped-phrasing question included) and
+  the frame's salmon `#FB868B` Delete. The Deactivate button stays genuinely
+  inert — no deactivate endpoint exists — so behaviour remains honest even
+  where the copy oversells; the how-to-pause footnote was removed as not in
+  the frame.
+
+Also this day: **Ride Complete** rebuilt to frame (route polyline preview
+from `geo.route`, Your Driver card, live 1–5 star rating →
+`POST /rides/:id/rating`), and every over-map chip on the live trip unified
+on one blurred `GlassChip` material.
 
 ---
 

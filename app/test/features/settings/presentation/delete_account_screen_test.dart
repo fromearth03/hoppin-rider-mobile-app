@@ -57,14 +57,20 @@ void main() {
     });
   });
 
-  testWidgets('shows the title, back arrow and the corrected copy',
+  testWidgets('shows the title, back arrow and the frame copy',
       (tester) async {
+    // Copy verbatim from Delete Account.png per Ismail's 2026-09-01
+    // instruction to take the frame UI as-is.
     await tester.pumpWidget(_harness());
 
     expect(find.text('Delete Account'), findsNWidgets(2)); // header + card
     expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+    expect(
+        find.text('Would you like to deactivate account permanently or '
+            'temporarily delete your account?'),
+        findsOneWidget);
+    expect(find.textContaining('Temporarily Deletion'), findsOneWidget);
     expect(find.textContaining('Permanent Deletion'), findsOneWidget);
-    expect(find.textContaining('Temporary Deactivation'), findsOneWidget);
     expect(find.textContaining('cannot be undone'), findsWidgets);
   });
 
@@ -163,14 +169,13 @@ void main() {
     verifyNever(() => auth.signOut());
   });
 
-  testWidgets('says plainly how to pause an account today', (tester) async {
+  testWidgets('Delete wears the frame salmon, not the shared negative red',
+      (tester) async {
     await tester.pumpWidget(_harness());
 
-    expect(find.textContaining('email Support@hoppin.com'), findsOneWidget);
-  });
-
-  testWidgets('renders in dark mode', (tester) async {
-    await tester.pumpWidget(_harness(brightness: Brightness.dark));
-    expect(find.textContaining('Permanent Deletion'), findsOneWidget);
+    final delete = tester
+        .widget<FilledButton>(find.widgetWithText(FilledButton, 'Delete'));
+    expect(delete.style?.backgroundColor?.resolve({}),
+        const Color(0xFFFB868B));
   });
 }

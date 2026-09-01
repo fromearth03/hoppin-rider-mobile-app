@@ -21,11 +21,12 @@ import 'widgets/settings_header.dart';
 /// deletes-while-labelled-deactivate would be the single worst control in the
 /// app, so it keeps the established "Soon" treatment.
 ///
-/// The frame's own copy has the two exits semantically swapped ("deactivate
-/// account permanently or temporarily delete"), and describes a temporary
-/// deletion that the API cannot perform. The bullets are rewritten to match
-/// what the endpoints actually do; recorded as a deviation in
-/// SCREEN-DECISIONS.md.
+/// The copy is the frame's, verbatim — including its swapped phrasing
+/// ("deactivate account permanently or temporarily delete") and a temporary
+/// deletion the API cannot perform. Ismail's 2026-09-01 instruction was to
+/// take the frame UI as-is, reversing the earlier rewrite; the Deactivate
+/// button stays genuinely inert, which keeps the screen honest in behaviour
+/// even where the copy oversells. Recorded in SCREEN-DECISIONS.md.
 ///
 /// A 409 `DELETION_BLOCKED` is not an error to apologise for — it is a list of
 /// things the rider must finish first (an open trip, an unresolved dispute),
@@ -104,33 +105,31 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Deleting your account erases it permanently. This '
-                        'cannot be undone.',
+                        'Would you like to deactivate account permanently '
+                        'or temporarily delete your account?',
                         style: theme.textTheme.bodyLarge,
                       ),
                       const SizedBox(height: 16),
-                      Text('•  Permanent Deletion',
+                      Text('•  Temporarily Deletion',
                           style: theme.textTheme.labelLarge),
                       const SizedBox(height: 4),
                       Text(
-                        'Erases your rides history and your personal data '
-                        'straight away. You will be signed out and cannot '
-                        'sign back in.',
+                        "Hide your account temporarily. You won't be able "
+                        'to book rides but your data will be saved.',
                         // The frame paints body copy in the same navy as the
                         // headings, not the secondary grey.
                         style: theme.textTheme.bodyMedium
                             ?.copyWith(color: bodyColor),
                       ),
                       const SizedBox(height: 14),
-                      Text('•  Temporary Deactivation',
-                          style: theme.textTheme.labelLarge?.copyWith(
-                              color: muted)),
+                      Text('•  Permanent Deletion',
+                          style: theme.textTheme.labelLarge),
                       const SizedBox(height: 4),
                       Text(
-                        'Not available yet. Hiding an account without erasing '
-                        'it is not something the service can do today.',
+                        'Erase all rides history and your data. This cannot '
+                        'be undone.',
                         style: theme.textTheme.bodyMedium
-                            ?.copyWith(color: muted),
+                            ?.copyWith(color: bodyColor),
                       ),
                       if (_blockers.isNotEmpty) ...[
                         const SizedBox(height: 16),
@@ -168,9 +167,12 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                             child: FilledButton(
                               onPressed: _deleting ? null : _confirmAndDelete,
                               style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.negative,
+                                // The frame's soft salmon (#FB868B sampled
+                                // from Delete Account.png), not the shared
+                                // negative red.
+                                backgroundColor: const Color(0xFFFB868B),
                                 foregroundColor: Colors.white,
-                                disabledBackgroundColor: AppColors.negative
+                                disabledBackgroundColor: const Color(0xFFFB868B)
                                     .withValues(alpha: 0.35),
                                 disabledForegroundColor: Colors.white70,
                               ),
@@ -187,17 +189,6 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                             ),
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 12),
-                      Center(
-                        child: Text(
-                          'Deleting is immediate and permanent. Deactivation '
-                          'is coming soon — to pause your account today, '
-                          'email Support@hoppin.com.',
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.bodyMedium
-                              ?.copyWith(fontSize: 12, color: muted),
-                        ),
                       ),
                     ],
                   ),

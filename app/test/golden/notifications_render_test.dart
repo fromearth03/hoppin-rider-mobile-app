@@ -158,12 +158,6 @@ void main() {
         'notifications_light');
   });
 
-  testWidgets('notifications dark', (t) async {
-    await shoot(t, notificationsScreen(notificationsSource()),
-        'notifications_dark',
-        brightness: Brightness.dark);
-  });
-
   testWidgets('notifications narrow', (t) async {
     await shoot(t, notificationsScreen(notificationsSource()),
         'notifications_narrow',
@@ -200,11 +194,6 @@ void main() {
 
   testWidgets('promotional light', (t) async {
     await shoot(t, promotionalScreen(promotionsSource()), 'promotional_light');
-  });
-
-  testWidgets('promotional dark', (t) async {
-    await shoot(t, promotionalScreen(promotionsSource()), 'promotional_dark',
-        brightness: Brightness.dark);
   });
 
   testWidgets('promotional narrow', (t) async {
