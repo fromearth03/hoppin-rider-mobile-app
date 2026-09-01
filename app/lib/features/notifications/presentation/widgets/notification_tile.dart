@@ -71,13 +71,34 @@ class NotificationTile extends StatelessWidget {
   }
 }
 
-/// Cycles the three accent colours the design uses down the list, since the
-/// placeholder source carries no "kind" field to key off of.
+/// The frame keys the left bar by what the notification IS: trip updates
+/// navy, rating prompts orange, resolutions/refunds green. The endpoint
+/// sends no kind field (title + body only), so the kind is read from the
+/// title's own words, falling back to a position cycle so unrecognised
+/// rows still match the design's alternation.
+Color accentForItem(NotificationItem item, int index) {
+  final title = item.title.toLowerCase();
+  final body = item.body.toLowerCase();
+  if (title.contains('rate') || title.contains('rating')) {
+    return AppColors.accent;
+  }
+  if (title.contains('resolved') ||
+      title.contains('refund') ||
+      body.contains('refunded')) {
+    return AppColors.positive;
+  }
+  if (title.contains('driver') ||
+      title.contains('message') ||
+      title.contains('ride') ||
+      title.contains('trip')) {
+    return AppColors.primary;
+  }
+  const colours = [AppColors.primary, AppColors.accent, AppColors.positive];
+  return colours[index % colours.length];
+}
+
+/// Kept for callers that only have a position.
 Color accentForIndex(int index) {
-  const colours = [
-    AppColors.primary,
-    AppColors.accent,
-    AppColors.positive,
-  ];
+  const colours = [AppColors.primary, AppColors.accent, AppColors.positive];
   return colours[index % colours.length];
 }

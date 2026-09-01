@@ -131,23 +131,9 @@ class _PaymentMethodSheetState extends ConsumerState<_PaymentMethodSheet> {
               ],
             ),
           ),
-          // Drawn on the frame; no backend behind either — cards only.
-          const _MethodRow(
-            icon: Icons.paypal,
-            title: 'PayPal',
-            subtitle: null,
-            selected: false,
-            enabled: false,
-            comingSoon: true,
-          ),
-          const _MethodRow(
-            icon: Icons.account_balance_wallet_outlined,
-            title: 'Wallet',
-            subtitle: null,
-            selected: false,
-            enabled: false,
-            comingSoon: true,
-          ),
+          // Ismail's call (2026-09-01): cards only — the sheet shows the
+          // rider's real Stripe cards and nothing else. The frame's PayPal
+          // and Wallet rows are omitted entirely rather than drawn disabled.
         ],
       ),
     );
@@ -160,7 +146,6 @@ class _MethodRow extends StatelessWidget {
   final String? subtitle;
   final bool selected;
   final bool enabled;
-  final bool comingSoon;
   final VoidCallback? onTap;
 
   const _MethodRow({
@@ -169,7 +154,6 @@ class _MethodRow extends StatelessWidget {
     required this.subtitle,
     required this.selected,
     required this.enabled,
-    this.comingSoon = false,
     this.onTap,
   });
 
@@ -178,9 +162,8 @@ class _MethodRow extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final muted = theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5);
-    final live = enabled && !comingSoon;
     final titleColor =
-        live ? theme.textTheme.bodyLarge?.color : muted;
+        enabled ? theme.textTheme.bodyLarge?.color : muted;
 
     final row = Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -214,18 +197,14 @@ class _MethodRow extends StatelessWidget {
               ],
             ),
           ),
-          if (comingSoon)
-            Text('Soon',
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(fontSize: 11, color: muted))
-          else if (selected)
+          if (selected)
             const Icon(Icons.check_circle,
                 color: AppColors.positive, size: 20),
         ],
       ),
     );
 
-    if (!live || onTap == null) return row;
+    if (!enabled || onTap == null) return row;
     return InkWell(onTap: onTap, child: row);
   }
 }

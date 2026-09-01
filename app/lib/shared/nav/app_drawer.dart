@@ -205,7 +205,8 @@ class _Stars extends StatelessWidget {
             rating >= i
                 ? Icons.star
                 : (rating >= i - 0.5 ? Icons.star_half : Icons.star_border),
-            size: 12,
+            // The frame's gold stars sit a touch larger than caption text.
+            size: 14,
             color: AppColors.warning,
           ),
         const SizedBox(width: 6),

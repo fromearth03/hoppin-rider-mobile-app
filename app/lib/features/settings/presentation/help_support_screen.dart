@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/colors.dart';
 import '../../../shared/nav/app_router.dart';
+import '../../../shared/widgets/bottom_scroll_fade.dart';
 import 'widgets/settings_card.dart';
 import 'widgets/settings_header.dart';
 
@@ -50,7 +51,10 @@ class HelpSupportScreen extends StatelessWidget {
     return Scaffold(
       appBar: const SettingsHeader(title: 'Help & Support'),
       body: SafeArea(
-        child: ListView(
+        // The frames fade scrolling content into the background at the
+        // bottom edge; the fade dissolves once the rider reaches the end.
+        child: BottomScrollFade(
+          child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           children: [
             SettingsCard(
@@ -123,6 +127,7 @@ class HelpSupportScreen extends StatelessWidget {
               ],
             ),
           ],
+          ),
         ),
       ),
     );

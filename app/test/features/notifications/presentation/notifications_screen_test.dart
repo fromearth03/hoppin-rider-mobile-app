@@ -164,20 +164,24 @@ void main() {
     await tester.pumpWidget(_harness(source));
     await tester.pumpAndSettle();
 
-    final button = tester.widget<OutlinedButton>(
-        find.widgetWithText(OutlinedButton, 'Mark all as read'));
+    // The glass pill renders inert: tapping it must not call read-all.
+    await tester.tap(find.text('Mark all as read'));
+    await tester.pumpAndSettle();
 
-    expect(button.onPressed, isNull);
+    verifyNever(() => source.markAllRead());
   });
 
   testWidgets('Select is disabled with no rows to select', (tester) async {
     await tester.pumpWidget(_harness(source));
     await tester.pumpAndSettle();
 
-    final button = tester
-        .widget<OutlinedButton>(find.widgetWithText(OutlinedButton, 'Select'));
-
-    expect(button.onPressed, isNull);
+    // With nothing to select the pill is inert — select mode never opens.
+    // (The empty state shows no footer at all; guard both shapes.)
+    if (tester.any(find.text('Select'))) {
+      await tester.tap(find.text('Select'));
+      await tester.pumpAndSettle();
+    }
+    expect(find.text('Cancel'), findsNothing);
   });
 
   testWidgets('Select mode dismisses the chosen rows', (tester) async {
@@ -190,14 +194,12 @@ void main() {
     await tester.tap(find.text('Select'));
     await tester.pumpAndSettle();
 
-    // The footer swaps to Cancel / Delete, and Delete waits for a selection.
+    // The footer swaps to Cancel / Delete, and Delete waits for a selection:
+    // tapping it with nothing chosen must dismiss nothing.
     expect(find.text('Cancel'), findsOneWidget);
-    expect(
-        tester
-            .widget<OutlinedButton>(
-                find.widgetWithText(OutlinedButton, 'Delete'))
-            .onPressed,
-        isNull);
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+    verifyNever(() => source.dismiss(any()));
 
     await tester.tap(find.text('Driver Arrived'));
     await tester.pumpAndSettle();

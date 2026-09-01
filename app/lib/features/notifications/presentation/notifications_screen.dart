@@ -1,7 +1,10 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/colors.dart';
+import '../../../shared/widgets/bottom_scroll_fade.dart';
 import '../application/notifications_controller.dart';
 import '../domain/notification_item.dart';
 import 'widgets/notification_tile.dart';
@@ -64,72 +67,130 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 ? const Center(child: CircularProgressIndicator())
                 : state.visible.isEmpty
                     ? _EmptyState(theme: theme, error: state.error)
-                    : RefreshIndicator(
-                        onRefresh: notifier.load,
-                        child: ListView(
-                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-                          children: [
-                            for (final entry in grouped.entries) ...[
-                              Padding(
-                                padding:
-                                    const EdgeInsets.only(bottom: 8, top: 8),
-                                child: Text(entry.key,
-                                    style: theme.textTheme.titleMedium),
+                    : Stack(
+                        children: [
+                          RefreshIndicator(
+                            onRefresh: notifier.load,
+                            child: BottomScrollFade(
+                              child: ListView(
+                                // Extra bottom room so the last card can
+                                // scroll clear of the floating buttons.
+                                padding: const EdgeInsets.fromLTRB(
+                                    20, 12, 20, 96),
+                                children: [
+                                  for (final entry in grouped.entries) ...[
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                          bottom: 8, top: 8),
+                                      child: Text(entry.key,
+                                          style: theme.textTheme.titleMedium),
+                                    ),
+                                    for (var i = 0;
+                                        i < entry.value.length;
+                                        i++) ...[
+                                      NotificationTile(
+                                        item: entry.value[i],
+                                        accent:
+                                            accentForItem(entry.value[i], i),
+                                        selectable: state.isSelecting,
+                                        selected: state.selectedIds
+                                            .contains(entry.value[i].id),
+                                        onTap: () => state.isSelecting
+                                            ? notifier.toggleSelected(
+                                                entry.value[i].id)
+                                            : notifier
+                                                .markRead(entry.value[i].id),
+                                      ),
+                                      const SizedBox(height: 10),
+                                    ],
+                                  ],
+                                ],
                               ),
-                              for (var i = 0; i < entry.value.length; i++) ...[
-                                NotificationTile(
-                                  item: entry.value[i],
-                                  accent: accentForIndex(i),
-                                  selectable: state.isSelecting,
-                                  selected: state.selectedIds
-                                      .contains(entry.value[i].id),
-                                  onTap: () => state.isSelecting
-                                      ? notifier
-                                          .toggleSelected(entry.value[i].id)
-                                      : notifier.markRead(entry.value[i].id),
+                            ),
+                          ),
+                          // The frame's translucent pill pair floating over
+                          // the faded list bottom — glass, not chrome.
+                          Positioned(
+                            left: 20,
+                            right: 20,
+                            bottom: 16,
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: _GlassButton(
+                                    label:
+                                        state.isSelecting ? 'Cancel' : 'Select',
+                                    onTap: state.items.isEmpty
+                                        ? null
+                                        : notifier.toggleSelecting,
+                                  ),
                                 ),
-                                const SizedBox(height: 10),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: state.isSelecting
+                                      ? _GlassButton(
+                                          label: 'Delete',
+                                          onTap: state.selectedIds.isEmpty
+                                              ? null
+                                              : notifier.dismissSelected,
+                                        )
+                                      : _GlassButton(
+                                          label: 'Mark all as read',
+                                          onTap: state.unreadCount == 0
+                                              ? null
+                                              : notifier.markAllRead,
+                                        ),
+                                ),
                               ],
-                            ],
-                          ],
-                        ),
+                            ),
+                          ),
+                        ],
                       ),
           ),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      // Selection is only meaningful with rows to select.
-                      onPressed:
-                          state.items.isEmpty ? null : notifier.toggleSelecting,
-                      child: Text(state.isSelecting ? 'Cancel' : 'Select'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: state.isSelecting
-                        ? OutlinedButton(
-                            onPressed: state.selectedIds.isEmpty
-                                ? null
-                                : notifier.dismissSelected,
-                            child: const Text('Delete'),
-                          )
-                        : OutlinedButton(
-                            onPressed: state.unreadCount == 0
-                                ? null
-                                : notifier.markAllRead,
-                            child: const Text('Mark all as read'),
-                          ),
-                  ),
-                ],
+        ],
+      ),
+    );
+  }
+}
+
+/// The frame's translucent grey pill: content blurs through it
+/// (glassmorphism), white label, stadium shape.
+class _GlassButton extends StatelessWidget {
+  final String label;
+  final VoidCallback? onTap;
+
+  const _GlassButton({required this.label, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final enabled = onTap != null;
+    final fill = (isDark ? Colors.white : Colors.black)
+        .withValues(alpha: enabled ? 0.38 : 0.20);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(26),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Material(
+          color: fill,
+          child: InkWell(
+            onTap: onTap,
+            child: Container(
+              height: 48,
+              alignment: Alignment.center,
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: isDark
+                      ? Colors.black.withValues(alpha: enabled ? 0.9 : 0.5)
+                      : Colors.white.withValues(alpha: enabled ? 1 : 0.7),
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }

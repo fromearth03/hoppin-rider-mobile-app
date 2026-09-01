@@ -11,6 +11,7 @@ import '../data/live_trip_source.dart';
 import '../data/ride_actions_repository.dart';
 import '../data/ride_context_repository.dart';
 import 'widgets/driver_info_card.dart';
+import 'widgets/trip_route_header.dart';
 import 'widgets/trip_status_banner.dart';
 import 'widgets/turn_banner.dart';
 
@@ -101,6 +102,10 @@ class _LiveTripBody extends ConsumerWidget {
             children: [
               TripStatusBanner(status: info.status),
               if (_isDriving) TurnBanner(steps: info.steps),
+              const SizedBox(height: 10),
+              // The frame's glass route panel — pickup, stops, dropoff over
+              // the map. Renders only once the ride's geo block arrives.
+              TripRouteHeader(waypoints: info.waypoints),
               const SizedBox(height: 10),
               // A persistent way to reach chat and SOS regardless of whether
               // a driver has been assigned yet -- SOS in particular must

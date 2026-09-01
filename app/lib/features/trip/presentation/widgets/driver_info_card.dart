@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/money.dart';
 import '../../../../core/result.dart';
 import '../../../../core/theme/colors.dart';
+import '../../../../shared/widgets/bottom_scroll_fade.dart';
 import '../../../payments/data/payment_methods_repository.dart';
 import '../../../payments/presentation/widgets/payment_method_sheet.dart';
 import '../../data/live_trip_source.dart';
@@ -31,7 +32,7 @@ final _defaultCardProvider =
 /// exposes no phone number (`ride_context_repo.go:20-38`), so a button here
 /// would do nothing -- worse than its absence, since a rider taps it when
 /// they need the driver most. Deferred to phase 2 per SCREEN-DECISIONS.md.
-class DriverInfoCard extends ConsumerWidget {
+class DriverInfoCard extends ConsumerStatefulWidget {
   final TripDriver? driver;
   final VoidCallback onChat;
   final VoidCallback onSafety;
@@ -54,9 +55,23 @@ class DriverInfoCard extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DriverInfoCard> createState() => _DriverInfoCardState();
+}
+
+class _DriverInfoCardState extends ConsumerState<DriverInfoCard> {
+  /// The frame's X collapses the details back to the compact driver row so
+  /// the map breathes; tapping the collapsed header reopens it.
+  bool _collapsed = false;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final d = driver;
+    final d = widget.driver;
+    // Bound the details so the map stays visible; inside the bound the
+    // content scrolls under the frame's bottom fade, and Cancel Booking
+    // stays pinned below it — veiled content behind, solid button in front,
+    // exactly the frame's materialise-at-the-end behaviour.
+    final maxDetailsHeight = MediaQuery.of(context).size.height * 0.42;
 
     return Container(
       width: double.infinity,
@@ -77,49 +92,89 @@ class DriverInfoCard extends ConsumerWidget {
           if (d == null)
             _AwaitingDriverRow(theme: theme)
           else ...[
-            // `Ride Details.png`: centred card title above the driver row.
-            Center(
-              child:
-                  Text('Ride Details', style: theme.textTheme.titleMedium),
+            // `Ride Details.png`: centred title, X top-right.
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                Center(
+                  child: Text('Ride Details',
+                      style: theme.textTheme.titleMedium),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: IconButton(
+                    visualDensity: VisualDensity.compact,
+                    icon: Icon(
+                        _collapsed
+                            ? Icons.keyboard_arrow_up
+                            : Icons.close,
+                        size: 20),
+                    tooltip: _collapsed ? 'Show details' : 'Hide details',
+                    onPressed: () =>
+                        setState(() => _collapsed = !_collapsed),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             _AssignedDriverRow(
               driver: d,
               theme: theme,
-              onChat: onChat,
-              onSafety: onSafety,
+              onChat: widget.onChat,
+              onSafety: widget.onSafety,
             ),
-            const SizedBox(height: 12),
-            const Divider(height: 1),
-            const SizedBox(height: 4),
-            _SpecRow(label: 'Complete Rides', value: '${d.tripsCompleted}'),
-            if (d.hasRating)
-              _SpecRow(
-                  label: 'Driver Review',
-                  value: '${d.rating!.toStringAsFixed(1)} Rating'),
-            if (d.plate != null)
-              _SpecRow(label: 'Vehicle Number', value: d.plate!),
-            if (d.vehicleType != null)
-              _SpecRow(label: 'Vehicle Type', value: d.vehicleType!),
-            if (d.hasCapacity)
-              _SpecRow(
-                  label: 'Capacity',
-                  value: '${d.seats} Seats ${d.bags} Bags'),
-            if (totalPence != null) ...[
-              const SizedBox(height: 4),
-              const Divider(height: 1),
-              const SizedBox(height: 4),
-              _SpecRow(
-                label: 'Total',
-                value: totalPence!.format(currency: currency),
-                emphasised: true,
+            if (!_collapsed) ...[
+              const SizedBox(height: 12),
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: maxDetailsHeight),
+                child: BottomScrollFade(
+                  height: 56,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Divider(height: 1),
+                        const SizedBox(height: 4),
+                        _SpecRow(
+                            label: 'Complete Rides',
+                            value: '${d.tripsCompleted}'),
+                        if (d.hasRating)
+                          _SpecRow(
+                              label: 'Driver Review',
+                              value:
+                                  '${d.rating!.toStringAsFixed(1)} Rating'),
+                        if (d.plate != null)
+                          _SpecRow(
+                              label: 'Vehicle Number', value: d.plate!),
+                        if (d.vehicleType != null)
+                          _SpecRow(
+                              label: 'Vehicle Type', value: d.vehicleType!),
+                        if (d.hasCapacity)
+                          _SpecRow(
+                              label: 'Capacity',
+                              value: '${d.seats} Seats ${d.bags} Bags'),
+                        if (widget.totalPence != null) ...[
+                          const SizedBox(height: 4),
+                          const Divider(height: 1),
+                          const SizedBox(height: 4),
+                          _SpecRow(
+                            label: 'Total',
+                            value: widget.totalPence!
+                                .format(currency: widget.currency),
+                            emphasised: true,
+                          ),
+                        ],
+                        _DefaultCardChip(theme: theme),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ],
-            _DefaultCardChip(theme: theme),
           ],
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: onCancel,
+            onPressed: widget.onCancel,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryDark,
               foregroundColor: Colors.white,
