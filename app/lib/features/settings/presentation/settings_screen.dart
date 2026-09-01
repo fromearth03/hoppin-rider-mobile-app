@@ -6,7 +6,6 @@ import '../../../shared/nav/app_router.dart';
 import '../../../shared/nav/logout_confirm.dart';
 import '../../auth/application/auth_controller.dart';
 import '../application/preferences_controller.dart';
-import 'widgets/appearance_picker_sheet.dart';
 import 'widgets/settings_card.dart';
 import 'widgets/settings_header.dart';
 import 'widgets/settings_rows.dart';
@@ -33,13 +32,9 @@ import 'widgets/settings_rows.dart';
 /// with a "Soon" badge, following the same disabled-until-later pattern used
 /// elsewhere for out-of-scope destinations.
 ///
-/// Appearance is the one row with a real effect: it opens a picker sheet
-/// (`appearance_picker_sheet.dart`) that writes to `themeModeProvider`,
-/// which `HoppinApp` reads for `MaterialApp.themeMode`. The choice changes
-/// the resolved theme immediately, for the current session only. The server
-/// does whitelist a `theme` key, but the picker predates this wiring and
-/// lives outside the two toggles this pass owns; persisting it is a separate
-/// change.
+/// There is no Appearance row: the app is light-only by product decision
+/// (2026-09-01) — the design pack is light-only. The server whitelists a
+/// `theme` preference key should dark frames ever ship.
 ///
 /// Distance Units stays disabled: distance is rendered ad hoc inline in
 /// `trip_details_screen.dart` and `ride_complete_screen.dart` (both outside
@@ -122,11 +117,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 value: false,
                 comingSoon: true,
               ),
-              SettingsNavRow(
-                icon: Icons.wb_sunny_outlined,
-                label: 'Apperance',
-                onTap: () => showAppearancePickerSheet(context),
-              ),
+              // The frame draws an Appearance row, but the app is light-only
+              // by product decision (2026-09-01) — a picker with nothing to
+              // switch would be the exact lying control this app refuses to
+              // ship, so the row is gone rather than inert.
             ]),
             const SizedBox(height: 20),
             const SettingsCard(children: [

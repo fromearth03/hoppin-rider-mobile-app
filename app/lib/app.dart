@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme/app_theme.dart';
-import 'core/theme/theme_mode_provider.dart';
 import 'features/auth/application/auth_controller.dart';
 import 'shared/nav/app_router.dart';
 
@@ -36,12 +35,12 @@ class _HoppinAppState extends ConsumerState<HoppinApp> {
     return MaterialApp.router(
       title: 'Hoppin Rider',
       debugShowCheckedModeBanner: false,
+      // LIGHT ONLY — Ismail's product decision (2026-09-01): the design
+      // pack is light-only and the derived dark theme kept surfacing
+      // unreviewed. No darkTheme, no themeMode: the OS setting cannot
+      // switch this app. If dark frames ever ship, the preferences
+      // endpoint already whitelists a `theme` key to persist a choice.
       theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      // Rider's in-session choice from Settings > Appearance. Held in memory
-      // only -- shared_preferences is not a dependency, so this resets to
-      // ThemeMode.system on every app restart rather than persisting.
-      themeMode: ref.watch(themeModeProvider),
       routerConfig: ref.watch(appRouterProvider),
       // The design is a 430px phone screen. In a wide browser window the
       // app used to stretch edge to edge — sheets became slabs and the map
