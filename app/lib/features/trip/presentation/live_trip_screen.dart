@@ -66,6 +66,17 @@ class LiveTripScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(liveTripInfoProvider(rideId));
 
+    // A finished trip leaves this screen for the receipt + rating. Listened,
+    // not checked in build: the completion arrives via the poll stream while
+    // the rider is just looking at the map — nothing else would navigate,
+    // so they were stuck on the live screen forever.
+    ref.listen(liveTripInfoProvider(rideId), (previous, next) {
+      final info = next.valueOrNull;
+      if (info == null || info.status != LiveTripStatus.completed) return;
+      final id = info.rideId.isNotEmpty ? info.rideId : rideId;
+      context.go('${AppRoutes.rideComplete}?ride=$id');
+    });
+
     return Scaffold(
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
