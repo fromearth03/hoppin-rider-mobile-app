@@ -11,6 +11,7 @@ import '../data/live_trip_source.dart';
 import '../data/ride_actions_repository.dart';
 import '../data/ride_context_repository.dart';
 import 'widgets/driver_info_card.dart';
+import 'widgets/glass_chip.dart';
 import 'widgets/trip_route_header.dart';
 import 'widgets/trip_status_banner.dart';
 import 'widgets/turn_banner.dart';
@@ -252,12 +253,8 @@ class _DestinationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GlassChip(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(14),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,

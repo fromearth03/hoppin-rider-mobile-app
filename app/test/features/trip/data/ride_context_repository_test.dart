@@ -41,7 +41,7 @@ Map<String, dynamic> _detail({Object? driver}) => {
 const _george = {
   'id': 'd-1',
   'full_name': 'George Oliver',
-  'avatar_url': null,
+  'avatar_url': 'https://cdn.example.com/avatars/d-1.png',
   'rating': 4.3,
   'rating_count': 1130,
   'trips_count': 1130,
@@ -65,6 +65,7 @@ void main() {
     expect(info.status, LiveTripStatus.accepted);
     expect(info.driver, isNotNull);
     expect(info.driver!.name, 'George Oliver');
+    expect(info.driver!.avatarUrl, 'https://cdn.example.com/avatars/d-1.png');
     expect(info.driver!.rating, 4.3);
     expect(info.driver!.ratingCount, 1130);
     expect(info.driver!.tripsCompleted, 1130);

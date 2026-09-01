@@ -45,6 +45,16 @@ void main() {
     expect(find.textContaining('Active Ride'), findsOneWidget);
   });
 
+  testWidgets('renders as a glass chip — blurred, not flat paint',
+      (tester) async {
+    // The frames draw every over-map chip as glassmorphism: a blurred
+    // translucent dark surface, same treatment as TripRouteHeader.
+    await tester.pumpWidget(
+      _harness(const TripStatusBanner(status: LiveTripStatus.started)),
+    );
+    expect(find.byType(BackdropFilter), findsOneWidget);
+  });
+
   testWidgets('renders in dark mode', (tester) async {
     await tester.pumpWidget(_harness(
       const TripStatusBanner(status: LiveTripStatus.arriving),

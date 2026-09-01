@@ -30,4 +30,13 @@ void main() {
     ])));
     expect(find.text('Take left after 1.5 mi'), findsOneWidget);
   });
+
+  testWidgets('renders as a glass chip — blurred, not flat paint',
+      (tester) async {
+    // Same glass treatment as TripRouteHeader and the status banner.
+    await tester.pumpWidget(_harness(const TurnBanner(steps: [
+      TripStep(maneuver: 'turn-left', instruction: 'Take left after 1.5 mi'),
+    ])));
+    expect(find.byType(BackdropFilter), findsOneWidget);
+  });
 }

@@ -38,6 +38,11 @@ LiveTripStatus _statusFromJson(Object? raw) => switch (raw) {
 /// one and callers must branch on [hasRating] rather than defaulting it.
 class TripDriver {
   final String name;
+
+  /// Photo URL from the ride detail's driver block; null renders as the
+  /// initial-letter avatar rather than a broken image.
+  final String? avatarUrl;
+
   final double? rating;
   final int ratingCount;
   final int tripsCompleted;
@@ -48,6 +53,7 @@ class TripDriver {
 
   const TripDriver({
     required this.name,
+    this.avatarUrl,
     required this.rating,
     required this.ratingCount,
     required this.tripsCompleted,
@@ -72,6 +78,7 @@ class TripDriver {
 
     return TripDriver(
       name: name,
+      avatarUrl: _orNull(json['avatar_url']),
       rating: (json['rating'] as num?)?.toDouble(),
       ratingCount: (json['rating_count'] as num?)?.toInt() ?? 0,
       tripsCompleted: (json['trips_completed'] as num?)?.toInt() ?? 0,

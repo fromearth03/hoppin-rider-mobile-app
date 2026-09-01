@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/live_trip_source.dart';
+import 'glass_chip.dart';
 
 /// The dark pill banner at the top of the map on `Driver Arrived.png` and
 /// `Start Ride.png` ("Driver is Waiting for You" / "Active Ride - Navigating
@@ -23,12 +24,9 @@ class TripStatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GlassChip(
+      radius: 16,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(16),
-      ),
       child: Text(
         _label,
         textAlign: TextAlign.center,

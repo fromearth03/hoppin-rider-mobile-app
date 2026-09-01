@@ -71,6 +71,7 @@ class RideContextRepository {
       ].whereType<String>().where((s) => s.trim().isNotEmpty).join(' ');
       tripDriver = TripDriver.tryFromJson({
         'name': driver['full_name'],
+        'avatar_url': driver['avatar_url'],
         'rating': driver['rating'],
         'rating_count': driver['rating_count'],
         'trips_completed': driver['trips_count'],

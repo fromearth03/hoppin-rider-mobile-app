@@ -60,4 +60,49 @@ void main() {
         isTrue);
     verifyZeroInteractions(api);
   });
+
+  group('rateRide', () {
+    test('sends the contract body to the contract path', () async {
+      // POST /rides/:id/rating with {score, comments} — rateRideBody in
+      // driver_handler.go. The reviewer is the bearer token's subject; no
+      // user id travels in the body.
+      when(() =>
+              api.post<Map<String, dynamic>>(any(), body: any(named: 'body')))
+          .thenAnswer((_) async => const Ok({'message': 'rating saved'}));
+
+      final repo = RideActionsRepository(api, () => 'user-77');
+      final result = await repo.rateRide('ride-9', 4, comments: 'Great trip');
+
+      expect(result, isA<Ok<void>>());
+      final captured = verify(() => api.post<Map<String, dynamic>>(
+            captureAny(),
+            body: captureAny(named: 'body'),
+          )).captured;
+      expect(captured[0], '/rides/ride-9/rating');
+      expect(captured[1], {'score': 4, 'comments': 'Great trip'});
+    });
+
+    test('a server rejection surfaces unchanged', () async {
+      when(() =>
+              api.post<Map<String, dynamic>>(any(), body: any(named: 'body')))
+          .thenAnswer((_) async => const Err(ApiException('ILLEGAL_TRANSITION',
+              'you can only rate a completed ride', 409)));
+
+      final repo = RideActionsRepository(api, () => 'user-77');
+      final result = await repo.rateRide('ride-9', 5);
+
+      expect((result as Err).error.code, 'ILLEGAL_TRANSITION');
+      expect(result.error.message, 'you can only rate a completed ride');
+    });
+
+    test('empty ride id or out-of-range score refuses before the network',
+        () async {
+      final repo = RideActionsRepository(api, () => 'user-77');
+
+      expect((await repo.rateRide('', 4)) is Err, isTrue);
+      expect((await repo.rateRide('ride-9', 0)) is Err, isTrue);
+      expect((await repo.rateRide('ride-9', 6)) is Err, isTrue);
+      verifyZeroInteractions(api);
+    });
+  });
 }

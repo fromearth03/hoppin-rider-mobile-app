@@ -35,6 +35,28 @@ class RideActionsRepository {
       Err(:final error) => Err(error),
     };
   }
+
+  /// `POST /rides/:id/rating` with `{score, comments}` (rateRideBody in
+  /// driver_handler.go) — the reviewer is the bearer token's subject, so no
+  /// user id travels in the body. One rating per reviewer per ride; posting
+  /// again edits it in place. Server rejects with VALIDATION_FAILED (score
+  /// out of 1–5), ILLEGAL_TRANSITION (ride not completed, 409) or
+  /// RIDE_NOT_FOUND.
+  Future<Result<void>> rateRide(String rideId, int score,
+      {String comments = ''}) async {
+    if (rideId.isEmpty || score < 1 || score > 5) {
+      return const Err(ApiException(
+          'VALIDATION_FAILED', 'rating must be between 1 and 5', 0));
+    }
+    final result = await _api.post<Map<String, dynamic>>(
+      '/rides/$rideId/rating',
+      body: {'score': score, 'comments': comments},
+    );
+    return switch (result) {
+      Ok() => const Ok(null),
+      Err(:final error) => Err(error),
+    };
+  }
 }
 
 final rideActionsRepositoryProvider = Provider<RideActionsRepository>(

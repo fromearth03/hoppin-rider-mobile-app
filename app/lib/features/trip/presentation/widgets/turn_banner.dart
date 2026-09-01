@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/live_trip_source.dart';
+import 'glass_chip.dart';
 
 /// The "Take left after 1.5 mi" banner on `Start Ride.png`, driven by
 /// `geo.steps`.
@@ -26,29 +27,27 @@ class TurnBanner extends StatelessWidget {
 
     final step = list.first;
 
-    return Container(
-      margin: const EdgeInsets.only(top: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(_iconFor(step.maneuver), color: Colors.white, size: 22),
-          const SizedBox(width: 10),
-          Flexible(
-            child: Text(
-              step.instruction,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: GlassChip(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(_iconFor(step.maneuver), color: Colors.white, size: 22),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                step.instruction,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
