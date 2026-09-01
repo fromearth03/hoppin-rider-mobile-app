@@ -5,20 +5,71 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/result.dart';
 
-/// Rider-initiated actions on a live ride. Today: cancellation.
+/// One rider-facing cancellation reason from `GET /cancellation-reasons`.
+///
+/// The reason is a LABEL server-side: which fee actually applies is derived
+/// from ride state + actor, so the fee fields here are shown as honest
+/// context ("a fee may apply"), never as the app's own fee calculation.
+class RiderCancelReason {
+  final String id;
+  final String label;
+  final bool appliesFee;
+  final double? feeAmount;
+  final int? freeCancelSeconds;
+
+  const RiderCancelReason({
+    required this.id,
+    required this.label,
+    required this.appliesFee,
+    this.feeAmount,
+    this.freeCancelSeconds,
+  });
+
+  static RiderCancelReason? tryFromJson(Map<String, dynamic> json) {
+    final id = json['id'];
+    if (id is! String || id.isEmpty) return null;
+    return RiderCancelReason(
+      id: id,
+      label: (json['reason_text'] as String?) ?? '',
+      appliesFee: json['applies_penalty_fee'] == true,
+      feeAmount: (json['penalty_fee_amount'] as num?)?.toDouble(),
+      freeCancelSeconds: (json['free_cancel_seconds'] as num?)?.toInt(),
+    );
+  }
+}
+
+/// Rider-initiated actions on a live ride: cancellation, with its reasons.
 ///
 /// Contract read from `ride_handler.go` (~1065–1135): `PATCH
 /// /rides/:id/cancel` with `canceled_by_user_id` (the Supabase subject) and
 /// `actor_type: "rider"` — the ownership check compares both, so sending
-/// anything else 403s. `reason_id` is optional and not sent until the app
-/// grows a reason picker (`GET /cancellation-reasons` serves the rows).
+/// anything else 403s. `reason_id` is optional: a missing reason never
+/// blocks the cancel (the ride must always be escapable).
 class RideActionsRepository {
   final ApiClient _api;
   final String? Function() _userId;
 
   const RideActionsRepository(this._api, this._userId);
 
-  Future<Result<void>> cancelRide(String rideId) async {
+  /// The active rider reasons for the cancel sheet's picker.
+  Future<Result<List<RiderCancelReason>>> cancellationReasons() async {
+    final result = await _api
+        .get<Map<String, dynamic>>('/cancellation-reasons', query: {
+      'actor': 'rider',
+    });
+    return switch (result) {
+      Ok(:final value) => Ok(
+          ((value['cancellation_reasons'] as List?) ?? const [])
+              .whereType<Map>()
+              .map((row) => RiderCancelReason.tryFromJson(
+                  Map<String, dynamic>.from(row)))
+              .whereType<RiderCancelReason>()
+              .toList(growable: false)),
+      Err(:final error) => Err(error),
+    };
+  }
+
+  Future<Result<void>> cancelRide(String rideId, {String? reasonId}) async {
     final userId = _userId();
     if (rideId.isEmpty || userId == null) {
       // No ride or no session: the request could only fail, and the copy
@@ -28,7 +79,11 @@ class RideActionsRepository {
     }
     final result = await _api.patch<Map<String, dynamic>>(
       '/rides/$rideId/cancel',
-      body: {'canceled_by_user_id': userId, 'actor_type': 'rider'},
+      body: {
+        'canceled_by_user_id': userId,
+        'actor_type': 'rider',
+        if (reasonId != null && reasonId.isNotEmpty) 'reason_id': reasonId,
+      },
     );
     return switch (result) {
       Ok() => const Ok(null),

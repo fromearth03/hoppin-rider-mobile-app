@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:intl/intl.dart';
 
 import '../../../core/api/error_codes.dart';
@@ -23,14 +22,26 @@ final _ticketsProvider =
   };
 });
 
-/// Recent trips for the optional "about this ride" attachment.
-final _recentTripsProvider =
+/// The rider's trips for the complaint's "about this ride" attachment —
+/// ANY ride can be complained about, so this pulls the server's page cap.
+final _attachableTripsProvider =
     FutureProvider.autoDispose<List<TripHistoryItem>>((ref) async {
   final result =
-      await ref.watch(tripHistoryRepositoryProvider).myTrips(limit: 10);
+      await ref.watch(tripHistoryRepositoryProvider).myTrips(limit: 50);
   return switch (result) {
     Ok(:final value) => value.trips,
     Err() => const <TripHistoryItem>[],
+  };
+});
+
+/// Importance tags for the complaint form's chips.
+final _tagsProvider =
+    FutureProvider.autoDispose<List<ComplaintTag>>((ref) async {
+  final result =
+      await ref.watch(supportTicketsRepositoryProvider).complaintTags();
+  return switch (result) {
+    Ok(:final value) => value,
+    Err() => const <ComplaintTag>[],
   };
 });
 
@@ -44,23 +55,21 @@ final _typesProvider =
   };
 });
 
-/// `Support.png`, built to the frame: an "Automated Support" form (issue
-/// category, description, preferred resolution) over a "Recent Issues" list
-/// of status-tinted cards, with the frame's bottom scroll fade.
+/// Support and Complaints, kept apart the way riders think about them —
+/// one `support_tickets` table server-side, split client-side by `category`:
 ///
-/// Wire honesty behind the drawn controls:
-/// - The API's one REQUIRED field is `subject`, which the frame does not
-///   draw. The subject is the chosen category's label (or the description's
-///   first words), so a ticket always files with a real subject.
-/// - "Preferred Resolution" has no field on `POST /me/support-tickets`; the
-///   rider's choice is appended to the ticket body, so it reaches the
-///   support team rather than being silently dropped. Its option copy is
-///   rider-correct — the frame's "Generate Payout" is driver-app vocabulary
-///   (designer question 11).
-/// - The tinted issue cards carry the SERVER's ticket subjects and statuses,
-///   never the frame's sample copy.
+///  * **Support** — "help me": a free subject + description.
+///  * **Complaints** — "something was wrong": a typed complaint reason
+///    (`/complaint-types`) plus the ride it is about.
+///
+/// Each tab files with its own `category` ('support' / 'complaint') and
+/// lists only its own tickets; legacy rows without a category surface under
+/// Support rather than vanishing. Both kinds open the same thread screen.
 class SupportTicketScreen extends ConsumerStatefulWidget {
-  const SupportTicketScreen({super.key});
+  /// 0 = Support, 1 = Complaints.
+  final int initialTab;
+
+  const SupportTicketScreen({super.key, this.initialTab = 0});
 
   @override
   ConsumerState<SupportTicketScreen> createState() =>
@@ -68,23 +77,29 @@ class SupportTicketScreen extends ConsumerStatefulWidget {
 }
 
 class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
+  final _subject = TextEditingController();
   final _body = TextEditingController();
   String? _typeCode;
   TripHistoryItem? _ride;
+  final Set<String> _tags = {};
   bool _submitting = false;
   String? _error;
 
   @override
   void dispose() {
+    _subject.dispose();
     _body.dispose();
     super.dispose();
   }
 
-  bool get _canSubmit =>
-      !_submitting && (_typeCode != null || _body.text.trim().isNotEmpty);
+  bool _canSubmit(bool complaint) {
+    if (_submitting) return false;
+    if (complaint) return _typeCode != null;
+    return _subject.text.trim().isNotEmpty || _body.text.trim().isNotEmpty;
+  }
 
-  Future<void> _submit() async {
-    if (!_canSubmit) return;
+  Future<void> _submit({required bool complaint}) async {
+    if (!_canSubmit(complaint)) return;
 
     final types = ref.read(_typesProvider).valueOrNull ?? const [];
     final categoryLabel = types
@@ -92,14 +107,18 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
         .map((t) => t.label)
         .firstOrNull;
     final description = _body.text.trim();
+    final typedSubject = _subject.text.trim();
 
-    // The wire requires a subject the frame never draws — the category
-    // label is the honest one; a free-typed issue falls back to its own
-    // opening words.
-    final subject = categoryLabel ??
-        (description.length > 60
-            ? '${description.substring(0, 57)}…'
-            : description);
+    // The wire requires a subject: a complaint's is its typed reason; a
+    // support ticket's is what the rider wrote (falling back to the
+    // description's opening words).
+    final subject = complaint
+        ? (categoryLabel ?? 'Complaint')
+        : (typedSubject.isNotEmpty
+            ? typedSubject
+            : (description.length > 60
+                ? '${description.substring(0, 57)}…'
+                : description));
 
     setState(() {
       _submitting = true;
@@ -108,9 +127,11 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
 
     final result = await ref.read(supportTicketsRepositoryProvider).open(
           subject: subject.isEmpty ? 'Support request' : subject,
-          typeCode: _typeCode,
+          category: complaint ? 'complaint' : 'support',
+          typeCode: complaint ? _typeCode : null,
           body: description,
-          rideId: _ride?.id,
+          rideId: complaint ? _ride?.id : null,
+          tags: complaint ? _tags.toList() : const [],
         );
     if (!mounted) return;
 
@@ -118,15 +139,18 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
       case Ok():
         setState(() {
           _submitting = false;
+          _subject.clear();
           _body.clear();
           _typeCode = null;
           _ride = null;
+          _tags.clear();
         });
         ref.invalidate(_ticketsProvider);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text(
-                  'Ticket opened. A representative will respond in 24 hours.')),
+          SnackBar(
+              content: Text(complaint
+                  ? 'Complaint filed. The team will look into it and reply.'
+                  : 'Ticket opened. A representative will respond in 24 hours.')),
         );
       case Err(:final error):
         setState(() {
@@ -136,9 +160,12 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
     }
   }
 
-  /// Attach the trip this complaint is about — recent trips, newest first.
+  /// Attach the trip this complaint is about — any of the rider's rides,
+  /// newest first. AWAITED here: reading the provider's cache showed an
+  /// empty sheet on first open because nothing had fetched yet.
   Future<void> _pickRide() async {
-    final trips = ref.read(_recentTripsProvider).valueOrNull ?? const [];
+    final trips = await ref.read(_attachableTripsProvider.future);
+    if (!mounted) return;
     final chosen = await showModalBottomSheet<TripHistoryItem>(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -148,7 +175,7 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
         child: trips.isEmpty
             ? const Padding(
                 padding: EdgeInsets.all(24),
-                child: Text('No recent trips to attach.',
+                child: Text('No rides on this account yet.',
                     textAlign: TextAlign.center),
               )
             : ListView(
@@ -176,111 +203,200 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      initialIndex: widget.initialTab.clamp(0, 1),
+      child: Scaffold(
+        appBar: AppBar(
+          centerTitle: true,
+          title: const Text('Help & Support'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
+          bottom: const TabBar(
+            labelColor: AppColors.navy,
+            indicatorColor: AppColors.navy,
+            tabs: [
+              Tab(text: 'Support'),
+              Tab(text: 'Complaints'),
+            ],
+          ),
+        ),
+        body: SafeArea(
+          child: TabBarView(
+            children: [
+              _tab(complaint: false),
+              _tab(complaint: true),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _tab({required bool complaint}) {
     final theme = Theme.of(context);
     final types = ref.watch(_typesProvider).valueOrNull ?? const [];
     final tickets = ref.watch(_ticketsProvider);
 
-    return Scaffold(
-      // The frame titles this screen "Help & Support" as well.
-      appBar: const SettingsHeader(title: 'Help & Support'),
-      body: SafeArea(
-        child: BottomScrollFade(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            children: [
-              SettingsCard(children: [
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Automated Support',
-                          style: theme.textTheme.titleMedium),
-                      const SizedBox(height: 8),
-                      DropdownButtonFormField<String>(
-                        initialValue: _typeCode,
-                        decoration: const InputDecoration(
-                            hintText: 'Select an issue category'),
-                        icon: const Icon(Icons.keyboard_arrow_down),
-                        items: [
-                          for (final t in types)
-                            DropdownMenuItem(
-                                value: t.code, child: Text(t.label)),
-                        ],
-                        onChanged: types.isEmpty
-                            ? null
-                            : (code) => setState(() => _typeCode = code),
-                      ),
-                      const SizedBox(height: 18),
-                      Text('Description', style: theme.textTheme.titleMedium),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _body,
-                        maxLines: 5,
-                        onChanged: (_) => setState(() {}),
-                        decoration: const InputDecoration(
-                            hintText: 'Please describe the issue…'),
-                      ),
-                      const SizedBox(height: 18),
-                      Text('About a ride (optional)',
-                          style: theme.textTheme.titleMedium),
-                      const SizedBox(height: 8),
-                      _RidePickerField(
-                        ride: _ride,
-                        onPick: _pickRide,
-                        onClear: () => setState(() => _ride = null),
-                      ),
-                      if (_error != null) ...[
-                        const SizedBox(height: 12),
-                        Text(_error!,
-                            style:
-                                const TextStyle(color: AppColors.negative)),
-                      ],
-                      const SizedBox(height: 20),
-                      FilledButton(
-                        style: FilledButton.styleFrom(
-                            minimumSize: const Size.fromHeight(48)),
-                        onPressed: _canSubmit ? _submit : null,
-                        child: Text(
-                            _submitting ? 'Submitting…' : 'Submit Ticket'),
-                      ),
-                    ],
-                  ),
-                ),
-              ]),
-              const SizedBox(height: 20),
-              SettingsCard(children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 16),
-                  child: Text('Recent Issues',
+    return BottomScrollFade(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 72),
+        children: [
+          SettingsCard(children: [
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(complaint ? 'File a Complaint' : 'New Support Ticket',
                       style: theme.textTheme.titleMedium),
-                ),
-                tickets.when(
-                  loading: () => const Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Center(child: CircularProgressIndicator()),
+                  const SizedBox(height: 8),
+                  if (complaint) ...[
+                    DropdownButtonFormField<String>(
+                      initialValue: _typeCode,
+                      // Long labels ("Service animal refusal (regulatory
+                      // breach)") overflowed the field border without this.
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                          hintText: 'What went wrong?'),
+                      icon: const Icon(Icons.keyboard_arrow_down),
+                      items: [
+                        for (final t in types)
+                          DropdownMenuItem(
+                              value: t.code,
+                              child: Text(t.label,
+                                  overflow: TextOverflow.ellipsis)),
+                      ],
+                      onChanged: types.isEmpty
+                          ? null
+                          : (code) => setState(() => _typeCode = code),
+                    ),
+                  ] else ...[
+                    TextField(
+                      controller: _subject,
+                      onChanged: (_) => setState(() {}),
+                      decoration: const InputDecoration(
+                          hintText: 'What do you need help with?'),
+                    ),
+                  ],
+                  const SizedBox(height: 18),
+                  Text('Description', style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _body,
+                    maxLines: 5,
+                    onChanged: (_) => setState(() {}),
+                    decoration: const InputDecoration(
+                        hintText: 'Please describe the issue…'),
                   ),
-                  error: (_, __) => Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Text('Could not load your tickets.',
-                        style: theme.textTheme.bodyMedium),
+                  if (complaint) ...[
+                    const SizedBox(height: 18),
+                    Builder(builder: (context) {
+                      final tags =
+                          ref.watch(_tagsProvider).valueOrNull ?? const [];
+                      if (tags.isEmpty) return const SizedBox.shrink();
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Tags (optional)',
+                              style: theme.textTheme.titleMedium),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              for (final t in tags)
+                                FilterChip(
+                                  label: Text(t.label,
+                                      style:
+                                          const TextStyle(fontSize: 12.5)),
+                                  selected: _tags.contains(t.name),
+                                  selectedColor: AppColors.navy
+                                      .withValues(alpha: 0.12),
+                                  checkmarkColor: AppColors.navy,
+                                  onSelected: (on) => setState(() => on
+                                      ? _tags.add(t.name)
+                                      : _tags.remove(t.name)),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+                      );
+                    }),
+                    Text('About a ride (optional)',
+                        style: theme.textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    _RidePickerField(
+                      ride: _ride,
+                      onPick: _pickRide,
+                      onClear: () => setState(() => _ride = null),
+                    ),
+                  ],
+                  if (_error != null) ...[
+                    const SizedBox(height: 12),
+                    Text(_error!,
+                        style: const TextStyle(color: AppColors.negative)),
+                  ],
+                  const SizedBox(height: 20),
+                  FilledButton(
+                    style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48)),
+                    onPressed: _canSubmit(complaint)
+                        ? () => _submit(complaint: complaint)
+                        : null,
+                    child: Text(_submitting
+                        ? 'Submitting…'
+                        : (complaint ? 'File Complaint' : 'Submit Ticket')),
                   ),
-                  data: (list) => list.isEmpty
-                      ? Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Text('No tickets yet.',
-                              style: theme.textTheme.bodyMedium),
-                        )
-                      : Column(children: [
-                          for (final ticket in list)
-                            _TicketRow(ticket: ticket),
-                        ]),
-                ),
-              ]),
-            ],
-          ),
-        ),
+                ],
+              ),
+            ),
+          ]),
+          const SizedBox(height: 20),
+          SettingsCard(children: [
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Text(
+                  complaint ? 'Your Complaints' : 'Recent Tickets',
+                  style: theme.textTheme.titleMedium),
+            ),
+            tickets.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.all(20),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (_, __) => Padding(
+                padding: const EdgeInsets.all(20),
+                child: Text('Could not load your tickets.',
+                    style: theme.textTheme.bodyMedium),
+              ),
+              data: (list) {
+                // Complaints carry category 'complaint'; everything else —
+                // including legacy rows with no category — is Support.
+                final mine = [
+                  for (final t in list)
+                    if ((t.category == 'complaint') == complaint) t,
+                ];
+                return mine.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Text(
+                            complaint
+                                ? 'No complaints filed.'
+                                : 'No tickets yet.',
+                            style: theme.textTheme.bodyMedium),
+                      )
+                    : Column(children: [
+                        for (final ticket in mine) _TicketRow(ticket: ticket),
+                      ]);
+              },
+            ),
+          ]),
+        ],
       ),
     );
   }

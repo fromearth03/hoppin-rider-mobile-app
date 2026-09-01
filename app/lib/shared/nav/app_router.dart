@@ -242,7 +242,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.supportTicket,
-        builder: (_, __) => const SupportTicketScreen(),
+        // ?tab=complaints opens straight onto the Complaints tab.
+        builder: (_, state) => SupportTicketScreen(
+          initialTab:
+              state.uri.queryParameters['tab'] == 'complaints' ? 1 : 0,
+        ),
       ),
       GoRoute(
         path: AppRoutes.promotional,

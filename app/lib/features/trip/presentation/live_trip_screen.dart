@@ -207,31 +207,29 @@ class _LiveTripBody extends ConsumerWidget {
   }
 
   Future<void> _confirmCancel(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Cancel this ride?'),
-        content: const Text(
-          'The cancellation policy for this trip may apply a fee.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Keep ride'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Cancel Ride'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !context.mounted) return;
+    // The configured rider reasons (best-effort: an unreachable list must
+    // never block the cancel — the ride is always escapable).
+    final reasonsResult =
+        await ref.read(rideActionsRepositoryProvider).cancellationReasons();
+    final reasons = switch (reasonsResult) {
+      Ok(:final value) => value,
+      Err() => const <RiderCancelReason>[],
+    };
+    if (!context.mounted) return;
 
-    // The dialog's answer used to be discarded here — the button looked
-    // live and cancelled nothing, leaving the request queued in dispatch.
-    final result =
-        await ref.read(rideActionsRepositoryProvider).cancelRide(rideId);
+    final outcome = await showModalBottomSheet<(bool, String?)>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _CancelReasonSheet(reasons: reasons),
+    );
+    if (outcome == null || outcome.$1 != true || !context.mounted) return;
+
+    final result = await ref
+        .read(rideActionsRepositoryProvider)
+        .cancelRide(rideId, reasonId: outcome.$2);
     if (!context.mounted) return;
 
     switch (result) {
@@ -420,6 +418,105 @@ class _TripMapState extends ConsumerState<_TripMap> {
         northeast: gmaps.LatLng(maxLat, maxLng),
       ),
       64,
+    );
+  }
+}
+
+/// "Why are you cancelling?" — the admin-configured rider reasons as a radio
+/// list, fee-bearing ones labelled honestly ("a fee may apply", with the
+/// free window when one is configured). The reason is optional: the ride
+/// must always be escapable, so "Prefer not to say" cancels with no reason
+/// and the server derives any fee from ride state either way.
+class _CancelReasonSheet extends StatefulWidget {
+  final List<RiderCancelReason> reasons;
+  const _CancelReasonSheet({required this.reasons});
+
+  @override
+  State<_CancelReasonSheet> createState() => _CancelReasonSheetState();
+}
+
+class _CancelReasonSheetState extends State<_CancelReasonSheet> {
+  String? _selected;
+
+  String? _feeHint(RiderCancelReason r) {
+    if (!r.appliesFee) return null;
+    final fee = r.feeAmount;
+    final free = r.freeCancelSeconds;
+    final feePart = fee != null && fee > 0
+        ? 'A £${fee.toStringAsFixed(2)} fee may apply'
+        : 'A fee may apply';
+    if (free != null && free > 0) {
+      final mins = (free / 60).round();
+      return '$feePart · free within ${mins < 1 ? '$free sec' : '$mins min'}';
+    }
+    return feePart;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+          children: [
+            Text('Cancel this ride?',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontSize: 17, color: AppColors.navy)),
+            const SizedBox(height: 4),
+            Text('Tell us why (optional):',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium),
+            const SizedBox(height: 8),
+            for (final r in widget.reasons)
+              RadioListTile<String>(
+                value: r.id,
+                // ignore: deprecated_member_use
+                groupValue: _selected,
+                // ignore: deprecated_member_use
+                onChanged: (v) => setState(() => _selected = v),
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                activeColor: AppColors.navy,
+                title: Text(r.label, style: const TextStyle(fontSize: 14)),
+                subtitle: _feeHint(r) == null
+                    ? null
+                    : Text(_feeHint(r)!,
+                        style: const TextStyle(
+                            fontSize: 11.5, color: AppColors.warning)),
+              ),
+            RadioListTile<String>(
+              value: '',
+              // ignore: deprecated_member_use
+              groupValue: _selected,
+              // ignore: deprecated_member_use
+              onChanged: (v) => setState(() => _selected = v),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              activeColor: AppColors.navy,
+              title: const Text('Prefer not to say',
+                  style: TextStyle(fontSize: 14)),
+            ),
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(
+                  (true, _selected == null || _selected!.isEmpty
+                      ? null
+                      : _selected)),
+              child: const Text('Cancel Ride'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop((false, null)),
+              child: const Text('Keep ride'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

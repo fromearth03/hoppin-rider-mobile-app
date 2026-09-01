@@ -1,11 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
 import '../../../shared/nav/app_router.dart';
 import '../../../shared/widgets/bottom_scroll_fade.dart';
+import '../../safety/data/safety_repository.dart';
 import 'widgets/settings_card.dart';
 import 'widgets/settings_header.dart';
+
+/// The platform's live contact points (admin-configured, `GET /contacts`).
+final _platformContactsProvider =
+    FutureProvider.autoDispose<PlatformContacts?>((ref) async {
+  final result =
+      await ref.watch(safetyRepositoryProvider).platformContacts();
+  return switch (result) {
+    Ok(:final value) => value,
+    // The section falls back to the static support address rather than
+    // vanishing.
+    Err() => null,
+  };
+});
 
 /// Help & Support — `Help & Support.png` (added to the pack 2026-08-31; the
 /// first build of this screen predates the design and was laid out blind).
@@ -101,12 +117,14 @@ class HelpSupportScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: _ContactCard(
-                          icon: Icons.mail_outline,
-                          title: 'Email',
-                          subtitle: 'Support@hoppin.com',
+                          icon: Icons.report_problem_outlined,
+                          title: 'File a Complaint',
+                          subtitle: 'Something went wrong on a ride',
                           enabled: true,
+                          onTap: () => context.push(
+                              '${AppRoutes.supportTicket}?tab=complaints'),
                         ),
                       ),
                     ],
@@ -126,11 +144,68 @@ class HelpSupportScreen extends StatelessWidget {
                 const _LegalRow(label: 'Privacy Policy'),
               ],
             ),
+            const SizedBox(height: 20),
+            // Live contact points from the admin's platform-contacts config —
+            // the email card's information, restored at the bottom with the
+            // emergency number beside it.
+            const _ContactsSection(),
           ],
           ),
         ),
       ),
     );
+  }
+}
+
+/// "Contact & Emergency" — the admin-configured numbers off `GET /contacts`,
+/// with the static support address as the fallback when the fetch fails.
+class _ContactsSection extends ConsumerWidget {
+  const _ContactsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final contacts = ref.watch(_platformContactsProvider).valueOrNull;
+
+    final email = contacts?.supportEmail ?? 'Support@hoppin.com';
+    final phone = contacts?.supportPhone;
+    final emergency = contacts?.emergencyPhone;
+    final whatsapp = contacts?.whatsappNumber;
+
+    Widget row(IconData icon, String label, String value, {Color? color}) =>
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: color ?? AppColors.navy),
+              const SizedBox(width: 12),
+              Text(label, style: theme.textTheme.bodyMedium),
+              const Spacer(),
+              SelectableText(value,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                      fontSize: 14,
+                      color: color ?? AppColors.navy,
+                      fontWeight: FontWeight.w600)),
+            ],
+          ),
+        );
+
+    return SettingsCard(children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 6),
+        child:
+            Text('Contact & Emergency', style: theme.textTheme.titleMedium),
+      ),
+      row(Icons.mail_outline, 'Email', email),
+      if (phone != null && phone.isNotEmpty)
+        row(Icons.phone_outlined, 'Phone', phone),
+      if (whatsapp != null && whatsapp.isNotEmpty)
+        row(Icons.chat_outlined, 'WhatsApp', whatsapp),
+      if (emergency != null && emergency.isNotEmpty)
+        row(Icons.emergency_outlined, 'Emergency', emergency,
+            color: AppColors.negative),
+      const SizedBox(height: 8),
+    ]);
   }
 }
 
