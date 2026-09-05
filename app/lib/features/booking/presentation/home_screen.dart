@@ -46,12 +46,6 @@ final homeSavedLocationsProvider =
   };
 });
 
-/// The journeys this rider repeats, newest-first by frequency. Empty for most
-/// riders and after any failure — see [frequentTripsProvider].
-///
-/// Re-read whenever Home is rebuilt from scratch, so a trip that just crossed
-/// the third-completion threshold appears without a restart.
-
 /// Home — `Ride Type.png` collapsed, `Select Vehicle.png` expanded.
 ///
 /// A full-bleed map with a white booking sheet over it. Tapping the
