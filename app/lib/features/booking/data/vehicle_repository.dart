@@ -5,10 +5,10 @@ import '../../../core/result.dart';
 
 /// One bookable vehicle class, mirroring `GET /api/v1/vehicle-types`.
 ///
-/// Five fields and no more (`app_catalog_repo.go:225-236`). There is no image,
-/// icon or description — artwork is a local asset keyed by [name], with a
-/// generic fallback, because categories are admin-editable and a new one can
-/// appear without an app release.
+/// Artwork is admin-uploaded ([iconUrl], migration 132) with the bundled
+/// capacity-keyed asset as the fallback — categories are admin-editable and a
+/// new one can appear without an app release, so the app must render something
+/// sensible for a class it has never heard of.
 class VehicleCategory {
   final String id;
   final String name;
@@ -18,12 +18,17 @@ class VehicleCategory {
   /// Relative cost, used to convey price before an estimate resolves.
   final double priceMultiplier;
 
+  /// Artwork the operator uploaded for this class. Null when they uploaded
+  /// none, and the app falls back to its bundled asset.
+  final String? iconUrl;
+
   const VehicleCategory({
     required this.id,
     required this.name,
     required this.seats,
     required this.bags,
     required this.priceMultiplier,
+    this.iconUrl,
   });
 
   /// The API COALESCEs seats and bags to 0 when unconfigured. Rendering
@@ -47,6 +52,10 @@ class VehicleCategory {
       seats: (json['seats'] as num?)?.toInt() ?? 0,
       bags: (json['bags'] as num?)?.toInt() ?? 0,
       priceMultiplier: (json['price_multiplier'] as num?)?.toDouble() ?? 1.0,
+      iconUrl: switch (json['icon_url']) {
+        String s when s.trim().isNotEmpty => s.trim(),
+        _ => null,
+      },
     );
   }
 

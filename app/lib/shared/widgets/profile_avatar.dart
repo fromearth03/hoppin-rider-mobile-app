@@ -1,26 +1,13 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/api/api_client.dart';
-import '../../core/result.dart';
 import '../../core/theme/colors.dart';
+import 'api_image.dart';
 
-/// Avatar bytes fetched WITH the bearer token.
-///
-/// The avatar route requires auth, and a plain `NetworkImage` (an `<img>` tag
-/// on web) cannot send the header — so the bytes come through [ApiClient]
-/// like every other call. Cached for the session: the drawer opens often and
-/// must not refetch the photo every time.
-final profileAvatarBytesProvider =
-    FutureProvider.family<Uint8List?, String>((ref, url) async {
-  final result = await ref.watch(apiClientProvider).getBytes(url);
-  return switch (result) {
-    Ok(:final value) => value,
-    Err() => null,
-  };
-});
+/// Avatar bytes fetched WITH the bearer token — the shared authenticated
+/// image loader, kept under its old name because the profile screen
+/// invalidates it after an upload.
+final profileAvatarBytesProvider = apiImageBytesProvider;
 
 /// The user photo everywhere it appears (drawer header, profile, receipts).
 ///

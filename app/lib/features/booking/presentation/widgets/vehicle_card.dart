@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/colors.dart';
+import '../../../../shared/widgets/api_image.dart';
 import '../../data/vehicle_repository.dart';
 
 /// One vehicle class in the picker — `Select Vehicle.png`.
@@ -44,7 +45,7 @@ class VehicleCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
             child: Row(
               children: [
-                _Artwork(seats: category.seats),
+                _Artwork(seats: category.seats, iconUrl: category.iconUrl),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
@@ -92,13 +93,14 @@ class VehicleCard extends StatelessWidget {
           .join(' ');
 }
 
-/// Artwork keyed by CAPACITY, not by name — categories are admin-editable and
-/// a new one can appear without an app release, but its seat count always
-/// says what kind of vehicle it is: a car up to 5 seats, the minibus up to
-/// 10, the coach beyond that.
+/// The operator's uploaded icon when there is one; otherwise artwork keyed by
+/// CAPACITY, not by name — a category invented in the panel with no icon still
+/// has a seat count, and that says what kind of vehicle it is: a car up to 5
+/// seats, the minibus up to 10, the coach beyond that.
 class _Artwork extends StatelessWidget {
   final int seats;
-  const _Artwork({required this.seats});
+  final String? iconUrl;
+  const _Artwork({required this.seats, this.iconUrl});
 
   String get _asset {
     if (seats > 10) return 'assets/vehicles/car_coach.png';
@@ -108,15 +110,20 @@ class _Artwork extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Image.asset(
-      _asset,
+    return ApiImage(
+      url: iconUrl,
       width: 60,
       height: 40,
-      fit: BoxFit.contain,
-      // If the asset ever fails to decode, fall back to a glyph rather than
-      // a broken-image box.
-      errorBuilder: (_, __, ___) => const Icon(Icons.directions_car,
-          size: 34, color: AppColors.navy),
+      fallback: Image.asset(
+        _asset,
+        width: 60,
+        height: 40,
+        fit: BoxFit.contain,
+        // If the bundled asset ever fails to decode, fall back to a glyph
+        // rather than a broken-image box.
+        errorBuilder: (_, __, ___) => const Icon(Icons.directions_car,
+            size: 34, color: AppColors.navy),
+      ),
     );
   }
 }
