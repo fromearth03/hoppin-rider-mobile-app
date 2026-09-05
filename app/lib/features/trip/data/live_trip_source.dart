@@ -168,6 +168,11 @@ class LiveTripInfo {
 
   final String? destinationLabel;
 
+  /// The note the rider left for their driver at booking, echoed back so they
+  /// can see it was actually carried onto the trip. Null when they left it
+  /// blank.
+  final String? riderNote;
+
   const LiveTripInfo({
     required this.rideId,
     required this.status,
@@ -182,6 +187,7 @@ class LiveTripInfo {
     required this.route,
     required this.steps,
     required this.destinationLabel,
+    this.riderNote,
   });
 
   /// The honest "nothing to show yet" state: matching, no driver, nothing
@@ -254,6 +260,7 @@ class LiveTripInfo {
       route: _parseRoute(json['route']),
       steps: _parseSteps(json['steps']),
       destinationLabel: _orNull(json['destination_label']),
+      riderNote: _orNull(json['rider_note']),
     );
   }
 }

@@ -219,6 +219,10 @@ class RideContextRepository {
         String s when s.trim().isNotEmpty => s,
         _ => null,
       },
+      riderNote: switch (json['rider_note']) {
+        String s when s.trim().isNotEmpty => s.trim(),
+        _ => null,
+      },
     );
   }
 

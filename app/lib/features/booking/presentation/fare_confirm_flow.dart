@@ -32,7 +32,8 @@ class FareConfirmFlow extends ConsumerStatefulWidget {
 class _FareConfirmFlowState extends ConsumerState<FareConfirmFlow> {
   bool _booking = false;
 
-  Future<void> _book(VehicleCategory category, FareEstimate? estimate) async {
+  Future<void> _book(
+      VehicleCategory category, FareEstimate? estimate, String note) async {
     if (_booking) return; // a double-tap on Confirm must not book twice
     setState(() => _booking = true);
 
@@ -48,6 +49,7 @@ class _FareConfirmFlowState extends ConsumerState<FareConfirmFlow> {
           estimateDurationSeconds: estimate?.durationSeconds ?? 0,
           pickupLabel: widget.route.pickup.label,
           dropoffLabel: widget.route.dropoff.label,
+          riderNote: note,
         );
     if (!mounted) return;
     setState(() => _booking = false);

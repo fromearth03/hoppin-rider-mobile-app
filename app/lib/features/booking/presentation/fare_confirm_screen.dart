@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show MaxLengthEnforcement;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 import 'package:pointer_interceptor/pointer_interceptor.dart';
@@ -63,7 +64,13 @@ class FareConfirmScreen extends ConsumerStatefulWidget {
   /// Called with the chosen category and its resolved quote once the rider
   /// taps Confirm. The caller (booking flow) owns what happens next — this
   /// screen only owns picking a category and fare, then confirming.
-  final void Function(VehicleCategory category, FareEstimate? estimate)?
+  /// [note] is the rider's free-text instruction for the driver — empty when
+  /// they left it blank, which is most trips.
+  final void Function(
+    VehicleCategory category,
+    FareEstimate? estimate,
+    String note,
+  )?
   onConfirm;
 
   const FareConfirmScreen({
@@ -84,6 +91,11 @@ class _FareConfirmScreenState extends ConsumerState<FareConfirmScreen> {
   /// One quote per category, filled in as each `POST /rides/estimate` lands;
   /// the sheet re-renders reactively off this map.
   final Map<String, Result<FareEstimate>> _resolved = {};
+
+  /// Owned by the screen, not the sheet: the sheet is rebuilt on every drag
+  /// and every fare that resolves, and a controller created down there would
+  /// wipe a half-typed note each time.
+  final _note = TextEditingController();
   String? _selectedId;
 
   /// A pin, every stop numbered, dropoff B — built async (canvas bitmaps).
@@ -261,11 +273,13 @@ class _FareConfirmScreenState extends ConsumerState<FareConfirmScreen> {
                   : null,
               waypoints: widget.waypoints,
               confirmEnabled: _selectedId != null && _selectedHasFare,
+              noteController: _note,
               onConfirm: () {
                 final category = widget.categories.firstWhere(
                   (c) => c.id == _selectedId,
                 );
-                widget.onConfirm?.call(category, _selectedEstimate);
+                widget.onConfirm
+                    ?.call(category, _selectedEstimate, _note.text.trim());
               },
             )),
           ),
@@ -286,6 +300,7 @@ class _Sheet extends ConsumerWidget {
   final VoidCallback onRetry;
   final List<LatLng> waypoints;
   final bool confirmEnabled;
+  final TextEditingController noteController;
   final VoidCallback onConfirm;
 
   const _Sheet({
@@ -299,6 +314,7 @@ class _Sheet extends ConsumerWidget {
     required this.onRetry,
     required this.waypoints,
     required this.confirmEnabled,
+    required this.noteController,
     required this.onConfirm,
   });
 
@@ -417,6 +433,8 @@ class _Sheet extends ConsumerWidget {
                   onChanged: () => ref.invalidate(_defaultCardProvider),
                 ),
                 const SizedBox(height: 14),
+                _DriverNoteField(controller: noteController),
+                const SizedBox(height: 14),
                 // Waiting is never in the estimate and accrues live --
                 // state that it may apply without attaching a number the
                 // app cannot know.
@@ -459,6 +477,65 @@ class _Sheet extends ConsumerWidget {
       return '${RiderErrorCopy.messageFor(error)} Check your stops: $stops.';
     }
     return RiderErrorCopy.messageFor(error);
+  }
+}
+
+/// Anything the driver needs to know before they arrive.
+///
+/// Optional and unlabelled as required, because most trips need nothing said.
+/// Capped at the column's 300 characters (mig 130) with the counter only
+/// appearing near the limit — a live "0/300" under an empty optional box reads
+/// as a form to fill in.
+class _DriverNoteField extends StatelessWidget {
+  final TextEditingController controller;
+
+  const _DriverNoteField({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Note for your driver',
+          style: theme.textTheme.titleMedium
+              ?.copyWith(fontSize: 15, color: AppColors.navy),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          maxLines: 2,
+          maxLength: 300,
+          maxLengthEnforcement: MaxLengthEnforcement.enforced,
+          textInputAction: TextInputAction.done,
+          textCapitalization: TextCapitalization.sentences,
+          style: const TextStyle(fontSize: 13),
+          buildCounter: (context,
+              {required currentLength, required isFocused, maxLength}) {
+            if (currentLength < 240) return null;
+            return Text('$currentLength/$maxLength',
+                style: theme.textTheme.bodySmall);
+          },
+          decoration: InputDecoration(
+            hintText: 'Optional — e.g. second gate past the barrier',
+            hintStyle: const TextStyle(fontSize: 13),
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFE3E3E8)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFE3E3E8)),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 

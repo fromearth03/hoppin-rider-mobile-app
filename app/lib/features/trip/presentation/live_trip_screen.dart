@@ -141,6 +141,16 @@ class _LiveTripBody extends ConsumerWidget {
               // The frame's glass route panel — pickup, stops, dropoff over
               // the map. Renders only once the ride's geo block arrives.
               TripRouteHeader(waypoints: info.waypoints),
+              // The note the rider left at booking, echoed back until the trip
+              // starts. A rider who typed "second gate past the barrier" has
+              // no other way to check it actually travelled with the booking,
+              // and once they are in the car it no longer matters.
+              if (info.riderNote != null &&
+                  info.status != LiveTripStatus.started &&
+                  info.status != LiveTripStatus.completed) ...[
+                const SizedBox(height: 8),
+                _RiderNoteChip(note: info.riderNote!),
+              ],
               const SizedBox(height: 10),
               // A persistent way to reach chat and SOS regardless of whether
               // a driver has been assigned yet -- SOS in particular must
@@ -635,6 +645,41 @@ class _CircleButton extends StatelessWidget {
 /// The "Destination" bar on `Start Ride.png`, shown only once the trip has
 /// actually started -- before that there is no in-progress journey to name a
 /// destination for.
+/// The rider's own note, shown back to them over the map.
+class _RiderNoteChip extends StatelessWidget {
+  final String note;
+
+  const _RiderNoteChip({required this.note});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.94),
+      borderRadius: BorderRadius.circular(12),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.sticky_note_2_outlined,
+                size: 16, color: AppColors.navy),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Your note: $note',
+                style: const TextStyle(fontSize: 12.5),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _DestinationBar extends StatelessWidget {
   final String label;
   const _DestinationBar({required this.label});

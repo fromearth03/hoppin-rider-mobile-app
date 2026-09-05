@@ -92,7 +92,7 @@ Widget _harness(
   Brightness brightness = Brightness.light,
   List<VehicleCategory> categories = const [_standard],
   List<LatLng> waypoints = const [],
-  void Function(VehicleCategory, FareEstimate?)? onConfirm,
+  void Function(VehicleCategory, FareEstimate?, String)? onConfirm,
 }) =>
     ProviderScope(
       overrides: [
@@ -246,7 +246,7 @@ void main() {
 
       VehicleCategory? confirmed;
       await tester.pumpWidget(
-          _harness(repo, onConfirm: (c, _) => confirmed = c));
+          _harness(repo, onConfirm: (c, _, __) => confirmed = c));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Standard'));
@@ -421,4 +421,43 @@ void main() {
     // state, not a crash.
     expect(tester.takeException(), isNull);
   });
+    testWidgets('a note for the driver travels with the confirmed booking',
+        (tester) async {
+      when(() => repo.estimate(
+            pickup: any(named: 'pickup'),
+            dropoff: any(named: 'dropoff'),
+            vehicleCategoryId: any(named: 'vehicleCategoryId'),
+            waypoints: any(named: 'waypoints'),
+          )).thenAnswer((_) async => Ok(_singleLegEstimate()));
+
+      String? note;
+      await tester.pumpWidget(
+          _harness(repo, onConfirm: (_, __, n) => note = n));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Standard'));
+      await tester.pumpAndSettle();
+      await tester.drag(find.text('Ride Details'), const Offset(0, -300));
+      await tester.pumpAndSettle();
+
+      final sheet = find
+          .descendant(
+              of: find.byType(DraggableScrollableSheet),
+              matching: find.byType(Scrollable))
+          .first;
+      await tester.scrollUntilVisible(find.text('Note for your driver'), 80,
+          scrollable: sheet);
+      await tester.enterText(
+          find.byType(TextField), '  Second gate past the barrier  ');
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(find.text('Confirm Booking'), 80,
+          scrollable: sheet);
+      await tester.tap(find.text('Confirm Booking'));
+      await tester.pumpAndSettle();
+
+      // Trimmed: trailing whitespace would be stored and shown to the driver.
+      expect(note, 'Second gate past the barrier');
+    });
+
 }

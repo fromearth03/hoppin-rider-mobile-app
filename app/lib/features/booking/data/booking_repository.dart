@@ -49,6 +49,9 @@ class BookingRepository {
     // BOTH apps shows addresses instead of bare coordinates.
     String pickupLabel = '',
     String dropoffLabel = '',
+    // Anything the driver needs to know before arriving. Stored on the ride
+    // and shown on the driver's trip screen; omitted entirely when blank.
+    String riderNote = '',
   }) async {
     if (waypoints.length > kMaxWaypoints) {
       return const Err(ApiException(
@@ -76,6 +79,7 @@ class BookingRepository {
         if (pickupLabel.trim().isNotEmpty) 'pickup_label': pickupLabel.trim(),
         if (dropoffLabel.trim().isNotEmpty)
           'dropoff_label': dropoffLabel.trim(),
+        if (riderNote.trim().isNotEmpty) 'rider_note': riderNote.trim(),
       },
     );
 
