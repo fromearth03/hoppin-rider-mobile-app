@@ -11,6 +11,7 @@ import '../../../core/geo.dart' as geo;
 import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
 import '../../../shared/nav/app_router.dart';
+import '../../../shared/widgets/offline.dart';
 import '../../booking/presentation/widgets/map_markers.dart';
 import '../../booking/presentation/widgets/rider_map.dart';
 import '../data/live_trip_source.dart';
@@ -27,13 +28,13 @@ import 'widgets/turn_banner.dart';
 /// `autoDispose` + `family`: each ride gets its own subscription, torn down
 /// when the screen watching it is gone, matching the pattern used by
 /// `rideReceiptProvider` and `emergencyContactsProvider` elsewhere in the app.
-final liveTripInfoProvider =
-    StreamProvider.autoDispose.family<LiveTripInfo, String>(
-  // The real `GET /rides/:id` poll — the spec's documented fallback
-  // transport. The moment dispatch assigns a driver, this stream carries
-  // the driver card onto the screen.
-  (ref, rideId) => ref.watch(rideContextRepositoryProvider).watch(rideId),
-);
+final liveTripInfoProvider = StreamProvider.autoDispose
+    .family<LiveTripInfo, String>(
+      // The real `GET /rides/:id` poll — the spec's documented fallback
+      // transport. The moment dispatch assigns a driver, this stream carries
+      // the driver card onto the screen.
+      (ref, rideId) => ref.watch(rideContextRepositoryProvider).watch(rideId),
+    );
 
 /// Driver Arrived / Start Ride / trip-in-progress, combined into one screen
 /// driven by [LiveTripInfo.status].
@@ -78,22 +79,29 @@ class LiveTripScreen extends ConsumerWidget {
     });
 
     return Scaffold(
-      body: async.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        // A transport hiccup degrades to the same honest awaiting state
-        // rather than a dead-end error screen -- the rider is mid-trip and
-        // needs Cancel Ride and SOS to keep working regardless.
-        error: (_, __) => _LiveTripBody(
-          info: LiveTripInfo.awaiting(rideId),
-          rideId: rideId,
-        ),
-        // Prefer the payload's own id: the route param may be a dispatch
-        // request id (or empty straight after booking), and chat / safety /
-        // cancel must hit the REAL ride.
-        data: (info) => _LiveTripBody(
-          info: info,
-          rideId: info.rideId.isNotEmpty ? info.rideId : rideId,
-        ),
+      body: Column(
+        children: [
+          const OfflineBanner(),
+          Expanded(
+            child: async.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              // A transport hiccup degrades to the same honest awaiting state
+              // rather than a dead-end error screen -- the rider is mid-trip and
+              // needs Cancel Ride and SOS to keep working regardless.
+              error: (_, __) => _LiveTripBody(
+                info: LiveTripInfo.awaiting(rideId),
+                rideId: rideId,
+              ),
+              // Prefer the payload's own id: the route param may be a dispatch
+              // request id (or empty straight after booking), and chat / safety /
+              // cancel must hit the REAL ride.
+              data: (info) => _LiveTripBody(
+                info: info,
+                rideId: info.rideId.isNotEmpty ? info.rideId : rideId,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -117,7 +125,9 @@ class _LiveTripBody extends ConsumerWidget {
 
     return Stack(
       children: [
-        Positioned.fill(child: _TripMap(info: info, rideId: rideId)),
+        Positioned.fill(
+          child: _TripMap(info: info, rideId: rideId),
+        ),
         Positioned(
           top: topInset,
           left: 16,
@@ -156,42 +166,42 @@ class _LiveTripBody extends ConsumerWidget {
           Align(
             alignment: Alignment.bottomCenter,
             child: PointerInterceptor(
-                child: SafeArea(
-              minimum: const EdgeInsets.all(16),
-              child: Material(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                elevation: 8,
-                child: Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text('This ride was cancelled',
+              child: SafeArea(
+                minimum: const EdgeInsets.all(16),
+                child: Material(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  elevation: 8,
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'This ride was cancelled',
                           textAlign: TextAlign.center,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
-                              ?.copyWith(
-                                  fontSize: 17, color: AppColors.navy)),
-                      const SizedBox(height: 6),
-                      Text(
-                        'No driver could be found nearby, or the ride was '
-                        'cancelled. You have not been charged.',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 14),
-                      FilledButton(
-                        onPressed: () => context.go(AppRoutes.home),
-                        child: const Text('Book again'),
-                      ),
-                    ],
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontSize: 17, color: AppColors.navy),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'No driver could be found nearby, or the ride was '
+                          'cancelled. You have not been charged.',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 14),
+                        FilledButton(
+                          onPressed: () => context.go(AppRoutes.home),
+                          child: const Text('Book again'),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            )),
+            ),
           ),
         if (info.status == LiveTripStatus.started &&
             info.destinationLabel != null)
@@ -227,8 +237,9 @@ class _LiveTripBody extends ConsumerWidget {
   Future<void> _confirmCancel(BuildContext context, WidgetRef ref) async {
     // The configured rider reasons (best-effort: an unreachable list must
     // never block the cancel — the ride is always escapable).
-    final reasonsResult =
-        await ref.read(rideActionsRepositoryProvider).cancellationReasons();
+    final reasonsResult = await ref
+        .read(rideActionsRepositoryProvider)
+        .cancellationReasons();
     final reasons = switch (reasonsResult) {
       Ok(:final value) => value,
       Err() => const <RiderCancelReason>[],
@@ -253,9 +264,9 @@ class _LiveTripBody extends ConsumerWidget {
 
     switch (result) {
       case Ok():
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ride cancelled.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Ride cancelled.')));
         context.go(AppRoutes.home);
       // The ride is already terminal — dispatch auto-cancelled it (no
       // driver) a moment before the tap, or it completed. From the rider's
@@ -307,7 +318,9 @@ class _TripMapState extends ConsumerState<_TripMap> {
   void initState() {
     super.initState();
     _driverPoll = Timer.periodic(
-        const Duration(seconds: 3), (_) => _pollDriver());
+      const Duration(seconds: 3),
+      (_) => _pollDriver(),
+    );
   }
 
   @override
@@ -330,11 +343,13 @@ class _TripMapState extends ConsumerState<_TripMap> {
       if (_driverPos != null && mounted) setState(() => _driverPos = null);
       return;
     }
-    final pos =
-        await ref.read(rideContextRepositoryProvider).driverPosition(id);
+    final pos = await ref
+        .read(rideContextRepositoryProvider)
+        .driverPosition(id);
     if (!mounted) return;
-    setState(() =>
-        _driverPos = pos == null ? null : gmaps.LatLng(pos.lat, pos.lng));
+    setState(
+      () => _driverPos = pos == null ? null : gmaps.LatLng(pos.lat, pos.lng),
+    );
   }
 
   gmaps.LatLng _g(geo.LatLng p) => gmaps.LatLng(p.lat, p.lng);
@@ -357,14 +372,17 @@ class _TripMapState extends ConsumerState<_TripMap> {
     _maybeBuildWpMarkers(waypoints);
     final markers = <gmaps.Marker>{..._wpMarkers};
     if (_driverPos != null) {
-      markers.add(gmaps.Marker(
-        markerId: const gmaps.MarkerId('driver'),
-        position: _driverPos!,
-        icon: gmaps.BitmapDescriptor.defaultMarkerWithHue(
-            gmaps.BitmapDescriptor.hueViolet),
-        infoWindow: const gmaps.InfoWindow(title: 'Your driver'),
-        anchor: const Offset(0.5, 0.5),
-      ));
+      markers.add(
+        gmaps.Marker(
+          markerId: const gmaps.MarkerId('driver'),
+          position: _driverPos!,
+          icon: gmaps.BitmapDescriptor.defaultMarkerWithHue(
+            gmaps.BitmapDescriptor.hueViolet,
+          ),
+          infoWindow: const gmaps.InfoWindow(title: 'Your driver'),
+          anchor: const Offset(0.5, 0.5),
+        ),
+      );
     }
 
     _maybeFitCamera(route);
@@ -403,16 +421,20 @@ class _TripMapState extends ConsumerState<_TripMap> {
       final color = isFirst
           ? AppColors.info
           : (isLast ? AppColors.positive : AppColors.accent);
-      markers.add(gmaps.Marker(
-        markerId: gmaps.MarkerId(
-            isFirst ? 'pickup' : (isLast ? 'dropoff' : 'stop$i')),
-        position: _g(pos),
-        icon: await circleLabelMarker(label, color),
-        infoWindow: gmaps.InfoWindow(
+      markers.add(
+        gmaps.Marker(
+          markerId: gmaps.MarkerId(
+            isFirst ? 'pickup' : (isLast ? 'dropoff' : 'stop$i'),
+          ),
+          position: _g(pos),
+          icon: await circleLabelMarker(label, color),
+          infoWindow: gmaps.InfoWindow(
             title: isFirst || isLast
                 ? waypoints[i].label
-                : 'Stop $i — ${waypoints[i].label}'),
-      ));
+                : 'Stop $i — ${waypoints[i].label}',
+          ),
+        ),
+      );
     }
     if (mounted) setState(() => _wpMarkers = markers);
   }
@@ -482,19 +504,26 @@ class _CancelReasonSheetState extends State<_CancelReasonSheet> {
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom),
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
         child: ListView(
           shrinkWrap: true,
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
           children: [
-            Text('Cancel this ride?',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.titleMedium
-                    ?.copyWith(fontSize: 17, color: AppColors.navy)),
+            Text(
+              'Cancel this ride?',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontSize: 17,
+                color: AppColors.navy,
+              ),
+            ),
             const SizedBox(height: 4),
-            Text('Tell us why (optional):',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium),
+            Text(
+              'Tell us why (optional):',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium,
+            ),
             const SizedBox(height: 8),
             for (final r in widget.reasons)
               RadioListTile<String>(
@@ -509,9 +538,13 @@ class _CancelReasonSheetState extends State<_CancelReasonSheet> {
                 title: Text(r.label, style: const TextStyle(fontSize: 14)),
                 subtitle: _feeHint(r) == null
                     ? null
-                    : Text(_feeHint(r)!,
+                    : Text(
+                        _feeHint(r)!,
                         style: const TextStyle(
-                            fontSize: 11.5, color: AppColors.warning)),
+                          fontSize: 11.5,
+                          color: AppColors.warning,
+                        ),
+                      ),
               ),
             RadioListTile<String>(
               value: '',
@@ -522,15 +555,17 @@ class _CancelReasonSheetState extends State<_CancelReasonSheet> {
               dense: true,
               contentPadding: EdgeInsets.zero,
               activeColor: AppColors.navy,
-              title: const Text('Prefer not to say',
-                  style: TextStyle(fontSize: 14)),
+              title: const Text(
+                'Prefer not to say',
+                style: TextStyle(fontSize: 14),
+              ),
             ),
             const SizedBox(height: 12),
             FilledButton(
-              onPressed: () => Navigator.of(context).pop(
-                  (true, _selected == null || _selected!.isEmpty
-                      ? null
-                      : _selected)),
+              onPressed: () => Navigator.of(context).pop((
+                true,
+                _selected == null || _selected!.isEmpty ? null : _selected,
+              )),
               child: const Text('Cancel Ride'),
             ),
             TextButton(

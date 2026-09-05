@@ -10,6 +10,7 @@ import 'package:hoppin_rider/features/booking/data/places_repository.dart';
 import 'package:hoppin_rider/features/booking/data/saved_locations_repository.dart';
 import 'package:hoppin_rider/features/booking/presentation/saved_places_screen.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:hoppin_rider/shared/widgets/skeleton.dart';
 
 class _MockSavedRepo extends Mock implements SavedLocationsRepository {}
 
@@ -59,7 +60,7 @@ void main() {
   });
 
   group('loading, error, empty', () {
-    testWidgets('shows a loading indicator while the list is in flight',
+    testWidgets('shows a skeleton while the list is in flight',
         (tester) async {
       final completer = Completer<Result<List<SavedLocation>>>();
       when(() => repo.list()).thenAnswer((_) => completer.future);
@@ -67,7 +68,9 @@ void main() {
       await tester.pumpWidget(_harness(repo));
       await tester.pump();
 
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      // A skeleton, not a spinner: it reserves the row layout so nothing
+      // jumps when the real places arrive.
+      expect(find.byType(SkeletonList), findsOneWidget);
 
       completer.complete(const Ok([]));
       await tester.pumpAndSettle();

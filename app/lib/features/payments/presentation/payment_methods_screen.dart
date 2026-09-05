@@ -13,6 +13,7 @@ import '../../history/data/trip_history_repository.dart';
 import '../data/payment_methods_repository.dart';
 import 'widgets/add_card_sheet.dart';
 import 'widgets/payment_card_tile.dart';
+import '../../../shared/widgets/skeleton.dart';
 
 /// The frame's "Recent Payments" list — real charged rides off `GET /rides`,
 /// newest first. There is no dedicated transactions endpoint; a completed
@@ -288,7 +289,7 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
 
   Widget _buildBody(ThemeData theme) {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const SkeletonCards(count: 3, height: 84);
     }
 
     if (_errorMessage != null) {

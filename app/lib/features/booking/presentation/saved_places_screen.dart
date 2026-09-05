@@ -7,6 +7,7 @@ import '../../../core/theme/colors.dart';
 import '../data/saved_locations_repository.dart';
 import 'widgets/saved_place_tile.dart';
 import 'widgets/saved_place_dialogs.dart';
+import '../../../shared/widgets/skeleton.dart';
 
 /// Manage the rider's saved places: list, add, rename, remove.
 ///
@@ -198,7 +199,7 @@ class _SavedPlacesScreenState extends ConsumerState<SavedPlacesScreen> {
 
   Widget _buildBody(ThemeData theme) {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const SkeletonList(rows: 4, rowHeight: 68, leadingCircle: true);
     }
 
     if (_errorMessage != null) {

@@ -6,21 +6,35 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../auth/token_store.dart';
 import '../device/device_id.dart';
+import '../net/network_status.dart';
 import '../result.dart';
 import 'api_exception.dart';
 
 /// Every call to the ride service goes through here. Returns [Result] rather
 /// than throwing, so callers handle failure where it happens.
 class ApiClient {
-  static const _defaultBaseUrl =
-      String.fromEnvironment('API_BASE_URL',
-          defaultValue: 'https://api.hoppin.tech/api/v1');
+  static const _defaultBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'https://api.hoppin.tech/api/v1',
+  );
 
   final Dio _dio;
   final TokenStore _tokens;
   final DeviceIdProvider _device;
 
-  ApiClient(this._dio, this._tokens, this._device, {String? baseUrl}) {
+  /// Told, after every call, whether the server was actually reached. This is
+  /// what drives the offline screen: a real HTTP response — even a 500 — proves
+  /// the network is fine, while a transport failure means we could not get
+  /// there at all. Optional so tests and tooling need no wiring.
+  final void Function({required bool reachedServer})? onReachability;
+
+  ApiClient(
+    this._dio,
+    this._tokens,
+    this._device, {
+    String? baseUrl,
+    this.onReachability,
+  }) {
     _dio.options.baseUrl = baseUrl ?? _defaultBaseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 15);
     // Longer than the backend's 4 s Photon timeout, so we never cancel work the
@@ -30,25 +44,29 @@ class ApiClient {
     _dio.options.validateStatus = (_) => true;
 
     _dio.interceptors.add(
-      InterceptorsWrapper(onRequest: (options, handler) async {
-        final token = await _tokens.read();
-        if (token != null) options.headers['Authorization'] = 'Bearer $token';
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          final token = await _tokens.read();
+          if (token != null) options.headers['Authorization'] = 'Bearer $token';
 
-        // The blacklist gate is fail-open on a missing header, so omitting this
-        // silently disables it. Always send one.
-        options.headers['X-Hoppin-Device-ID'] = await _device.resolve();
+          // The blacklist gate is fail-open on a missing header, so omitting this
+          // silently disables it. Always send one.
+          options.headers['X-Hoppin-Device-ID'] = await _device.resolve();
 
-        handler.next(options);
-      }),
+          handler.next(options);
+        },
+      ),
     );
   }
 
   Future<Result<T>> get<T>(String path, {Map<String, dynamic>? query}) =>
       _send<T>(() => _dio.get(path, queryParameters: query));
 
-  Future<Result<T>> post<T>(String path,
-          {Object? body, Map<String, dynamic>? query}) =>
-      _send<T>(() => _dio.post(path, data: body, queryParameters: query));
+  Future<Result<T>> post<T>(
+    String path, {
+    Object? body,
+    Map<String, dynamic>? query,
+  }) => _send<T>(() => _dio.post(path, data: body, queryParameters: query));
 
   Future<Result<T>> patch<T>(String path, {Object? body}) =>
       _send<T>(() => _dio.patch(path, data: body));
@@ -63,13 +81,14 @@ class ApiClient {
     required Uint8List bytes,
     String field = 'file',
     String filename = 'upload.jpg',
-  }) =>
-      _send<T>(() => _dio.post(
-            path,
-            data: FormData.fromMap({
-              field: MultipartFile.fromBytes(bytes, filename: filename),
-            }),
-          ));
+  }) => _send<T>(
+    () => _dio.post(
+      path,
+      data: FormData.fromMap({
+        field: MultipartFile.fromBytes(bytes, filename: filename),
+      }),
+    ),
+  );
 
   /// Raw bytes with the same auth the JSON calls get. The image routes
   /// require a bearer token, which a plain `NetworkImage` (an `<img>` tag on
@@ -86,7 +105,8 @@ class ApiClient {
         return Ok(Uint8List.fromList(data));
       }
       return Err(
-          ApiException(status >= 500 ? 'INTERNAL' : 'NOT_FOUND', '', status));
+        ApiException(status >= 500 ? 'INTERNAL' : 'NOT_FOUND', '', status),
+      );
     } on DioException catch (e) {
       return Err(ApiException('INTERNAL', e.message ?? 'network error', 0));
     }
@@ -95,6 +115,8 @@ class ApiClient {
   Future<Result<T>> _send<T>(Future<Response> Function() call) async {
     try {
       final response = await call();
+      // Any status at all means we got through to the server.
+      onReachability?.call(reachedServer: true);
       final status = response.statusCode ?? 500;
       if (status >= 200 && status < 300) {
         return Ok<T>(response.data as T);
@@ -104,6 +126,12 @@ class ApiClient {
       // Timeouts and connection failures are transient. INTERNAL is the honest
       // classification for "no network" — it is the one code we mark retryable
       // without the server having said so.
+      //
+      // Only a TRANSPORT failure counts as offline. A cancellation is the app's
+      // own doing and says nothing about the network.
+      if (e.type != DioExceptionType.cancel) {
+        onReachability?.call(reachedServer: false);
+      }
       return Err<T>(ApiException('INTERNAL', e.message ?? 'network error', 0));
     }
   }
@@ -138,10 +166,22 @@ class ApiClient {
 
 final dioProvider = Provider<Dio>((ref) => Dio());
 
-final apiClientProvider = Provider<ApiClient>(
-  (ref) => ApiClient(
+final apiClientProvider = Provider<ApiClient>((ref) {
+  final status = ref.watch(networkStatusProvider);
+  final client = ApiClient(
     ref.watch(dioProvider),
     ref.watch(tokenStoreProvider),
     ref.watch(deviceIdProvider),
-  ),
-);
+    onReachability: status.report,
+  );
+  // The probe that decides when we are back. `/app-status` is public, tiny and
+  // needs no token, so it works even when the session has expired.
+  status.pingBackend ??= () async {
+    final res = await client.get<Map<String, dynamic>>(
+      '/app-status',
+      query: {'platform': 'android', 'version': '1.0.0'},
+    );
+    return res is Ok;
+  };
+  return client;
+});

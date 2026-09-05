@@ -8,6 +8,7 @@ import '../../../shared/widgets/bottom_scroll_fade.dart';
 import '../application/notifications_controller.dart';
 import '../domain/notification_item.dart';
 import 'widgets/notification_tile.dart';
+import '../../../shared/widgets/skeleton.dart';
 
 /// Notifications inbox, backed by `GET /me/notifications`.
 ///
@@ -64,7 +65,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           ),
           Expanded(
             child: state.isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const SkeletonList(rows: 6, leadingCircle: true)
                 : state.visible.isEmpty
                     ? _EmptyState(theme: theme, error: state.error)
                     : Stack(

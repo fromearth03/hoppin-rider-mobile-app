@@ -10,6 +10,7 @@ import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
 import '../../../shared/nav/app_router.dart';
 import '../data/trip_history_repository.dart';
+import '../../../shared/widgets/skeleton.dart';
 
 /// First day of the month the list is filtered to; null = all time.
 /// Defaults to the current month, as the frame's "This Month" card shows.
@@ -72,8 +73,9 @@ class RideHistoryScreen extends ConsumerWidget {
           const _MonthFilterCard(),
           Expanded(
             child: history.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
+              // Skeleton rather than a spinner: it holds the exact space
+              // the trip rows will take, so nothing jumps when they land.
+              loading: () => const SkeletonList(rows: 6, leadingCircle: true),
               error: (e, _) => _HistoryMessage(
                 icon: Icons.error_outline,
                 // Server copy wins; RiderErrorCopy is only the net for a

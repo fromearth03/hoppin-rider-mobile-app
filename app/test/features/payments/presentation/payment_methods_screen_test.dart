@@ -10,6 +10,7 @@ import 'package:hoppin_rider/core/result.dart';
 import 'package:hoppin_rider/features/payments/data/payment_methods_repository.dart';
 import 'package:hoppin_rider/features/payments/presentation/payment_methods_screen.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:hoppin_rider/shared/widgets/skeleton.dart';
 
 class _MockRepo extends Mock implements PaymentMethodsRepository {}
 
@@ -78,7 +79,7 @@ void main() {
   });
 
   group('loading, empty, error', () {
-    testWidgets('shows a loading indicator while the list is in flight',
+    testWidgets('shows a skeleton while the list is in flight',
         (tester) async {
       final completer = Completer<Result<List<SavedCard>>>();
       when(() => repo.list()).thenAnswer((_) => completer.future);
@@ -86,7 +87,7 @@ void main() {
       await tester.pumpWidget(_harness(repo));
       await tester.pump();
 
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(SkeletonCards), findsOneWidget);
 
       completer.complete(const Ok([]));
       await tester.pumpAndSettle();
