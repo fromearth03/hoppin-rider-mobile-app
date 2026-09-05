@@ -6,7 +6,9 @@ import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
 import '../../../shared/nav/app_router.dart';
 import '../../../shared/widgets/bottom_scroll_fade.dart';
+import '../../../shared/widgets/skeleton.dart';
 import '../../safety/data/safety_repository.dart';
+import '../data/faq_repository.dart';
 import 'widgets/settings_card.dart';
 import 'widgets/settings_header.dart';
 
@@ -37,32 +39,22 @@ final _platformContactsProvider =
 ///   ticket-filing flow behind it, but no support-ticket endpoint exists in
 ///   the rider API, so the card renders disabled with the established "Soon"
 ///   treatment rather than opening a form that submits into nowhere.
+/// - FAQ copy is operator-written (`GET /faqs?audience=rider`, migration 133),
+///   not bundled: the answers describe rules the panel changes in seconds, so
+///   copy that could only change with a store release was copy guaranteed to
+///   go stale.
 /// - The legal rows are drawn as accordions, but no terms or privacy-policy
 ///   documents exist to put inside them; they render disabled until the
 ///   documents do.
 /// - Email stays plain text: `url_launcher` is not a dependency, so a mailto
 ///   link cannot be opened from here.
-class HelpSupportScreen extends StatelessWidget {
+class HelpSupportScreen extends ConsumerWidget {
   const HelpSupportScreen({super.key});
 
-  // The design's questions only — inventing FAQ copy is the designer's call,
-  // not ours. The dropped documents question is recorded as a deviation.
-  static const _faqs = [
-    (
-      'Penalty for cancellation after arrival?',
-      'If a driver cancels a ride after arriving at pickup, then £5 fee is '
-          'charged as penalty.',
-    ),
-    (
-      'How to Dispute',
-      'Email us at Support@hoppin.com with your ride details and we will '
-          'look into it. A representative responds within 24 hours.',
-    ),
-  ];
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final faqs = ref.watch(riderFaqsProvider);
 
     return Scaffold(
       appBar: const SettingsHeader(title: 'Help & Support'),
@@ -83,13 +75,44 @@ class HelpSupportScreen extends StatelessWidget {
                 ),
                 // SettingsCard inserts the dividers between children; adding
                 // our own here doubled every line in the render.
-                for (final (i, faq) in _faqs.indexed)
-                  _FaqTile(
-                    question: faq.$1,
-                    answer: faq.$2,
-                    // The frame draws the first question already open.
-                    initiallyOpen: i == 0,
-                  ),
+                ...faqs.when(
+                  // Fixed blocks, not SkeletonList: this card already sits
+                  // inside the page's ListView, and a nested scrollable has no
+                  // bounded height to expand into.
+                  loading: () => [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
+                      child: Column(
+                        children: [
+                          Skeleton.block(height: 18),
+                          const SizedBox(height: 14),
+                          Skeleton.block(height: 18),
+                          const SizedBox(height: 14),
+                          Skeleton.block(height: 18),
+                        ],
+                      ),
+                    ),
+                  ],
+                  // Said plainly rather than as an empty list: "Hoppin has no
+                  // answers" and "we could not load them" are different
+                  // messages, and the rider opened this screen for help.
+                  error: (_, __) => const [
+                    _FaqMessage(
+                        'We could not load the answers right now. '
+                        'Check your connection and try again.'),
+                  ],
+                  data: (list) => list.isEmpty
+                      ? const [_FaqMessage('No questions have been added yet.')]
+                      : [
+                          for (final (i, faq) in list.indexed)
+                            _FaqTile(
+                              question: faq.question,
+                              answer: faq.answer,
+                              // The frame draws the first question already open.
+                              initiallyOpen: i == 0,
+                            ),
+                        ],
+                ),
               ],
             ),
             const SizedBox(height: 20),
@@ -211,6 +234,24 @@ class _ContactsSection extends ConsumerWidget {
 
 /// One expandable question, as the design's accordion draws it — bullet,
 /// question, chevron that flips when open.
+/// Copy shown in place of the accordion — empty, or unreachable.
+class _FaqMessage extends StatelessWidget {
+  final String text;
+  const _FaqMessage(this.text);
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
+        child: Text(
+          text,
+          style: Theme.of(context)
+              .textTheme
+              .bodyMedium
+              ?.copyWith(color: AppColors.lightTextSecondary),
+        ),
+      );
+}
+
 class _FaqTile extends StatefulWidget {
   final String question;
   final String answer;
