@@ -6,14 +6,17 @@ import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/api/error_codes.dart';
+import '../../../core/geo.dart';
 import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
 import '../../../shared/nav/app_drawer.dart';
 import '../../../shared/nav/app_router.dart';
 import '../../trip/data/ride_context_repository.dart';
 import '../application/booking_draft.dart';
+import '../data/frequent_trips_repository.dart';
 import '../data/saved_locations_repository.dart';
 import '../data/vehicle_repository.dart';
+import 'route_entry_screen.dart' show ChosenRoute, RoutePoint, RoutePrefill;
 import 'widgets/rider_map.dart';
 import 'widgets/vehicle_card.dart';
 
@@ -42,6 +45,12 @@ final homeSavedLocationsProvider =
     Err() => const <SavedLocation>[],
   };
 });
+
+/// The journeys this rider repeats, newest-first by frequency. Empty for most
+/// riders and after any failure — see [frequentTripsProvider].
+///
+/// Re-read whenever Home is rebuilt from scratch, so a trip that just crossed
+/// the third-completion threshold appears without a restart.
 
 /// Home — `Ride Type.png` collapsed, `Select Vehicle.png` expanded.
 ///
@@ -237,6 +246,9 @@ class _BookingSheet extends StatelessWidget {
             ],
             const SizedBox(height: 12),
             const _SearchField(),
+            // Above saved places: a journey the rider has actually taken three
+            // times is a better guess than a place they once bookmarked.
+            const _FrequentTripRow(),
             _SavedList(saved: saved),
           ],
         ),
@@ -469,6 +481,83 @@ class _SearchField extends StatelessWidget {
 
 /// The saved places under the search pill — the frame lists them plainly with
 /// an outline pin, no card chrome.
+/// One-tap rebook for the rider's most-taken journey.
+///
+/// Only the top one, and only on Home: this sits under the search pill in the
+/// booking sheet, and a list of five would push the sheet over the map it is
+/// meant to sit on. The full list lives in Ride History.
+class _FrequentTripRow extends ConsumerWidget {
+  const _FrequentTripRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final trips = ref.watch(frequentTripsProvider).valueOrNull ?? const [];
+    if (trips.isEmpty) return const SizedBox.shrink();
+    final trip = trips.first;
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Material(
+        color: AppColors.primary.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => rebookFrequentTrip(context, trip),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            child: Row(
+              children: [
+                const Icon(Icons.replay, size: 20, color: AppColors.primary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Book again: ${trip.toLabel}',
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(fontSize: 14, height: 1.25),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        'From ${trip.fromLabel} · ${trip.tripCount} trips',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                            fontSize: 12, color: AppColors.lightTextSecondary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right,
+                    size: 20, color: AppColors.lightTextSecondary),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Opens the booking flow on a repeated journey with BOTH ends filled.
+///
+/// Into the route picker rather than straight to fare-confirm: the rider is
+/// rebooking a journey, not confirming one, and the pickup they used last
+/// Tuesday may not be where they are standing now. One tap gets them to a
+/// screen where everything is already correct and anything can still change.
+void rebookFrequentTrip(BuildContext context, FrequentTrip trip) {
+  context.push(
+    AppRoutes.route,
+    extra: ChosenRoute(
+      pickup: RoutePoint(trip.fromLabel, trip.pickup),
+      dropoff: RoutePoint(trip.toLabel, trip.dropoff),
+    ),
+  );
+}
+
 class _SavedList extends StatelessWidget {
   final AsyncValue<List<SavedLocation>> saved;
 
@@ -485,7 +574,14 @@ class _SavedList extends StatelessWidget {
       children: [
         for (final p in places.take(2))
           InkWell(
-            onTap: () => context.push(AppRoutes.route),
+            // Prefilled as the DESTINATION: a saved place tapped from Home is
+            // where the rider wants to go. Opening a blank picker made the
+            // list decorative.
+            onTap: () => context.push(
+              AppRoutes.route,
+              extra: RoutePrefill(
+                  dropoff: RoutePoint(p.label, LatLng(p.lat, p.lng))),
+            ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 11),
               child: Row(

@@ -9,6 +9,8 @@ import '../../../core/api/error_codes.dart';
 import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
 import '../../../shared/nav/app_router.dart';
+import '../../booking/data/frequent_trips_repository.dart';
+import '../../booking/presentation/home_screen.dart' show rebookFrequentTrip;
 import '../data/trip_history_repository.dart';
 import '../../../shared/widgets/skeleton.dart';
 
@@ -70,6 +72,11 @@ class RideHistoryScreen extends ConsumerWidget {
       ),
       body: Column(
         children: [
+          // Above the period filter, because it is not part of the filtered
+          // history — it is a shortcut out of it. A rider who opens Ride
+          // History to rebook the trip they always take should not have to
+          // scroll through the trips to find it.
+          const _FrequentTrips(),
           const _MonthFilterCard(),
           Expanded(
             child: history.when(
@@ -98,6 +105,83 @@ class RideHistoryScreen extends ConsumerWidget {
                     ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The journeys this rider repeats, with a one-tap rebook.
+///
+/// Hidden entirely when there are none — which is most riders, and everyone
+/// new. An empty "Frequent trips" heading over nothing is worse than no
+/// heading, and a failed fetch degrades to the same silence rather than
+/// putting an error above a screen that loaded fine.
+class _FrequentTrips extends ConsumerWidget {
+  const _FrequentTrips();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final trips = ref.watch(frequentTripsProvider).valueOrNull ?? const [];
+    if (trips.isEmpty) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Your frequent trips',
+              style: theme.textTheme.titleMedium?.copyWith(fontSize: 15)),
+          const SizedBox(height: 8),
+          for (final trip in trips)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Material(
+                color: AppColors.primary.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(14),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () => rebookFrequentTrip(context, trip),
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.replay,
+                            size: 20, color: AppColors.primary),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${trip.fromLabel} → ${trip.toLabel}',
+                                style: theme.textTheme.bodyMedium
+                                    ?.copyWith(fontSize: 14, height: 1.25),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                '${trip.tripCount} trips',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                    fontSize: 12,
+                                    color: AppColors.lightTextSecondary),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text('Rebook',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                                fontSize: 13, color: AppColors.primary)),
+                        const Icon(Icons.chevron_right,
+                            size: 20, color: AppColors.lightTextSecondary),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
