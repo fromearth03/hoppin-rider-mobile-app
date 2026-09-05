@@ -46,7 +46,7 @@ class AuthController extends StateNotifier<AuthSnapshot> {
       state = const AuthSnapshot(status: AuthStatus.signedOut);
       return;
     }
-    await _loadProfile();
+    await _loadProfile(silentAuthFailure: true);
   }
 
   Future<void> signIn(String email, String password) async {
@@ -149,7 +149,13 @@ class AuthController extends StateNotifier<AuthSnapshot> {
   }
 
   /// Reads the profile and decides whether the rider can actually use the app.
-  Future<void> _loadProfile() async {
+  ///
+  /// [silentAuthFailure] is set on launch. A session that has simply expired is
+  /// the ordinary end of a session, not something that went wrong: the rider
+  /// should meet the login screen, not the login screen with "unauthorized"
+  /// printed above it in red. Off a deliberate sign-in attempt the same failure
+  /// IS worth reporting, so the flag is per-call rather than a mode.
+  Future<void> _loadProfile({bool silentAuthFailure = false}) async {
     final profile = await _profiles.get();
 
     state = switch (profile) {
@@ -180,11 +186,30 @@ class AuthController extends StateNotifier<AuthSnapshot> {
           status: error.code == 'USER_NOT_FOUND'
               ? AuthStatus.profileIncomplete
               : AuthStatus.signedOut,
-          error: error,
+          error: silentAuthFailure && _isDeadSession(error) ? null : error,
         ),
     };
+    // Drop the dead session with it, or every launch repeats the same doomed
+    // refresh before landing on the same login screen.
+    if (state.status == AuthStatus.signedOut &&
+        state.error == null &&
+        _auth.currentSession != null) {
+      await _auth.signOut();
+    }
     if (state.status == AuthStatus.signedIn) _onSignedIn?.call();
   }
+
+  /// True when the failure means "this session simply ran out" rather than
+  /// "something went wrong".
+  ///
+  /// A network error on launch must NOT qualify — silently signing out a rider
+  /// whose train went into a tunnel loses their session for a reason that has
+  /// nothing to do with their session. Nor do the terminal-auth codes:
+  /// suspended, banned, blacklisted, signed-in-elsewhere all carry an
+  /// explanation the rider needs, and dropping it leaves them at a login screen
+  /// that will keep refusing them without ever saying why.
+  static bool _isDeadSession(ApiException e) =>
+      !e.isTerminalAuth && (e.status == 401 || e.code == 'UNAUTHORIZED');
 }
 
 final authControllerProvider =

@@ -10,7 +10,9 @@ import 'core/net/network_status.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/application/auth_controller.dart';
 import 'shared/nav/app_router.dart';
+import 'features/auth/domain/auth_state.dart';
 import 'shared/widgets/offline.dart';
+import 'shared/widgets/startup_splash.dart';
 
 class HoppinApp extends ConsumerStatefulWidget {
   const HoppinApp({super.key});
@@ -63,10 +65,16 @@ class _HoppinAppState extends ConsumerState<HoppinApp> {
         // blanking the page would take away the map, the driver's details and
         // the SOS button from someone sitting in a moving car. That screen
         // shows a reconnecting banner instead and stays usable.
-        final Widget shell = _OfflineShell(
-          router: router,
-          child: child ?? const SizedBox.shrink(),
-        );
+        // Until bootstrap says who this is, show the splash rather than the
+        // login form the router happens to have started on.
+        final starting =
+            ref.watch(authControllerProvider).status == AuthStatus.unknown;
+        final Widget shell = starting
+            ? const StartupSplash()
+            : _OfflineShell(
+                router: router,
+                child: child ?? const SizedBox.shrink(),
+              );
         if (!kIsWeb) return shell;
         return LayoutBuilder(
           builder: (context, constraints) {

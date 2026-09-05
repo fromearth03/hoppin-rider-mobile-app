@@ -276,4 +276,60 @@ void main() {
       expect(controller.state.error, isNull);
     });
   });
+  group('an expired session on launch', () {
+    test('lands on the login screen without an error to explain', () async {
+      when(() => auth.currentSession).thenReturn(_session());
+      when(() => auth.signOut()).thenAnswer((_) async => const Ok(null));
+      when(() => profiles.get()).thenAnswer(
+          (_) async => const Err(ApiException('UNAUTHORIZED', 'unauthorized', 401)));
+
+      await controller.bootstrap();
+
+      expect(controller.state.status, AuthStatus.signedOut);
+      // The bug this covers: a session simply running out was reported to the
+      // rider as "unauthorized" in red above the login form.
+      expect(controller.state.error, isNull);
+      // And the spent session is dropped, or every launch repeats the same
+      // doomed refresh.
+      verify(() => auth.signOut()).called(1);
+    });
+
+    test('still explains a suspension rather than silently signing out',
+        () async {
+      when(() => auth.currentSession).thenReturn(_session());
+      when(() => auth.signOut()).thenAnswer((_) async => const Ok(null));
+      when(() => profiles.get()).thenAnswer((_) async =>
+          const Err(ApiException('ACCOUNT_SUSPENDED', 'suspended', 401)));
+
+      await controller.bootstrap();
+
+      expect(controller.state.status, AuthStatus.signedOut);
+      expect(controller.state.error?.code, 'ACCOUNT_SUSPENDED');
+    });
+
+    test('keeps a network failure visible instead of dropping the session',
+        () async {
+      when(() => auth.currentSession).thenReturn(_session());
+      when(() => auth.signOut()).thenAnswer((_) async => const Ok(null));
+      when(() => profiles.get()).thenAnswer(
+          (_) async => const Err(ApiException('INTERNAL', 'network error', 0)));
+
+      await controller.bootstrap();
+
+      expect(controller.state.error?.code, 'INTERNAL');
+      verifyNever(() => auth.signOut());
+    });
+
+    test('a failed sign-in still reports why', () async {
+      when(() => auth.signIn(any(), any())).thenAnswer((_) async =>
+          const Err(ApiException(
+              'INVALID_CREDENTIALS', "That email and password don't match", 400)));
+
+      await controller.signIn('a@b.com', 'nope');
+
+      expect(controller.state.status, AuthStatus.signedOut);
+      expect(controller.state.error?.code, 'INVALID_CREDENTIALS');
+    });
+  });
+
 }

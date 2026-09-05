@@ -8,13 +8,34 @@ import '../device/device_id.dart';
 /// Reads the current access token for the Authorization header.
 ///
 /// Supabase owns the session — persistence, refresh, expiry — so nothing here
-/// stores or refreshes a token. Re-implementing that would mean two sources of
-/// truth for whether the rider is signed in.
+/// stores a token or manages its lifetime. Re-implementing that would mean two
+/// sources of truth for whether the rider is signed in.
 class TokenStore {
   final SupabaseClient _client;
   const TokenStore(this._client);
 
-  Future<String?> read() async => _client.auth.currentSession?.accessToken;
+  /// The access token to send, refreshed first if it has already expired.
+  ///
+  /// The SDK refreshes in the background, but a cold start races it: the
+  /// persisted session is restored with whatever access token it was last
+  /// saved with, and after an hour away that token is already dead. Sending it
+  /// anyway earns a 401, and the rider who never signed out is bounced to the
+  /// login screen with a live refresh token sitting in storage. Awaiting the
+  /// refresh here is what actually keeps them signed in.
+  ///
+  /// A failed refresh returns null rather than throwing: the refresh token is
+  /// genuinely spent, and the caller's 401 is the correct outcome.
+  Future<String?> read() async {
+    final session = _client.auth.currentSession;
+    if (session == null) return null;
+    if (!session.isExpired) return session.accessToken;
+    try {
+      final refreshed = await _client.auth.refreshSession();
+      return refreshed.session?.accessToken;
+    } catch (_) {
+      return null;
+    }
+  }
 
   bool get isSignedIn => _client.auth.currentSession != null;
 

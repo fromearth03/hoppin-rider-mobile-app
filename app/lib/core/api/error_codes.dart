@@ -50,7 +50,10 @@ class RiderErrorCopy {
     // Supabase auth — mapped from GoTrue's structured error codes
     'WEAK_PASSWORD': 'Choose a stronger password.',
     'EMAIL_TAKEN': 'An account with that email already exists.',
-    'INVALID_CREDENTIALS': 'That email or password is not right.',
+    'INVALID_CREDENTIALS':
+        "That email and password don't match an account. Check them and try again.",
+    'EMAIL_NOT_CONFIRMED':
+        'Confirm your email address first — check your inbox for the link.',
     'TOO_MANY_ATTEMPTS': 'Too many attempts. Wait a moment and try again.',
     'EXPIRED_LINK': 'That link has expired. Request a new one.',
     'AUTH_FAILED': 'We could not sign you in. Try again.',

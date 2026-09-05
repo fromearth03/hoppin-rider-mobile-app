@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/api/api_exception.dart';
+import '../../../core/api/error_codes.dart';
 import '../../../core/auth/token_store.dart';
 import '../../../core/config.dart';
 import '../../../core/result.dart';
@@ -156,7 +157,22 @@ class AuthRepository {
   /// break a plain `contains(...)` check. `code` is null for some errors that
   /// occur before a response is received (e.g. older tokens, transport
   /// failures), so the message/status heuristics remain as a fallback.
+  ///
+  /// The mapped exception carries OUR copy, not GoTrue's. `ApiException.message`
+  /// is contracted as server-owned rider-facing text and `RiderErrorCopy` shows
+  /// it verbatim — but GoTrue is not our server and never wrote copy for a
+  /// rider. Passing its string through is how "Invalid login credentials"
+  /// reached the login screen. Where we have deliberate copy for the code, that
+  /// wins; anything unmapped still falls back to GoTrue's text, which beats a
+  /// blank error.
   ApiException _map(AuthException e) {
+    final mapped = _classify(e);
+    final ours = RiderErrorCopy.forCode(mapped.code);
+    if (ours == null) return mapped;
+    return ApiException(mapped.code, ours, mapped.status);
+  }
+
+  ApiException _classify(AuthException e) {
     final status = int.tryParse(e.statusCode ?? '') ?? 0;
     final message = e.message.toLowerCase();
 
@@ -171,6 +187,12 @@ class AuthRepository {
         return ApiException('TOO_MANY_ATTEMPTS', e.message, status);
       case 'weak_password':
         return ApiException('WEAK_PASSWORD', e.message, status);
+      case 'invalid_credentials':
+        return ApiException('INVALID_CREDENTIALS', e.message, status);
+      // Also a 400, and it would otherwise be reported as a wrong password —
+      // sending the rider to reset a password that was never the problem.
+      case 'email_not_confirmed':
+        return ApiException('EMAIL_NOT_CONFIRMED', e.message, status);
     }
 
     if (status == 429 || message.contains('rate limit')) {
