@@ -11,6 +11,7 @@ import 'core/theme/app_theme.dart';
 import 'features/auth/application/auth_controller.dart';
 import 'shared/nav/app_router.dart';
 import 'features/auth/domain/auth_state.dart';
+import 'shared/widgets/app_gate.dart';
 import 'shared/widgets/offline.dart';
 import 'shared/widgets/startup_splash.dart';
 
@@ -71,9 +72,14 @@ class _HoppinAppState extends ConsumerState<HoppinApp> {
             ref.watch(authControllerProvider).status == AuthStatus.unknown;
         final Widget shell = starting
             ? const StartupSplash()
-            : _OfflineShell(
-                router: router,
-                child: child ?? const SizedBox.shrink(),
+            // AppGate wraps the router's output rather than living on a route:
+            // a maintenance screen the rider can navigate away from is not a
+            // maintenance screen.
+            : AppGate(
+                child: _OfflineShell(
+                  router: router,
+                  child: child ?? const SizedBox.shrink(),
+                ),
               );
         if (!kIsWeb) return shell;
         return LayoutBuilder(
