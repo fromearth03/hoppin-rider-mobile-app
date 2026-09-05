@@ -365,4 +365,38 @@ void main() {
     expect(find.text('Home'), findsOneWidget);
     expect(find.text('Saved Places'), findsOneWidget);
   });
+  testWidgets('tapping a saved place offers to book a ride from or to it',
+      (tester) async {
+    when(() => repo.list()).thenAnswer((_) async => Ok([_place()]));
+
+    await tester.pumpWidget(_harness(repo));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Home'));
+    await tester.pumpAndSettle();
+
+    // A saved place the rider cannot ride to is only a bookmark — the whole
+    // point of saving it is one tap into the booking flow.
+    expect(find.text('Ride from here'), findsOneWidget);
+    expect(find.text('Ride to here'), findsOneWidget);
+    expect(find.text('Rename'), findsOneWidget);
+    expect(find.text('Remove'), findsOneWidget);
+  });
+
+  testWidgets('the add dialog offers picking on the map as well as typing',
+      (tester) async {
+    when(() => repo.list()).thenAnswer((_) async => const Ok([]));
+
+    await tester.pumpWidget(_harness(repo, placesRepo: placesRepo));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add a place'));
+    await tester.pumpAndSettle();
+
+    // Plenty of real pickups have no searchable name — a side entrance, an
+    // unnamed car park — so typing cannot be the only way in.
+    expect(find.text('Choose on map instead'), findsOneWidget);
+    expect(find.text('Search for a place'), findsOneWidget);
+  });
+
 }

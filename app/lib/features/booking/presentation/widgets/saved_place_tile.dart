@@ -13,11 +13,16 @@ class SavedPlaceTile extends StatelessWidget {
   final VoidCallback? onRename;
   final VoidCallback? onRemove;
 
+  /// Tapping the row itself — offers to book a ride from or to this place.
+  /// A saved place the rider cannot ride to is just a bookmark.
+  final VoidCallback? onTap;
+
   const SavedPlaceTile({
     super.key,
     required this.place,
     required this.onRename,
     required this.onRemove,
+    this.onTap,
   });
 
   @override
@@ -29,35 +34,41 @@ class SavedPlaceTile extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: border),
       ),
-      child: Row(
-        children: [
-          const Icon(Icons.star_outline, color: AppColors.accent),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Text(
-              place.label,
-              style: theme.textTheme.bodyLarge,
-              overflow: TextOverflow.ellipsis,
-            ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              const Icon(Icons.star_outline, color: AppColors.accent),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  place.label,
+                  style: theme.textTheme.bodyLarge,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              IconButton(
+                onPressed: onRename,
+                icon: const Icon(Icons.edit_outlined),
+                tooltip: 'Rename this place',
+              ),
+              IconButton(
+                onPressed: onRemove,
+                icon: const Icon(Icons.delete_outline),
+                color: AppColors.negative,
+                tooltip: 'Remove this place',
+              ),
+            ],
           ),
-          IconButton(
-            onPressed: onRename,
-            icon: const Icon(Icons.edit_outlined),
-            tooltip: 'Rename this place',
-          ),
-          IconButton(
-            onPressed: onRemove,
-            icon: const Icon(Icons.delete_outline),
-            color: AppColors.negative,
-            tooltip: 'Remove this place',
-          ),
-        ],
+        ),
       ),
     );
   }

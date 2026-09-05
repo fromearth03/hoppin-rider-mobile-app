@@ -8,6 +8,7 @@ import '../../../../core/api/error_codes.dart';
 import '../../../../core/result.dart';
 import '../../../../core/theme/colors.dart';
 import '../../data/places_repository.dart';
+import '../location_picker_screen.dart';
 
 /// A place the rider picked from search, ready to be named and saved.
 class ChosenPlace {
@@ -74,10 +75,10 @@ class _RenameDialogState extends State<_RenameDialog> {
   }
 }
 
-/// Search-and-name flow for adding a saved place. Coordinates come from a
-/// real search result — the repository requires lat/lng, and inventing a
-/// coordinate for a typed label would silently save the wrong place. Returns
-/// null if the rider cancelled.
+/// Search-or-point flow for adding a saved place. Coordinates come from a real
+/// search result or from a pin the rider dropped on the map — the repository
+/// requires lat/lng, and inventing a coordinate for a typed label would
+/// silently save the wrong place. Returns null if the rider cancelled.
 Future<ChosenPlace?> showAddPlaceDialog(BuildContext context) {
   return showDialog<ChosenPlace>(
     context: context,
@@ -100,7 +101,9 @@ class _AddPlaceDialogState extends ConsumerState<_AddPlaceDialog> {
   List<PlaceSuggestion> _results = const [];
   bool _searching = false;
   ApiException? _searchError;
-  PlaceSuggestion? _chosen;
+  /// The place to save, however it was chosen: a search result or a dropped
+  /// pin. Both collapse to the same three fields the repository needs.
+  ChosenPlace? _chosen;
   String? _saveError;
 
   @override
@@ -144,12 +147,25 @@ class _AddPlaceDialogState extends ConsumerState<_AddPlaceDialog> {
     });
   }
 
-  void _choose(PlaceSuggestion place) {
+  void _choose(ChosenPlace place) {
     setState(() {
       _chosen = place;
       _results = const [];
       _label.text = place.label;
+      _saveError = null;
     });
+  }
+
+  Future<void> _pickOnMap() async {
+    final picked = await Navigator.of(context).push<PickedPoint>(
+      MaterialPageRoute(
+        builder: (_) => const LocationPickerScreen(title: 'Save a place'),
+        fullscreenDialog: true,
+      ),
+    );
+    if (picked == null || !mounted) return;
+    _search.clear();
+    _choose(ChosenPlace(label: picked.label, lat: picked.lat, lng: picked.lng));
   }
 
   void _save() {
@@ -177,22 +193,60 @@ class _AddPlaceDialogState extends ConsumerState<_AddPlaceDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(
-              controller: _search,
-              autofocus: true,
-              onChanged: _onSearchChanged,
-              decoration: const InputDecoration(
-                labelText: 'Search for a place',
-                prefixIcon: Icon(Icons.search),
+            if (chosen == null)
+              TextField(
+                controller: _search,
+                autofocus: true,
+                onChanged: _onSearchChanged,
+                decoration: const InputDecoration(
+                  labelText: 'Search for a place',
+                  prefixIcon: Icon(Icons.search),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
+            if (chosen == null) ...[
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _pickOnMap,
+                  icon: const Icon(Icons.map_outlined, size: 18),
+                  label: const Text('Choose on map instead'),
+                ),
+              ),
+            ],
+            const SizedBox(height: 4),
             _resultsArea(theme),
             if (chosen != null) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: 4),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.place_outlined,
+                      size: 18, color: AppColors.accent),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(chosen.label,
+                        style: theme.textTheme.bodySmall,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis),
+                  ),
+                  TextButton(
+                    onPressed: () => setState(() {
+                      _chosen = null;
+                      _label.clear();
+                    }),
+                    child: const Text('Change'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
               TextField(
                 controller: _label,
-                decoration: const InputDecoration(labelText: 'Save as'),
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'Save as',
+                  hintText: 'Home, Work, Mum\u2019s',
+                ),
               ),
             ],
             if (_saveError != null) ...[
@@ -247,7 +301,8 @@ class _AddPlaceDialogState extends ConsumerState<_AddPlaceDialog> {
             ),
             title: Text(result.label, overflow: TextOverflow.ellipsis),
             subtitle: result.postcode == null ? null : Text(result.postcode!),
-            onTap: () => _choose(result),
+            onTap: () => _choose(ChosenPlace(
+                label: result.label, lat: result.lat, lng: result.lng)),
           );
         },
       ),

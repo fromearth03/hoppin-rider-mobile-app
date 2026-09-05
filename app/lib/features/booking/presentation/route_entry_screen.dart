@@ -38,6 +38,18 @@ class ChosenRoute {
   });
 }
 
+/// ONE end of a trip, known up front — booking from (or to) a saved place,
+/// where the other end is still the rider's to choose.
+///
+/// Distinct from [ChosenRoute], which is a complete route being re-edited: a
+/// prefill leaves the opposite field blank and focused, so the rider lands in
+/// the picker already typing the half that is actually missing.
+class RoutePrefill {
+  final RoutePoint? pickup;
+  final RoutePoint? dropoff;
+  const RoutePrefill({this.pickup, this.dropoff});
+}
+
 /// Where to, and via where — a collapsible sheet over the FULL live map.
 ///
 /// The design shows Suggestion and Saved as tabs. They are one response
@@ -58,7 +70,12 @@ class RouteEntryScreen extends ConsumerStatefulWidget {
   /// rider from blank fields.
   final ChosenRoute? initial;
 
-  const RouteEntryScreen({super.key, this.pickMode = false, this.initial});
+  /// Only one end known — see [RoutePrefill]. Ignored when [initial] is set,
+  /// which already fills both.
+  final RoutePrefill? prefill;
+
+  const RouteEntryScreen(
+      {super.key, this.pickMode = false, this.initial, this.prefill});
 
   @override
   ConsumerState<RouteEntryScreen> createState() => _RouteEntryScreenState();
@@ -102,6 +119,23 @@ class _RouteEntryScreenState extends ConsumerState<RouteEntryScreen> {
         _stops.add(TextEditingController(text: stop.label));
         _stopPoints[_stops.length - 1] = stop;
       }
+      _refreshMarkers();
+      return;
+    }
+    final pre = widget.prefill;
+    if (pre != null) {
+      if (pre.pickup != null) {
+        _pickup.text = pre.pickup!.label;
+        _pickupPoint = pre.pickup;
+      }
+      if (pre.dropoff != null) {
+        _dropoff.text = pre.dropoff!.label;
+        _dropoffPoint = pre.dropoff;
+      }
+      // Point the search at the end that is still empty, so the rider's first
+      // keystroke fills the missing half rather than overwriting the place
+      // they just chose.
+      _activeField = pre.pickup != null ? 1 : 0;
       _refreshMarkers();
     }
   }

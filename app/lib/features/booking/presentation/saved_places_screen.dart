@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/api/error_codes.dart';
 import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
+import '../../../core/geo.dart';
+import '../../../shared/nav/app_router.dart';
 import '../data/saved_locations_repository.dart';
+import 'route_entry_screen.dart';
 import 'widgets/saved_place_tile.dart';
 import 'widgets/saved_place_dialogs.dart';
 import '../../../shared/widgets/skeleton.dart';
@@ -71,7 +75,8 @@ class _SavedPlacesScreenState extends ConsumerState<SavedPlacesScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Remove this place?'),
         content: Text(
-            '"${place.label}" will be removed from your saved places. This cannot be undone.'),
+          '"${place.label}" will be removed from your saved places. This cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -110,7 +115,10 @@ class _SavedPlacesScreenState extends ConsumerState<SavedPlacesScreen> {
   }
 
   Future<void> _openRename(SavedLocation place) async {
-    final label = await showRenamePlaceDialog(context, initialLabel: place.label);
+    final label = await showRenamePlaceDialog(
+      context,
+      initialLabel: place.label,
+    );
     if (label == null || !mounted) return;
     await _renamePlace(place, label);
   }
@@ -132,6 +140,82 @@ class _SavedPlacesScreenState extends ConsumerState<SavedPlacesScreen> {
 
     setState(() => _busyId = null);
     await _load();
+  }
+
+  /// Book a ride using this place as one end. The other end is left blank and
+  /// focused in the picker — a saved place is a shortcut into booking, not a
+  /// separate destination list the rider has to copy an address out of.
+  Future<void> _bookWith(SavedLocation place, {required bool asPickup}) async {
+    final point = RoutePoint(place.label, LatLng(place.lat, place.lng));
+    context.push(
+      AppRoutes.route,
+      extra: asPickup
+          ? RoutePrefill(pickup: point)
+          : RoutePrefill(dropoff: point),
+    );
+  }
+
+  Future<void> _openActions(SavedLocation place) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheet) => SafeArea(
+        // Scrollable rather than a bare Column: six rows plus a long saved
+        // label overflows the default sheet height on a short screen or at a
+        // large text scale.
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.star, color: AppColors.accent),
+                title: Text(place.label),
+                subtitle: Text(
+                  '${place.lat.toStringAsFixed(5)}, ${place.lng.toStringAsFixed(5)}',
+                ),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.my_location),
+                title: const Text('Ride from here'),
+                onTap: () {
+                  Navigator.of(sheet).pop();
+                  _bookWith(place, asPickup: true);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.place_outlined),
+                title: const Text('Ride to here'),
+                onTap: () {
+                  Navigator.of(sheet).pop();
+                  _bookWith(place, asPickup: false);
+                },
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.edit_outlined),
+                title: const Text('Rename'),
+                onTap: () {
+                  Navigator.of(sheet).pop();
+                  _openRename(place);
+                },
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.delete_outline,
+                  color: AppColors.negative,
+                ),
+                title: const Text('Remove'),
+                onTap: () {
+                  Navigator.of(sheet).pop();
+                  _confirmRemove(place);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _openAdd() async {
@@ -187,7 +271,8 @@ class _SavedPlacesScreenState extends ConsumerState<SavedPlacesScreen> {
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(28)),
+                    borderRadius: BorderRadius.circular(28),
+                  ),
                 ),
               ),
             ],
@@ -207,11 +292,17 @@ class _SavedPlacesScreenState extends ConsumerState<SavedPlacesScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline,
-                size: 40, color: AppColors.negative),
+            const Icon(
+              Icons.error_outline,
+              size: 40,
+              color: AppColors.negative,
+            ),
             const SizedBox(height: 12),
-            Text(_errorMessage!,
-                textAlign: TextAlign.center, style: theme.textTheme.bodyLarge),
+            Text(
+              _errorMessage!,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyLarge,
+            ),
             const SizedBox(height: 16),
             OutlinedButton(onPressed: _load, child: const Text('Retry')),
           ],
@@ -224,14 +315,23 @@ class _SavedPlacesScreenState extends ConsumerState<SavedPlacesScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.location_off_outlined,
-                size: 40, color: theme.textTheme.bodyMedium?.color),
+            Icon(
+              Icons.location_off_outlined,
+              size: 40,
+              color: theme.textTheme.bodyMedium?.color,
+            ),
             const SizedBox(height: 12),
-            Text('No saved places yet',
-                style: theme.textTheme.bodyLarge, textAlign: TextAlign.center),
+            Text(
+              'No saved places yet',
+              style: theme.textTheme.bodyLarge,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 4),
-            Text('Add a place to find it faster next time.',
-                style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
+            Text(
+              'Save your home, work or anywhere you go often — then book straight from it.',
+              style: theme.textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       );
@@ -246,6 +346,7 @@ class _SavedPlacesScreenState extends ConsumerState<SavedPlacesScreen> {
           final busy = _busyId == place.id;
           return SavedPlaceTile(
             place: place,
+            onTap: busy ? null : () => _openActions(place),
             onRename: busy ? null : () => _openRename(place),
             onRemove: busy ? null : () => _confirmRemove(place),
           );

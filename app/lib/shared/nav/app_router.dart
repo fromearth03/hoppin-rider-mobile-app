@@ -257,10 +257,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         // pushing fare-confirm (the scheduling screen books its own way).
         // extra ChosenRoute → pick mode with the fields pre-filled to EDIT
         // that route rather than restarting from blank.
+        // extra RoutePrefill → one end filled (booking from a saved place),
+        // normal booking mode: confirming pushes fare-confirm as usual.
         builder: (_, state) => RouteEntryScreen(
           pickMode: state.extra == 'pick' || state.extra is ChosenRoute,
           initial: state.extra is ChosenRoute
               ? state.extra as ChosenRoute
+              : null,
+          prefill: state.extra is RoutePrefill
+              ? state.extra as RoutePrefill
               : null,
         ),
       ),

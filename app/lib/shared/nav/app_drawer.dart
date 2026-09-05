@@ -60,6 +60,14 @@ class AppDrawer extends ConsumerWidget {
                     },
                   ),
                   _Item(
+                    icon: Icons.bookmark_border,
+                    label: 'My Addresses',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      context.push(AppRoutes.savedPlaces);
+                    },
+                  ),
+                  _Item(
                     icon: Icons.calendar_today_outlined,
                     label: 'Schedule Rides',
                     onTap: () {
