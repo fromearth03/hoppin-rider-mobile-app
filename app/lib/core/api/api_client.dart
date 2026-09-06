@@ -43,20 +43,11 @@ class ApiClient {
     // Let non-2xx through so the envelope can be parsed rather than thrown.
     _dio.options.validateStatus = (_) => true;
 
-    _dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) async {
-          final token = await _tokens.read();
-          if (token != null) options.headers['Authorization'] = 'Bearer $token';
-
-          // The blacklist gate is fail-open on a missing header, so omitting this
-          // silently disables it. Always send one.
-          options.headers['X-Hoppin-Device-ID'] = await _device.resolve();
-
-          handler.next(options);
-        },
-      ),
-    );
+    // Replace rather than append. The Dio instance is a shared singleton, so a
+    // second ApiClient over the same Dio used to leave BOTH interceptors in the
+    // chain, each independently reading the token on every request.
+    _dio.interceptors.removeWhere((i) => i is _HoppinHeaders);
+    _dio.interceptors.add(_HoppinHeaders(_tokens, _device));
   }
 
   Future<Result<T>> get<T>(String path, {Map<String, dynamic>? query}) =>
@@ -164,10 +155,58 @@ class ApiClient {
   }
 }
 
+/// Attaches the auth and device headers to every request.
+///
+/// A named type rather than an inline `InterceptorsWrapper` so a rebuilt client
+/// can find and replace its own interceptor instead of stacking another one.
+class _HoppinHeaders extends Interceptor {
+  final TokenStore _tokens;
+  final DeviceIdProvider _device;
+
+  _HoppinHeaders(this._tokens, this._device);
+
+  /// How long the headers may take before the request goes without them.
+  ///
+  /// Dio's connectTimeout does not start until the connection is attempted, so
+  /// anything awaited HERE is outside every timeout the client has: a stalled
+  /// token refresh or device-id lookup blocks the request before it is sent,
+  /// forever, and the screen waiting on it never leaves its loading state.
+  /// Sending an unauthenticated request is recoverable — a 401 the app already
+  /// handles. Never sending one is not.
+  /// Comfortably longer than TokenStore's own 5s refresh bound, so in the
+  /// normal stalled-refresh case that fallback wins and the request still
+  /// carries the stale token. This is the backstop for the case nothing else
+  /// catches.
+  static const _headerBudget = Duration(seconds: 8);
+
+  @override
+  void onRequest(
+      RequestOptions options, RequestInterceptorHandler handler) async {
+    try {
+      final token = await _tokens.read().timeout(_headerBudget);
+      if (token != null) options.headers['Authorization'] = 'Bearer $token';
+    } catch (_) {
+      // Go without it; the server decides.
+    }
+    try {
+      // The blacklist gate is fail-open on a missing header, so omitting this
+      // silently disables it. Always send one when we can get one.
+      options.headers['X-Hoppin-Device-ID'] =
+          await _device.resolve().timeout(_headerBudget);
+    } catch (_) {
+      // Same trade: a request without the header beats no request at all.
+    }
+    handler.next(options);
+  }
+}
+
 final dioProvider = Provider<Dio>((ref) => Dio());
 
 final apiClientProvider = Provider<ApiClient>((ref) {
-  final status = ref.watch(networkStatusProvider);
+  // read, NOT watch. The client only calls a method on this notifier; watching
+  // it rebuilt the whole client every time reachability flipped, which meant a
+  // new interceptor on the shared Dio each time.
+  final status = ref.read(networkStatusProvider);
   final client = ApiClient(
     ref.watch(dioProvider),
     ref.watch(tokenStoreProvider),
