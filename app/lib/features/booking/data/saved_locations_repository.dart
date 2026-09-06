@@ -40,15 +40,15 @@ class SavedLocationsRepository {
   final ApiClient _api;
   const SavedLocationsRepository(this._api);
 
+  /// The endpoint answers with a BARE JSON array, not an object wrapping one
+  /// (`rider_handler.go` → `c.JSON(http.StatusOK, locs)`). Asking for a Map
+  /// here made every response fail its cast, so this screen could never load.
   Future<Result<List<SavedLocation>>> list() async {
-    final result =
-        await _api.get<Map<String, dynamic>>('/me/saved-locations');
+    final result = await _api.get<List<dynamic>>('/me/saved-locations');
     return switch (result) {
       // `List.cast()` is lazy: it throws when `map` pulls a non-object element,
       // escaping a method that promises a Result. Filter by type instead.
-      Ok(:final value) => Ok((value['saved_locations'] is List
-              ? value['saved_locations'] as List
-              : const [])
+      Ok(:final value) => Ok(value
           .whereType<Map<String, dynamic>>()
           .map(SavedLocation.tryFromJson)
           .whereType<SavedLocation>()

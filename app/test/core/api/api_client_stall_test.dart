@@ -18,12 +18,14 @@ class _MockDevice extends Mock implements DeviceIdProvider {}
 /// on is the client's own pre-request work.
 class _InstantAdapter implements HttpClientAdapter {
   String? sentAuth;
+  Object body = const {'ok': true};
+  int status = 200;
 
   @override
   Future<ResponseBody> fetch(RequestOptions options,
       Stream<Uint8List>? requestStream, Future<void>? cancelFuture) async {
     sentAuth = options.headers['Authorization'] as String?;
-    return ResponseBody.fromString(jsonEncode({'ok': true}), 200,
+    return ResponseBody.fromString(jsonEncode(body), status,
         headers: {
           Headers.contentTypeHeader: [Headers.jsonContentType]
         });
@@ -88,4 +90,34 @@ void main() {
 
     verify(() => tokens.read()).called(1);
   });
+  test('a response of the wrong shape is an error, not a crash', () async {
+    // The bug this covers: `response.data as T` threw a TypeError from inside
+    // an async body, so it escaped as an UNHANDLED error — the caller's future
+    // never completed and the screen awaiting it sat on its skeleton forever.
+    // /me/saved-locations returns a bare array; the repository asked for a Map.
+    when(() => tokens.read()).thenAnswer((_) async => 'jwt-abc');
+    adapter.body = [
+      {'id': '1', 'label': 'Home'}
+    ];
+
+    final client = ApiClient(dio, tokens, device, baseUrl: 'https://x.test');
+    final result = await client.get<Map<String, dynamic>>('/anything');
+
+    expect(result, isA<Err<Map<String, dynamic>>>());
+    expect((result as Err).error.code, 'UNEXPECTED_RESPONSE');
+  });
+
+  test('a matching shape still comes back as Ok', () async {
+    when(() => tokens.read()).thenAnswer((_) async => 'jwt-abc');
+    adapter.body = [
+      {'id': '1', 'label': 'Home'}
+    ];
+
+    final client = ApiClient(dio, tokens, device, baseUrl: 'https://x.test');
+    final result = await client.get<List<dynamic>>('/anything');
+
+    expect(result, isA<Ok<List<dynamic>>>());
+    expect((result as Ok).value, hasLength(1));
+  });
+
 }

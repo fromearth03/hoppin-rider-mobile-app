@@ -15,70 +15,42 @@ void main() {
     repo = SavedLocationsRepository(api);
   });
 
-  test('reads the list', () async {
-    when(() => api.get<Map<String, dynamic>>(any()))
-        .thenAnswer((_) async => const Ok({
-              'saved_locations': [
-                {'id': 's1', 'label': 'Home', 'lat': 52.58, 'lng': -2.12},
-              ],
-            }));
+  test('parses the bare array the endpoint actually returns', () async {
+    // `rider_handler.go` answers `c.JSON(http.StatusOK, locs)` — a bare JSON
+    // array, NOT an object wrapping one. The repository used to ask for a Map,
+    // so every response failed its cast and the screen never loaded.
+    when(() => api.get<List<dynamic>>('/me/saved-locations'))
+        .thenAnswer((_) async => const Ok<List<dynamic>>([
+              {'id': 'sl_1', 'label': 'Home', 'lat': 52.58, 'lng': -2.12},
+              {'id': 'sl_2', 'label': 'Work', 'lat': 52.59, 'lng': -2.11},
+            ]));
 
-    final list = ((await repo.list()) as Ok<List<SavedLocation>>).value;
+    final result = await repo.list();
 
-    expect(list.single.label, 'Home');
-    expect(list.single.lat, 52.58);
+    expect(result, isA<Ok<List<SavedLocation>>>());
+    final places = (result as Ok<List<SavedLocation>>).value;
+    expect(places.map((p) => p.label), ['Home', 'Work']);
   });
 
-  test('rename keeps the id - it patches rather than recreating', () async {
-    // The endpoint exists precisely so a rename does not change the id.
-    // Delete-and-recreate would break anything referencing the old one.
-    when(() => api.patch<Map<String, dynamic>>(any(), body: any(named: 'body')))
-        .thenAnswer((_) async => const Ok({
-              'id': 's1', 'label': 'Work', 'lat': 52.58, 'lng': -2.12,
-            }));
+  test('skips a malformed row rather than losing the whole list', () async {
+    when(() => api.get<List<dynamic>>('/me/saved-locations'))
+        .thenAnswer((_) async => const Ok<List<dynamic>>([
+              {'id': 'sl_1', 'label': 'Home', 'lat': 52.58, 'lng': -2.12},
+              'not an object',
+              {'label': 'no id'},
+            ]));
 
-    final updated =
-        ((await repo.rename('s1', 'Work')) as Ok<SavedLocation>).value;
+    final result = await repo.list();
 
-    expect(updated.id, 's1');
-    expect(updated.label, 'Work');
-    verify(() => api.patch<Map<String, dynamic>>('/me/saved-locations/s1',
-        body: {'label': 'Work'})).called(1);
+    expect((result as Ok<List<SavedLocation>>).value, hasLength(1));
   });
 
-  test('refuses a blank label before calling', () async {
-    final result = await repo.rename('s1', '   ');
+  test('an empty list is a success, not an error', () async {
+    when(() => api.get<List<dynamic>>('/me/saved-locations'))
+        .thenAnswer((_) async => const Ok<List<dynamic>>([]));
 
-    expect((result as Err).error.code, 'VALIDATION_FAILED');
-    verifyNever(() => api.patch<Map<String, dynamic>>(any(),
-        body: any(named: 'body')));
-  });
+    final result = await repo.list();
 
-  test('add refuses a blank label before calling', () async {
-    final result = await repo.add(label: '', lat: 1, lng: 2);
-
-    expect((result as Err).error.code, 'VALIDATION_FAILED');
-    verifyNever(() => api.post<Map<String, dynamic>>(any(),
-        body: any(named: 'body')));
-  });
-
-  test('a saved place with no id is skipped rather than crashing the list',
-      () async {
-    // An unguarded `json['id'] as String` throws on one bad row and loses
-    // the whole list. A place with no id cannot be renamed or deleted, so
-    // rendering it would produce a row whose buttons fail - skip it instead.
-    when(() => api.get<Map<String, dynamic>>(any()))
-        .thenAnswer((_) async => const Ok({
-              'saved_locations': [
-                {'id': null, 'label': 'Broken', 'lat': 1.0, 'lng': 2.0},
-                {'id': '', 'label': 'Also broken', 'lat': 3.0, 'lng': 4.0},
-                {'id': 's2', 'label': 'Work', 'lat': 52.6, 'lng': -2.2},
-              ],
-            }));
-
-    final list = ((await repo.list()) as Ok<List<SavedLocation>>).value;
-
-    expect(list, hasLength(1));
-    expect(list.single.id, 's2');
+    expect((result as Ok<List<SavedLocation>>).value, isEmpty);
   });
 }

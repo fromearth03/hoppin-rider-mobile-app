@@ -110,7 +110,18 @@ class ApiClient {
       onReachability?.call(reachedServer: true);
       final status = response.statusCode ?? 500;
       if (status >= 200 && status < 300) {
-        return Ok<T>(response.data as T);
+        final data = response.data;
+        // Checked, not cast. A blind `as T` throws a TypeError from inside this
+        // async body, which escapes as an UNHANDLED error — the caller's future
+        // never completes, and a screen awaiting it sits on its loading state
+        // forever with nothing on screen to explain it. A wrong shape is a
+        // failed call like any other, so it comes back as one.
+        if (data is T) return Ok<T>(data);
+        return Err<T>(ApiException(
+          'UNEXPECTED_RESPONSE',
+          'The server sent something this app could not read.',
+          status,
+        ));
       }
       return Err<T>(parseError(response));
     } on DioException catch (e) {

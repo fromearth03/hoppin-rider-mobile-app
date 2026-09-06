@@ -75,6 +75,7 @@ class RiderErrorCopy {
     'NOT_FOUND': 'That could not be found.',
     'RIDE_NOT_FOUND': 'That trip no longer exists.',
     'INTERNAL': 'Something went wrong on our side. Try again.',
+    'UNEXPECTED_RESPONSE': 'The server sent something this app could not read.',
     'STORAGE_DISABLED': 'Uploads are unavailable right now.',
   };
 
