@@ -39,12 +39,17 @@ class ChosenRoute {
   });
 }
 
-/// ONE end of a trip, known up front — booking from (or to) a saved place,
-/// where the other end is still the rider's to choose.
+/// Ends of a trip that are known up front — booking from (or to) a saved place,
+/// or rebooking a journey the rider has already taken.
 ///
-/// Distinct from [ChosenRoute], which is a complete route being re-edited: a
-/// prefill leaves the opposite field blank and focused, so the rider lands in
-/// the picker already typing the half that is actually missing.
+/// Either end, or both. What separates this from [ChosenRoute] is not how much
+/// is filled in but what the caller WANTS: a ChosenRoute means "let the rider
+/// pick a route and hand it back to me" (the scheduling screen), which puts the
+/// picker in pick mode and pops on confirm. A prefill means "start booking, with
+/// these already filled" — Confirm books the ride, as normal.
+///
+/// With one end given, the opposite field is the one focused, so the rider lands
+/// in the picker already typing the half that is actually missing.
 class RoutePrefill {
   final RoutePoint? pickup;
   final RoutePoint? dropoff;

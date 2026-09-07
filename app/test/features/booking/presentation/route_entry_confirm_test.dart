@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hoppin_rider/core/geo.dart';
 import 'package:hoppin_rider/core/result.dart';
 import 'package:hoppin_rider/core/theme/app_theme.dart';
 import 'package:hoppin_rider/features/booking/data/places_repository.dart';
 import 'package:hoppin_rider/features/booking/data/saved_locations_repository.dart';
+import 'package:hoppin_rider/features/booking/presentation/rebook.dart';
 import 'package:hoppin_rider/features/booking/presentation/route_entry_screen.dart';
 import 'package:hoppin_rider/shared/nav/app_router.dart';
 import 'package:mocktail/mocktail.dart';
@@ -163,6 +165,73 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('You have not saved any places yet.'), findsOneWidget);
+  });
+
+  testWidgets('a rebook confirms into the fare screen, not back where it came from',
+      (tester) async {
+    // The bug: rebook sent a ChosenRoute, and the router reads that as "pick a
+    // route and hand it back", which puts the screen in pick mode — so Confirm
+    // POPPED with a result and the rider landed back on Ride History.
+    final router = GoRouter(
+      initialLocation: '/history',
+      routes: [
+        GoRoute(
+          path: '/history',
+          builder: (_, __) => Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => rebookJourney(
+                  context,
+                  pickupLabel: 'Wolverhampton City Centre',
+                  pickup: const LatLng(52.5851, -2.1281),
+                  dropoffLabel: 'Willenhall',
+                  dropoff: const LatLng(52.5912, -2.1104),
+                ),
+                child: const Text('Rebook'),
+              ),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: AppRoutes.route,
+          builder: (_, state) => RouteEntryScreen(
+            pickMode: state.extra == 'pick' || state.extra is ChosenRoute,
+            initial: state.extra is ChosenRoute ? state.extra as ChosenRoute : null,
+            prefill: state.extra is RoutePrefill ? state.extra as RoutePrefill : null,
+          ),
+        ),
+        GoRoute(
+          path: AppRoutes.fareConfirm,
+          builder: (_, state) {
+            received = state.extra as ChosenRoute?;
+            return const Scaffold(body: Text('fare screen'));
+          },
+        ),
+      ],
+    );
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        placesRepositoryProvider.overrideWithValue(places),
+        savedLocationsRepositoryProvider.overrideWithValue(saved),
+      ],
+      child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Rebook'));
+    await tester.pumpAndSettle();
+
+    // Both ends arrive filled, so Confirm is live immediately.
+    final confirm = find.widgetWithText(FilledButton, 'Confirm Route');
+    expect(tester.widget<FilledButton>(confirm).onPressed, isNotNull);
+
+    await tester.tap(confirm);
+    await tester.pumpAndSettle();
+
+    expect(find.text('fare screen'), findsOneWidget);
+    expect(find.text('Rebook'), findsNothing); // did NOT bounce back
+    expect(received?.pickup.label, 'Wolverhampton City Centre');
+    expect(received?.dropoff.label, 'Willenhall');
   });
 
 }
