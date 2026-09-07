@@ -41,7 +41,12 @@ class _FareConfirmFlowState extends ConsumerState<FareConfirmFlow> {
           pickup: widget.route.pickup.position,
           dropoff: widget.route.dropoff.position,
           vehicleCategoryId: category.id,
-          waypoints: [for (final stop in widget.route.stops) stop.position],
+          // Labels travel with the stops, so the trip screen names them the
+          // way the rider chose them instead of falling back to "Stop 1".
+          waypoints: [
+            for (final stop in widget.route.stops)
+              (label: stop.label, position: stop.position),
+          ],
           // The confirmed quote rides along so the booking-created ride
           // carries the exact fare the rider agreed to.
           estimatePence: estimate?.totalPence.value ?? 0,

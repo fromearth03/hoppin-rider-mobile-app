@@ -39,7 +39,11 @@ class BookingRepository {
     required LatLng pickup,
     required LatLng dropoff,
     required String vehicleCategoryId,
-    List<LatLng> waypoints = const [],
+    /// Ordered intermediate stops. Labelled, not bare coordinates: the server
+    /// stores whatever it is sent, and sending only lat/lng is why a stop the
+    /// rider chose as "Molineux Stadium" came back as "Stop 1" on the trip
+    /// screen — the name existed on the confirm screen and nowhere after it.
+    List<({String label, LatLng position})> waypoints = const [],
     // The estimate the rider confirmed, carried onto the booking-created
     // ride so estimate = quote = charge from the first moment.
     int estimatePence = 0,
@@ -70,7 +74,13 @@ class BookingRepository {
         'dropoff_lng': dropoff.lng,
         'vehicle_category_id': vehicleCategoryId,
         if (waypoints.isNotEmpty)
-          'waypoints': waypoints.map((w) => w.toJson()).toList(),
+          'waypoints': [
+            for (final w in waypoints)
+              {
+                ...w.position.toJson(),
+                if (w.label.trim().isNotEmpty) 'label': w.label.trim(),
+              },
+          ],
         if (estimatePence > 0) 'estimate_pence': estimatePence,
         if (estimateDistanceMeters > 0)
           'estimate_distance_meters': estimateDistanceMeters,

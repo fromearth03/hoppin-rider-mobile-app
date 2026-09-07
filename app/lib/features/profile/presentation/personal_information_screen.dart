@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/api/error_codes.dart';
+import 'widgets/cancellation_rate_card.dart';
 import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
 import '../../../shared/widgets/hoppin_button.dart';
@@ -288,6 +289,7 @@ class _PersonalInformationScreenState
                 ),
               ],
             ),
+            const CancellationRateCard(),
             if (state.saveError != null) ...[
               const SizedBox(height: 16),
               Text(

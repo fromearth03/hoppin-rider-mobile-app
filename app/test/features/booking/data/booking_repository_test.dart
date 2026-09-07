@@ -38,8 +38,8 @@ void main() {
       dropoff: dropoff,
       vehicleCategoryId: 'cat-1',
       waypoints: const [
-        LatLng(1, 1), LatLng(2, 2), LatLng(3, 3),
-        LatLng(4, 4), LatLng(5, 5), LatLng(6, 6),
+        (label: 'Stop 1', position: LatLng(1, 1)), (label: 'Stop 2', position: LatLng(2, 2)), (label: 'Stop 3', position: LatLng(3, 3)),
+        (label: 'Stop 4', position: LatLng(4, 4)), (label: 'Stop 5', position: LatLng(5, 5)), (label: 'Stop 6', position: LatLng(6, 6)),
       ],
     );
 
@@ -57,8 +57,8 @@ void main() {
       dropoff: dropoff,
       vehicleCategoryId: 'cat-1',
       waypoints: const [
-        LatLng(1, 1), LatLng(2, 2), LatLng(3, 3),
-        LatLng(4, 4), LatLng(5, 5),
+        (label: 'Stop 1', position: LatLng(1, 1)), (label: 'Stop 2', position: LatLng(2, 2)), (label: 'Stop 3', position: LatLng(3, 3)),
+        (label: 'Stop 4', position: LatLng(4, 4)), (label: 'Stop 5', position: LatLng(5, 5)),
       ],
     );
 
@@ -80,4 +80,48 @@ void main() {
     expect(err.message, 'add a payment card to book a ride',
         reason: 'server copy is shown verbatim');
   });
+  test('sends each stop with the name the rider chose', () async {
+    // The bug this covers: only lat/lng went to the server, so a stop the
+    // rider picked as "Molineux Stadium" was stored nameless and the trip
+    // screen rendered it as "Stop 1" — the name existed on the confirm screen
+    // and nowhere after it.
+    Map<String, dynamic>? sent;
+    when(() => api.post<Map<String, dynamic>>('/rides/request',
+        body: any(named: 'body'))).thenAnswer((inv) async {
+      sent = inv.namedArguments[#body] as Map<String, dynamic>;
+      return const Ok({'request_id': 'r1'});
+    });
+
+    await repo.request(
+      pickup: pickup,
+      dropoff: dropoff,
+      vehicleCategoryId: 'cat-1',
+      waypoints: const [
+        (label: 'Molineux Stadium', position: LatLng(52.59, -2.13)),
+      ],
+    );
+
+    final stops = sent!['waypoints'] as List;
+    expect(stops.single['label'], 'Molineux Stadium');
+    expect(stops.single['lat'], 52.59);
+  });
+
+  test('a blank stop label is omitted rather than sent empty', () async {
+    Map<String, dynamic>? sent;
+    when(() => api.post<Map<String, dynamic>>('/rides/request',
+        body: any(named: 'body'))).thenAnswer((inv) async {
+      sent = inv.namedArguments[#body] as Map<String, dynamic>;
+      return const Ok({'request_id': 'r1'});
+    });
+
+    await repo.request(
+      pickup: pickup,
+      dropoff: dropoff,
+      vehicleCategoryId: 'cat-1',
+      waypoints: const [(label: '   ', position: LatLng(1, 1))],
+    );
+
+    expect((sent!['waypoints'] as List).single.containsKey('label'), isFalse);
+  });
+
 }
