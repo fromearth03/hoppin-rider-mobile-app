@@ -223,8 +223,13 @@ class RideContextRepository {
         String s when s.trim().isNotEmpty => s.trim(),
         _ => null,
       },
+      driverArrivedAt: _time(_map(json['timestamps'])?['arrived_at']),
+      riderComingAt: _time(_map(json['timestamps'])?['rider_coming_at']),
     );
   }
+
+  static DateTime? _time(Object? raw) =>
+      raw is String ? DateTime.tryParse(raw)?.toLocal() : null;
 
   static Map<String, dynamic>? _map(Object? raw) =>
       raw is Map ? raw.cast<String, dynamic>() : null;

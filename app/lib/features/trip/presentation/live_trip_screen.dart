@@ -15,6 +15,7 @@ import '../../../shared/widgets/offline.dart';
 import '../../booking/presentation/widgets/map_markers.dart';
 import '../../booking/presentation/widgets/rider_map.dart';
 import '../data/live_trip_source.dart';
+import '../data/rider_location_sender.dart';
 import '../data/ride_actions_repository.dart';
 import '../data/ride_context_repository.dart';
 import 'widgets/driver_info_card.dart';
@@ -118,10 +119,32 @@ class _LiveTripBody extends ConsumerWidget {
       info.status == LiveTripStatus.arriving ||
       info.status == LiveTripStatus.started;
 
+  /// Position streams only while someone is driving toward the rider — from a
+  /// driver accepting until the trip starts. Before that nobody is coming; from
+  /// pickup onward the driver has them.
+  bool get _shouldSendLocation =>
+      info.status == LiveTripStatus.accepted ||
+      info.status == LiveTripStatus.arriving;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final topInset = MediaQuery.of(context).padding.top + 12;
     final cancelled = info.status == LiveTripStatus.cancelled;
+
+    // Driven off the rendered state rather than a lifecycle hook, so it starts
+    // and stops with the state that justifies it and cannot be left running.
+    //
+    // Guarded: reaching the sender needs a live Supabase session behind the
+    // token interceptor, and in a harness without one this must not take the
+    // trip screen down. The pickup gates fail open, so the ride still works.
+    try {
+      final sender = ref.read(riderLocationSenderProvider);
+      if (_shouldSendLocation) {
+        sender.start(rideId);
+      } else if (sender.isSending) {
+        sender.stop();
+      }
+    } catch (_) {}
 
     return Stack(
       children: [
@@ -211,6 +234,17 @@ class _LiveTripBody extends ConsumerWidget {
                   ),
                 ),
               ),
+            ),
+          ),
+        // "Your driver is here" — the answer to the driver's own announcement.
+        // Placed above the driver card, where the rider is already looking.
+        if (info.needsComingAck)
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 232,
+            child: PointerInterceptor(
+              child: _DriverHereCard(rideId: rideId),
             ),
           ),
         if (info.status == LiveTripStatus.started &&
@@ -645,6 +679,87 @@ class _CircleButton extends StatelessWidget {
 /// The "Destination" bar on `Start Ride.png`, shown only once the trip has
 /// actually started -- before that there is no in-progress journey to name a
 /// destination for.
+/// The driver has arrived and is waiting. One tap tells them the rider is on
+/// their way out, so they are not sitting at the kerb guessing whether to wait
+/// or start the no-show clock.
+class _DriverHereCard extends ConsumerStatefulWidget {
+  final String rideId;
+  const _DriverHereCard({required this.rideId});
+
+  @override
+  ConsumerState<_DriverHereCard> createState() => _DriverHereCardState();
+}
+
+class _DriverHereCardState extends ConsumerState<_DriverHereCard> {
+  bool _sending = false;
+  bool _sent = false;
+
+  Future<void> _tell() async {
+    if (_sending || _sent) return;
+    setState(() => _sending = true);
+    final res = await ref
+        .read(rideActionsRepositoryProvider)
+        .riderComing(widget.rideId);
+    if (!mounted) return;
+    setState(() {
+      _sending = false;
+      // A conflict means the acknowledgement already landed, which for the
+      // rider is the same outcome as success — the card should go either way.
+      _sent = res is Ok || (res is Err && res.error.code == 'NOTHING_TO_ACKNOWLEDGE');
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_sent) return const SizedBox.shrink();
+    return Material(
+      color: AppColors.navy,
+      borderRadius: BorderRadius.circular(16),
+      elevation: 6,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        child: Row(
+          children: [
+            const Icon(Icons.directions_car_filled,
+                color: Colors.white, size: 22),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Your driver is here',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600)),
+                  Text('Let them know you\u2019re on your way out',
+                      style: TextStyle(color: Colors.white70, fontSize: 12)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            FilledButton(
+              onPressed: _sending ? null : _tell,
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: AppColors.navy,
+                minimumSize: const Size(0, 40),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+              ),
+              child: _sending
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('I\u2019m coming'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// The rider's own note, shown back to them over the map.
 class _RiderNoteChip extends StatelessWidget {
   final String note;

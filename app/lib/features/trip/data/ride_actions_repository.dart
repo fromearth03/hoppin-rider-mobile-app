@@ -109,6 +109,17 @@ class RideActionsRepository {
   /// again edits it in place. Server rejects with VALIDATION_FAILED (score
   /// out of 1–5), ILLEGAL_TRANSITION (ride not completed, 409) or
   /// RIDE_NOT_FOUND.
+  /// Tells the driver the rider is on their way out, answering their "I'm
+  /// here". A 409 means it already landed — see the trip screen, which treats
+  /// that as success because for the rider it is the same outcome.
+  Future<Result<void>> riderComing(String rideId) async {
+    final res = await _api.post<dynamic>('/rides/$rideId/coming');
+    return switch (res) {
+      Ok() => const Ok(null),
+      Err(:final error) => Err(error),
+    };
+  }
+
   Future<Result<void>> rateRide(String rideId, int score,
       {String comments = ''}) async {
     if (rideId.isEmpty || score < 1 || score > 5) {

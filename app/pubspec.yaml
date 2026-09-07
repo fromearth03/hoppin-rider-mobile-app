@@ -29,6 +29,9 @@ dependencies:
   # Avatar picking for POST /me/avatar/upload — gallery on Android, file
   # dialog on web.
   image_picker: ^1.1.2
+  # Rider position for the pickup gates (arrive within 30m, start within 15m).
+  # Streamed only between a driver accepting and the trip starting.
+  geolocator: ^13.0.2
 
 dev_dependencies:
   flutter_test:

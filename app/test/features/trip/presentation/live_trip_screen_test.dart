@@ -35,6 +35,25 @@ Widget _harness({
       ),
     );
 
+// A trip whose driver has announced arrival, optionally already acknowledged.
+LiveTripInfo _arrived({DateTime? comingAt}) => LiveTripInfo(
+      rideId: 'ride-1',
+      status: LiveTripStatus.arriving,
+      driver: null,
+      baseFarePence: null,
+      surgeMultiplier: null,
+      surgePence: null,
+      totalPence: null,
+      currency: 'GBP',
+      cancellationPolicy: null,
+      waypoints: const [],
+      route: null,
+      steps: null,
+      destinationLabel: null,
+      driverArrivedAt: DateTime.now(),
+      riderComingAt: comingAt,
+    );
+
 void main() {
   testWidgets('has a const constructor with an optional rideId', (tester) async {
     const screen = LiveTripScreen();
@@ -85,4 +104,34 @@ void main() {
     // inside the (absent) assigned-driver row.
     expect(find.byIcon(Icons.chat_bubble), findsWidgets);
   });
+  testWidgets('offers "I\u2019m coming" once the driver has announced arrival',
+      (tester) async {
+    // The driver is sat at the kerb with no idea whether anyone is coming; this
+    // prompt is the rider's answer to their "I'm here".
+    await tester.pumpWidget(_harness(overrides: [
+      liveTripInfoProvider('ride-1').overrideWith(
+        (ref) => Stream.value(_arrived(comingAt: null)),
+      ),
+    ]));
+    // Not pumpAndSettle: the trip screen animates continuously, so it never
+    // settles. One frame past the stream is enough to render.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(find.text('Your driver is here'), findsOneWidget);
+  });
+
+  testWidgets('the prompt is gone once the rider has already answered',
+      (tester) async {
+    await tester.pumpWidget(_harness(overrides: [
+      liveTripInfoProvider('ride-1').overrideWith(
+        (ref) => Stream.value(_arrived(comingAt: DateTime.now())),
+      ),
+    ]));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(find.text('Your driver is here'), findsNothing);
+  });
+
 }

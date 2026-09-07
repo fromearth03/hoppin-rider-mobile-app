@@ -173,6 +173,17 @@ class LiveTripInfo {
   /// blank.
   final String? riderNote;
 
+  /// Set once the driver has announced they are at the pickup. This is what
+  /// starts the free waiting clock, so it is also what the rider needs to see.
+  final DateTime? driverArrivedAt;
+
+  /// Set once the rider has answered "I'm coming". The prompt shows while the
+  /// first is set and this is not.
+  final DateTime? riderComingAt;
+
+  bool get driverIsWaiting => driverArrivedAt != null;
+  bool get needsComingAck => driverArrivedAt != null && riderComingAt == null;
+
   const LiveTripInfo({
     required this.rideId,
     required this.status,
@@ -188,6 +199,8 @@ class LiveTripInfo {
     required this.steps,
     required this.destinationLabel,
     this.riderNote,
+    this.driverArrivedAt,
+    this.riderComingAt,
   });
 
   /// The honest "nothing to show yet" state: matching, no driver, nothing
