@@ -14,6 +14,7 @@ import '../../../shared/nav/app_drawer.dart';
 import '../../../shared/nav/app_router.dart';
 import '../../../shared/widgets/collapsible_sheet.dart';
 import '../data/places_repository.dart';
+import '../data/saved_locations_repository.dart';
 import 'home_screen.dart' show MapCircleButton;
 import 'widgets/map_markers.dart';
 import 'widgets/rider_map.dart';
@@ -100,15 +101,68 @@ class _RouteEntryScreenState extends ConsumerState<RouteEntryScreen> {
 
   Timer? _debounce;
   List<PlaceSuggestion> _results = const [];
+
+  /// The rider's saved places, loaded once when the screen opens. Held here
+  /// rather than read from the search response: the geocoder only returns
+  /// saved rows that match the query, which is the wrong list for a tab whose
+  /// whole job is "show me my places".
+  List<PlaceSuggestion> _savedPlaces = const [];
   bool _searching = false;
   ApiException? _error;
 
   RiderMapController? _map;
   Set<gmaps.Marker> _markers = const {};
 
+  /// The text field the suggestions currently apply to.
+  TextEditingController _activeController() => switch (_activeField) {
+        0 => _pickup,
+        1 => _dropoff,
+        _ => _stops[_activeField - 2],
+      };
+
+  /// Saved places narrowed by whatever is in the active field. With an empty
+  /// field this is simply all of them.
+  List<PlaceSuggestion> _savedMatching() {
+    final q = _activeController().text.trim().toLowerCase();
+    if (q.isEmpty) return _savedPlaces;
+    return _savedPlaces
+        .where((p) => p.label.toLowerCase().contains(q))
+        .toList(growable: false);
+  }
+
+  Future<void> _loadSavedPlaces() async {
+    final Result<List<SavedLocation>> result;
+    try {
+      result = await ref.read(savedLocationsRepositoryProvider).list();
+    } catch (_) {
+      // Reaching the repository needs a live app bootstrap (Supabase session
+      // behind the token interceptor). In a harness without one, the shortcut
+      // is simply absent — it must never take the route picker down with it.
+      return;
+    }
+    if (!mounted) return;
+    if (result case Ok(:final value)) {
+      setState(() {
+        _savedPlaces = [
+          for (final p in value)
+            PlaceSuggestion(
+              label: p.label,
+              lat: p.lat,
+              lng: p.lng,
+              postcode: null,
+              source: 'saved',
+            ),
+        ];
+      });
+    }
+    // A failure leaves the tab empty and saying so; saved places are a
+    // shortcut, and losing the shortcut must not break searching.
+  }
+
   @override
   void initState() {
     super.initState();
+    _loadSavedPlaces();
     final init = widget.initial;
     if (init != null) {
       _pickup.text = init.pickup.label;
@@ -320,9 +374,12 @@ class _RouteEntryScreenState extends ConsumerState<RouteEntryScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final visible = _savedOnly
-        ? _results.where((p) => p.isSaved).toList(growable: false)
-        : _results;
+    // Saved reads the rider's OWN places, not the search results filtered to
+    // the saved ones. Filtering the results meant the tab was empty until the
+    // rider typed something that happened to match a saved label — so a rider
+    // with three saved places was told "No saved places match" while My
+    // Addresses listed all three.
+    final visible = _savedOnly ? _savedMatching() : _results;
 
     final topInset = MediaQuery.of(context).padding.top;
 
@@ -452,7 +509,9 @@ class _RouteEntryScreenState extends ConsumerState<RouteEntryScreen> {
             // is unreachable the server returns saved places alone, silently,
             // so an empty list cannot distinguish the two.
             _savedOnly
-                ? 'No saved places match.'
+                ? (_savedPlaces.isEmpty
+                    ? 'You have not saved any places yet.'
+                    : 'None of your saved places match that search.')
                 : 'Start typing to search for a place.',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium,

@@ -5,11 +5,21 @@ import 'package:go_router/go_router.dart';
 import 'package:hoppin_rider/core/result.dart';
 import 'package:hoppin_rider/core/theme/app_theme.dart';
 import 'package:hoppin_rider/features/booking/data/places_repository.dart';
+import 'package:hoppin_rider/features/booking/data/saved_locations_repository.dart';
 import 'package:hoppin_rider/features/booking/presentation/route_entry_screen.dart';
 import 'package:hoppin_rider/shared/nav/app_router.dart';
 import 'package:mocktail/mocktail.dart';
 
 class _MockPlaces extends Mock implements PlacesRepository {}
+
+class _MockSaved extends Mock implements SavedLocationsRepository {}
+
+const _savedHome = SavedLocation(
+  id: 'sl_1',
+  label: 'Home',
+  lat: 52.5851,
+  lng: -2.1281,
+);
 
 const _hanley = PlaceSuggestion(
   label: 'Hanley, Stoke-on-Trent',
@@ -28,6 +38,7 @@ const _keele = PlaceSuggestion(
 
 void main() {
   late _MockPlaces places;
+  late _MockSaved saved;
   ChosenRoute? received;
 
   Widget harness() {
@@ -48,14 +59,19 @@ void main() {
       ],
     );
     return ProviderScope(
-      overrides: [placesRepositoryProvider.overrideWithValue(places)],
+      overrides: [
+        placesRepositoryProvider.overrideWithValue(places),
+        savedLocationsRepositoryProvider.overrideWithValue(saved),
+      ],
       child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
     );
   }
 
   setUp(() {
     places = _MockPlaces();
+    saved = _MockSaved();
     received = null;
+    when(() => saved.list()).thenAnswer((_) async => const Ok([_savedHome]));
     when(() => places.search(any()))
         .thenAnswer((_) async => const Ok([_hanley, _keele]));
   });
@@ -121,4 +137,32 @@ void main() {
     final button = find.widgetWithText(FilledButton, 'Confirm Route');
     expect(tester.widget<FilledButton>(button).onPressed, isNull);
   });
+  testWidgets('the Saved tab lists your places without typing anything',
+      (tester) async {
+    // It used to filter the SEARCH results down to saved ones, so the tab was
+    // empty until the rider typed something that happened to match a saved
+    // label — "No saved places match" while My Addresses listed them all.
+    await tester.pumpWidget(harness());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Saved'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('No saved places match.'), findsNothing);
+  });
+
+  testWidgets('an empty Saved tab says you have none, not that none matched',
+      (tester) async {
+    when(() => saved.list()).thenAnswer((_) async => const Ok([]));
+
+    await tester.pumpWidget(harness());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Saved'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('You have not saved any places yet.'), findsOneWidget);
+  });
+
 }
