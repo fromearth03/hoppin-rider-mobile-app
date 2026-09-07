@@ -4,21 +4,17 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 
-import '../../../core/api/api_exception.dart';
-import '../../../core/api/error_codes.dart';
 import '../../../core/geo.dart';
 import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
 import '../../../shared/nav/app_drawer.dart';
 import '../../../shared/nav/app_router.dart';
 import '../../trip/data/ride_context_repository.dart';
-import '../application/booking_draft.dart';
 import '../data/frequent_trips_repository.dart';
 import '../data/saved_locations_repository.dart';
 import '../data/vehicle_repository.dart';
 import 'route_entry_screen.dart' show ChosenRoute, RoutePoint, RoutePrefill;
 import 'widgets/rider_map.dart';
-import 'widgets/vehicle_card.dart';
 
 /// The categories the rider can book, cheapest first.
 ///
@@ -48,9 +44,14 @@ final homeSavedLocationsProvider =
 
 /// Home — `Ride Type.png` collapsed, `Select Vehicle.png` expanded.
 ///
-/// A full-bleed map with a white booking sheet over it. Tapping the
-/// "Ride Type" card toggles the vehicle grid, exactly as the two frames draw
-/// the same screen in its two states.
+/// A full-bleed map with a white booking sheet over it.
+///
+/// The sheet does NOT ask which vehicle. The design pack draws that grid here,
+/// but the fare screen has to ask again anyway — it is the only place a real
+/// quote per category exists — so asking on Home put the same question to the
+/// rider twice, the first time with no prices to answer it by. Both the Ride
+/// Type card and the search field now open the booking flow, and the vehicle
+/// is chosen once, against live fares.
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -64,8 +65,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// (e.g. from a completed trip) never bounces them again.
   static bool _resumeCheckedThisLaunch = false;
 
-  String? _selectedCategoryId;
-  bool _pickerOpen = false;
   RiderMapController? _map;
 
   @override
@@ -93,7 +92,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final categories = ref.watch(vehicleCategoriesProvider);
     final saved = ref.watch(homeSavedLocationsProvider);
 
     return Scaffold(
@@ -134,24 +132,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 // PointerInterceptor: on web the map is a DOM platform view
                 // and touches over the sheet can fall through and pan the
                 // map. No-op on native.
-                PointerInterceptor(
-                  child: _BookingSheet(
-                    categories: categories,
-                    saved: saved,
-                    selectedId: _selectedCategoryId,
-                    pickerOpen: _pickerOpen,
-                    onSelect: (id) {
-                      setState(() => _selectedCategoryId = id);
-                      // Carried into fare-confirm so the rider is never
-                      // asked to pick the same vehicle twice.
-                      ref
-                          .read(draftVehicleCategoryProvider.notifier)
-                          .state = id;
-                    },
-                    onTogglePicker: () =>
-                        setState(() => _pickerOpen = !_pickerOpen),
-                  ),
-                ),
+                PointerInterceptor(child: _BookingSheet(saved: saved)),
               ],
             ),
           ),
@@ -187,21 +168,9 @@ class MapCircleButton extends StatelessWidget {
 }
 
 class _BookingSheet extends StatelessWidget {
-  final AsyncValue<List<VehicleCategory>> categories;
   final AsyncValue<List<SavedLocation>> saved;
-  final String? selectedId;
-  final bool pickerOpen;
-  final ValueChanged<String> onSelect;
-  final VoidCallback onTogglePicker;
 
-  const _BookingSheet({
-    required this.categories,
-    required this.saved,
-    required this.selectedId,
-    required this.pickerOpen,
-    required this.onSelect,
-    required this.onTogglePicker,
-  });
+  const _BookingSheet({required this.saved});
 
   @override
   Widget build(BuildContext context) {
@@ -221,46 +190,32 @@ class _BookingSheet extends StatelessWidget {
         16,
         MediaQuery.of(context).padding.bottom + 16,
       ),
-      child: AnimatedSize(
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-        alignment: Alignment.topCenter,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _ModeRow(pickerOpen: pickerOpen, onTogglePicker: onTogglePicker),
-            if (pickerOpen) ...[
-              const SizedBox(height: 12),
-              _Categories(
-                categories: categories,
-                selectedId: selectedId,
-                onSelect: onSelect,
-              ),
-            ],
-            const SizedBox(height: 12),
-            const _SearchField(),
-            // Above saved places: a journey the rider has actually taken three
-            // times is a better guess than a place they once bookmarked.
-            const _FrequentTripRow(),
-            _SavedList(saved: saved),
-          ],
-        ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _ModeRow(),
+          const SizedBox(height: 12),
+          const _SearchField(),
+          // Above saved places: a journey the rider has actually taken three
+          // times is a better guess than a place they once bookmarked.
+          const _FrequentTripRow(),
+          _SavedList(saved: saved),
+        ],
       ),
     );
   }
 }
 
-/// "Ride Type" and "Schedule Ride", in both frame states.
+/// "Ride Type" and "Schedule Ride".
 ///
-/// Collapsed (`Ride Type.png`): a wide bordered card with the orange car and
-/// the "Pick the vehicle that fits your trip" line, plus a square schedule
-/// button. Expanded (`Select Vehicle.png`): two labelled chips side by side.
+/// `Ride Type.png` draws this card as the handle for an inline vehicle grid
+/// (`Select Vehicle.png` is the same screen expanded). It opens the booking
+/// flow instead — the vehicle question belongs on the fare screen, where the
+/// answer has prices attached. So the card is a way IN to booking, like the
+/// search field below it, rather than a question of its own.
 class _ModeRow extends StatelessWidget {
-  final bool pickerOpen;
-  final VoidCallback onTogglePicker;
-
-  const _ModeRow({required this.pickerOpen, required this.onTogglePicker});
+  const _ModeRow();
 
   @override
   Widget build(BuildContext context) {
@@ -270,11 +225,10 @@ class _ModeRow extends StatelessWidget {
       color: Colors.white,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
-        onTap: onTogglePicker,
+        onTap: () => context.push(AppRoutes.route),
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: EdgeInsets.symmetric(
-              horizontal: 12, vertical: pickerOpen ? 12 : 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppColors.navy, width: 1.4),
@@ -284,12 +238,7 @@ class _ModeRow extends StatelessWidget {
               SvgPicture.asset('assets/vehicles/car_orange.svg',
                   width: 34, height: 24),
               const SizedBox(width: 10),
-              if (pickerOpen)
-                Text('Ride Type',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                        fontSize: 14.5, color: AppColors.navy))
-              else
-                Expanded(
+              Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
@@ -315,122 +264,22 @@ class _ModeRow extends StatelessWidget {
 
     void scheduleTap() => context.push(AppRoutes.scheduleRide);
 
-    if (!pickerOpen) {
-      return Row(
-        children: [
-          Expanded(child: rideTypeCard),
-          const SizedBox(width: 10),
-          Material(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            elevation: 1,
-            child: InkWell(
-              onTap: scheduleTap,
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                  padding: const EdgeInsets.all(11), child: scheduleIcon),
-            ),
-          ),
-        ],
-      );
-    }
-
     return Row(
       children: [
         Expanded(child: rideTypeCard),
         const SizedBox(width: 10),
-        Expanded(
-          child: Material(
-            color: Colors.white,
+        Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          elevation: 1,
+          child: InkWell(
+            onTap: scheduleTap,
             borderRadius: BorderRadius.circular(12),
-            elevation: 1,
-            child: InkWell(
-              onTap: scheduleTap,
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    scheduleIcon,
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text('Schedule Ride',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                              fontSize: 14.5, color: AppColors.navy),
-                          overflow: TextOverflow.ellipsis),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            child: Padding(
+                padding: const EdgeInsets.all(11), child: scheduleIcon),
           ),
         ),
       ],
-    );
-  }
-}
-
-class _Categories extends StatelessWidget {
-  final AsyncValue<List<VehicleCategory>> categories;
-  final String? selectedId;
-  final ValueChanged<String> onSelect;
-
-  const _Categories({
-    required this.categories,
-    required this.selectedId,
-    required this.onSelect,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return categories.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 32),
-        child: Center(child: CircularProgressIndicator()),
-      ),
-      // The server's own message, never invented copy: one backend code
-      // carries two unrelated meanings distinguished only by its text.
-      error: (e, _) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Text(
-          e is ApiException
-              ? RiderErrorCopy.messageFor(e)
-              : 'Could not load vehicles.',
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: AppColors.negative),
-        ),
-      ),
-      data: (list) {
-        if (list.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 24),
-            child: Text('No vehicles available right now.',
-                textAlign: TextAlign.center),
-          );
-        }
-
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: list.length,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            mainAxisExtent: 66,
-          ),
-          itemBuilder: (_, i) {
-            final c = list[i];
-            return VehicleCard(
-              category: c,
-              selected: c.id == selectedId,
-              onTap: () => onSelect(c.id),
-            );
-          },
-        );
-      },
     );
   }
 }

@@ -12,7 +12,6 @@ import '../../payments/data/payment_methods_repository.dart';
 import '../../payments/presentation/widgets/payment_method_sheet.dart';
 import '../../trip/data/live_trip_source.dart' show TripWaypoint;
 import '../../trip/presentation/widgets/trip_route_header.dart';
-import '../application/booking_draft.dart';
 import '../data/fare_repository.dart';
 import '../data/vehicle_repository.dart';
 import 'widgets/fare_legs_breakdown.dart';
@@ -104,13 +103,10 @@ class _FareConfirmScreenState extends ConsumerState<FareConfirmScreen> {
   @override
   void initState() {
     super.initState();
-    // The vehicle picked on Home rides through: arrive preselected with its
-    // quote loading rather than asking the rider to choose again. Nothing
-    // picked → the grid works exactly as before.
-    final draft = ref.read(draftVehicleCategoryProvider);
-    if (draft != null && widget.categories.any((c) => c.id == draft)) {
-      _selectedId = draft;
-    }
+    // No pre-selection to carry: this screen is the ONLY place the vehicle is
+    // asked. Home used to ask first and pass the answer through, which meant
+    // the rider answered the same question twice — the first time with no
+    // fares in front of them.
     _fetchAll();
     _buildMarkers();
   }

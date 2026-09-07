@@ -6,6 +6,7 @@ import 'package:hoppin_rider/features/auth/application/auth_controller.dart';
 import 'package:hoppin_rider/features/auth/domain/auth_state.dart';
 import 'package:hoppin_rider/features/booking/data/vehicle_repository.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hoppin_rider/features/booking/presentation/widgets/vehicle_card.dart';
 import 'package:hoppin_rider/features/booking/presentation/home_screen.dart';
 import 'package:hoppin_rider/shared/nav/app_drawer.dart';
 import 'package:hoppin_rider/shared/nav/app_router.dart';
@@ -116,4 +117,46 @@ void main() {
 
     expect(find.text('Ride Type'), findsOneWidget);
   });
+  testWidgets('the Ride Type card opens the booking flow, not a vehicle grid',
+      (tester) async {
+    // It used to expand an inline vehicle grid, so the rider chose a vehicle
+    // here AND again on the fare screen — the first time with no prices to
+    // choose by. The card is now a way in to booking, like the search field.
+    final router = GoRouter(
+      initialLocation: AppRoutes.home,
+      routes: [
+        GoRoute(path: AppRoutes.home, builder: (_, __) => const HomeScreen()),
+        GoRoute(
+            path: AppRoutes.route,
+            builder: (_, __) => const Scaffold(body: Text('route entry'))),
+      ],
+    );
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        vehicleCategoriesProvider.overrideWith((ref) async => _categories),
+        authControllerProvider.overrideWith((ref) => auth),
+      ],
+      child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Ride Type'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('route entry'), findsOneWidget);
+  });
+
+  testWidgets('Home never asks which vehicle', (tester) async {
+    await tester.pumpWidget(_harness(auth));
+    await tester.pumpAndSettle();
+
+    // No grid, in any state. The card navigates (covered above) rather than
+    // expanding one in place: the vehicle question belongs on the fare screen,
+    // where each category carries a real quote.
+    expect(find.byType(VehicleCard), findsNothing);
+    for (final c in _categories) {
+      expect(find.text(c.name), findsNothing);
+    }
+  });
+
 }
