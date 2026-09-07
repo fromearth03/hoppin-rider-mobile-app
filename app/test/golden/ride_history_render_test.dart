@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hoppin_rider/core/geo.dart';
 import 'package:hoppin_rider/core/money.dart';
 import 'package:hoppin_rider/core/result.dart';
 import 'package:hoppin_rider/core/theme/app_theme.dart';
@@ -39,6 +40,8 @@ void main() {
         vehicleCategory: null,
         pickupLabel: 'Wolverhampton City Centre',
         dropoffLabel: 'Wolverhampton Railway Station',
+        pickup: const LatLng(52.5851, -2.1281),
+        dropoff: const LatLng(52.5912, -2.1104),
         requestedAt: at,
         pickupTime: at,
         dropoffTime: null,
@@ -162,6 +165,8 @@ void main() {
             vehicleCategory: null,
             pickupLabel: 'Wolverhampton City Centre',
             dropoffLabel: 'Wolverhampton Railway Station',
+            pickup: const LatLng(52.5851, -2.1281),
+            dropoff: const LatLng(52.5912, -2.1104),
             requestedAt: at(15, 9, 5),
             pickupTime: null,
             dropoffTime: null,
@@ -179,6 +184,8 @@ void main() {
             vehicleCategory: null,
             pickupLabel: 'Wolverhampton City Centre',
             dropoffLabel: 'Wolverhampton Railway Station',
+            pickup: const LatLng(52.5851, -2.1281),
+            dropoff: const LatLng(52.5912, -2.1104),
             requestedAt: at(14, 18, 30),
             pickupTime: at(14, 18, 30),
             dropoffTime: null,

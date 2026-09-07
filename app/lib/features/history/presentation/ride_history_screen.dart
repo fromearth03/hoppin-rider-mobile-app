@@ -10,6 +10,7 @@ import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
 import '../../../shared/nav/app_router.dart';
 import '../../booking/data/frequent_trips_repository.dart';
+import '../../booking/presentation/rebook.dart';
 import '../../booking/presentation/home_screen.dart' show rebookFrequentTrip;
 import '../data/trip_history_repository.dart';
 import '../../../shared/widgets/skeleton.dart';
@@ -429,7 +430,32 @@ class _TripCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  // Offered on a cancelled trip too — a ride that never
+                  // happened is one of the likelier things a rider wants to
+                  // try again — but not on a trip whose coordinates we never
+                  // stored, where the button could only mislead.
+                  if (trip.canRebook) ...[
+                    TextButton.icon(
+                      onPressed: () => rebookJourney(
+                        context,
+                        pickupLabel: trip.pickupLabel ?? 'Pickup',
+                        pickup: trip.pickup!,
+                        dropoffLabel: trip.dropoffLabel ?? 'Destination',
+                        dropoff: trip.dropoff!,
+                      ),
+                      icon: const Icon(Icons.replay, size: 16),
+                      label: const Text('Rebook'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        minimumSize: const Size(0, 32),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        textStyle: const TextStyle(fontSize: 13),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                  ] else
+                    const SizedBox(width: 8),
                   _TripTrailing(trip: trip),
                 ],
               ),

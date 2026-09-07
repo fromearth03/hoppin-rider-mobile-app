@@ -34,8 +34,15 @@ class Pence implements Comparable<Pence> {
 
   /// "£12.38". Currency defaults to GBP; the API always sends the code
   /// alongside the amount, so pass it rather than assuming.
+  ///
+  /// The code is normalised before use. Stripe stores currencies lowercase, so
+  /// a receipt comes back as "gbp" — and intl's symbol table is keyed on the
+  /// uppercase code, so it found nothing and printed the code itself. That is
+  /// how "gbp79.44" reached a rider's trip summary. Normalising here fixes it
+  /// for every screen at once, whatever casing any endpoint happens to send.
   String format({String currency = 'GBP', bool showSign = false}) {
-    final f = NumberFormat.simpleCurrency(locale: 'en_GB', name: currency);
+    final code = currency.trim().isEmpty ? 'GBP' : currency.trim().toUpperCase();
+    final f = NumberFormat.simpleCurrency(locale: 'en_GB', name: code);
     final formatted = f.format(value.abs() / 100);
     if (!showSign) return value < 0 ? '-$formatted' : formatted;
     return value < 0 ? '-$formatted' : '+$formatted';

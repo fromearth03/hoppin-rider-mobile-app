@@ -13,7 +13,8 @@ import '../../trip/data/ride_context_repository.dart';
 import '../data/frequent_trips_repository.dart';
 import '../data/saved_locations_repository.dart';
 import '../data/vehicle_repository.dart';
-import 'route_entry_screen.dart' show ChosenRoute, RoutePoint, RoutePrefill;
+import 'rebook.dart';
+import 'route_entry_screen.dart' show RoutePoint, RoutePrefill;
 import 'widgets/rider_map.dart';
 
 /// The categories the rider can book, cheapest first.
@@ -385,19 +386,14 @@ class _FrequentTripRow extends ConsumerWidget {
   }
 }
 
-/// Opens the booking flow on a repeated journey with BOTH ends filled.
-///
-/// Into the route picker rather than straight to fare-confirm: the rider is
-/// rebooking a journey, not confirming one, and the pickup they used last
-/// Tuesday may not be where they are standing now. One tap gets them to a
-/// screen where everything is already correct and anything can still change.
+/// Opens the booking flow on a repeated journey with both ends filled.
 void rebookFrequentTrip(BuildContext context, FrequentTrip trip) {
-  context.push(
-    AppRoutes.route,
-    extra: ChosenRoute(
-      pickup: RoutePoint(trip.fromLabel, trip.pickup),
-      dropoff: RoutePoint(trip.toLabel, trip.dropoff),
-    ),
+  rebookJourney(
+    context,
+    pickupLabel: trip.fromLabel,
+    pickup: trip.pickup,
+    dropoffLabel: trip.toLabel,
+    dropoff: trip.dropoff,
   );
 }
 

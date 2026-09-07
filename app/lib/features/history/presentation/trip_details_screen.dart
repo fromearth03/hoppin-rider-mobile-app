@@ -8,10 +8,11 @@ import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
 import '../../../shared/widgets/profile_avatar.dart';
 import '../../payments/data/receipts_repository.dart';
+import '../../booking/presentation/rebook.dart';
 import '../../payments/presentation/ride_complete_screen.dart'
     show rideCompleteContextProvider;
 import '../../payments/presentation/widgets/route_preview.dart';
-import '../../trip/data/live_trip_source.dart' show LiveTripInfo;
+import '../../trip/data/live_trip_source.dart' show LiveTripInfo, TripWaypoint;
 
 final _receiptProvider =
     FutureProvider.autoDispose.family<Receipt, String>((ref, rideId) async {
@@ -249,8 +250,42 @@ class _TripDetailsBody extends StatelessWidget {
             ),
           ),
         ],
+        // Book it again. Last on the page on purpose: the rider came here to
+        // look at a trip that already happened, and an action that starts a new
+        // one belongs after they have finished reading, not competing with it.
+        if (_rebookEnds case (final from, final to)?) ...[
+          const SizedBox(height: 20),
+          FilledButton.icon(
+            onPressed: () => rebookJourney(
+              context,
+              pickupLabel: from.label,
+              pickup: from.position!,
+              dropoffLabel: to.label,
+              dropoff: to.position!,
+            ),
+            icon: const Icon(Icons.replay, size: 20),
+            label: const Text('Book this trip again'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(52),
+            ),
+          ),
+        ],
       ],
     );
+  }
+
+  /// The two ends of this trip, when both are known well enough to rebook.
+  ///
+  /// Null hides the button rather than offering one that drops the rider into
+  /// a half-filled picker — a trip whose geometry never loaded, or an old ride
+  /// stored without coordinates, cannot honestly be repeated.
+  (TripWaypoint, TripWaypoint)? get _rebookEnds {
+    final points = detail?.waypoints ?? const <TripWaypoint>[];
+    if (points.length < 2) return null;
+    final from = points.first;
+    final to = points.last;
+    if (from.position == null || to.position == null) return null;
+    return (from, to);
   }
 
   /// "Not yet charged" rather than "£0.00" - a null total means the ride has

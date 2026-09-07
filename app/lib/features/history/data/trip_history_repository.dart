@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/geo.dart';
 import '../../../core/money.dart';
 import '../../../core/result.dart';
 
@@ -96,6 +97,13 @@ class TripHistoryItem {
   final String? pickupLabel;
   final String? dropoffLabel;
 
+  /// Where the trip actually ran, so it can be booked again exactly. Labels
+  /// alone are not enough: re-geocoding the same text can land on a different
+  /// point, or on nothing. Null on rides booked before coordinates were
+  /// returned here — those simply cannot be rebooked.
+  final LatLng? pickup;
+  final LatLng? dropoff;
+
   /// `requested_at` on the wire — the ride's `created_at`, and the field the
   /// server's cursor pages on. Never null; it is what the list groups by.
   final DateTime requestedAt;
@@ -125,6 +133,8 @@ class TripHistoryItem {
     required this.vehicleCategory,
     required this.pickupLabel,
     required this.dropoffLabel,
+    required this.pickup,
+    required this.dropoff,
     required this.requestedAt,
     required this.pickupTime,
     required this.dropoffTime,
@@ -137,6 +147,11 @@ class TripHistoryItem {
 
   bool get isCancelled => status == 'cancelled';
 
+  /// Whether this journey can be booked again. Both ends are needed — half a
+  /// route would drop the rider into the picker with one field mysteriously
+  /// filled, which is worse than not offering it.
+  bool get canRebook => pickup != null && dropoff != null;
+
   /// The moment to show and group by: when the ride actually ran if it ran,
   /// otherwise when it was asked for. A cancelled ride has no pickup time.
   DateTime get displayTime => pickupTime ?? requestedAt;
@@ -146,6 +161,10 @@ class TripHistoryItem {
   /// The id is the whole reason a card is tappable — without it, tapping opens
   /// trip details for nothing. A row that cannot be opened is better absent
   /// than present-and-dead.
+  /// Both halves or nothing: half a coordinate is not a place.
+  static LatLng? _latLng(Object? lat, Object? lng) =>
+      (lat is num && lng is num) ? LatLng(lat.toDouble(), lng.toDouble()) : null;
+
   static TripHistoryItem? tryFromJson(Map<String, dynamic> json) {
     final id = _orNull(json['id']);
     if (id == null) return null;
@@ -163,6 +182,8 @@ class TripHistoryItem {
           : null,
       pickupLabel: _orNull(json['pickup_label']),
       dropoffLabel: _orNull(json['dropoff_label']),
+      pickup: _latLng(json['pickup_lat'], json['pickup_lng']),
+      dropoff: _latLng(json['dropoff_lat'], json['dropoff_lng']),
       // Never null on the wire; an unparseable value falls back to the epoch
       // rather than dropping a row the rider genuinely took.
       requestedAt: _time(json['requested_at']) ??

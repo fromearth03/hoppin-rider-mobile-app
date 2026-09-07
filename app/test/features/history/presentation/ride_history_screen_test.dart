@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hoppin_rider/core/geo.dart';
 import 'package:hoppin_rider/core/api/api_exception.dart';
 import 'package:hoppin_rider/core/money.dart';
 import 'package:hoppin_rider/core/result.dart';
@@ -37,6 +38,8 @@ TripHistoryItem _trip({
       vehicleCategory: null,
       pickupLabel: pickup,
       dropoffLabel: dropoff,
+      pickup: const LatLng(52.5851, -2.1281),
+      dropoff: const LatLng(52.5912, -2.1104),
       requestedAt: at ?? DateTime.utc(2026, 2, 16, 11, 50),
       pickupTime: at ?? DateTime.utc(2026, 2, 16, 11, 50),
       dropoffTime: null,
@@ -274,4 +277,13 @@ void main() {
 
     expect(tester.takeException(), isNull);
   });
+  testWidgets('a past trip can be booked again from the list', (tester) async {
+    _answer(repo, [_trip()]);
+
+    await tester.pumpWidget(_harness(repo));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(TextButton, 'Rebook'), findsOneWidget);
+  });
+
 }
