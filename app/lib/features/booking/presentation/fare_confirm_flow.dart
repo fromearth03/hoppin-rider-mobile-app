@@ -7,6 +7,7 @@ import '../../../core/result.dart';
 import '../../../shared/nav/app_router.dart';
 import '../data/booking_repository.dart';
 import '../data/fare_repository.dart' show FareEstimate;
+import '../data/promo_repository.dart';
 import '../data/vehicle_repository.dart';
 import 'fare_confirm_screen.dart';
 import 'home_screen.dart' show vehicleCategoriesProvider;
@@ -32,8 +33,8 @@ class FareConfirmFlow extends ConsumerStatefulWidget {
 class _FareConfirmFlowState extends ConsumerState<FareConfirmFlow> {
   bool _booking = false;
 
-  Future<void> _book(
-      VehicleCategory category, FareEstimate? estimate, String note) async {
+  Future<void> _book(VehicleCategory category, FareEstimate? estimate,
+      String note, String promoCode) async {
     if (_booking) return; // a double-tap on Confirm must not book twice
     setState(() => _booking = true);
 
@@ -61,6 +62,34 @@ class _FareConfirmFlowState extends ConsumerState<FareConfirmFlow> {
 
     switch (result) {
       case Ok(:final value):
+        // A promo can only be applied once a ride exists — the discount is
+        // computed from the ride's quoted fare, and the zone and minimum-spend
+        // rules need a real journey to check against. So it happens here, after
+        // booking, not as part of the request.
+        //
+        // A refusal must NOT block the ride. The rider has confirmed a fare and
+        // a driver is being found; losing the trip because a code was ineligible
+        // would be a far worse outcome than paying full price. Tell them and
+        // carry on.
+        if (promoCode.isNotEmpty) {
+          final applied = await ref
+              .read(promoRepositoryProvider)
+              .applyToRide(value.rideId, promoCode);
+          if (!mounted) return;
+          switch (applied) {
+            case Ok(value: final promo):
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('${promo.code} applied — '
+                    '£${promo.discountAmount.toStringAsFixed(2)} off.'),
+              ));
+            case Err(:final error):
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(
+                    '${RiderErrorCopy.messageFor(error)} Your ride is still booked.'),
+              ));
+          }
+        }
+        if (!mounted) return;
         // The returned id IS the ride id now (the server creates the ride at
         // booking), so the trip screen binds to it instantly; /me/active-ride
         // stays as the fallback resolver for stale links.

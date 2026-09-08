@@ -142,6 +142,10 @@ void main() {
                 of: find.byType(DraggableScrollableSheet),
                 matching: find.byType(Scrollable))
             .first);
+    // The sheet can extend below the viewport, so scrollUntilVisible finds the
+    // button without making it tappable. ensureVisible scrolls the ancestors.
+    await tester.ensureVisible(find.text('Confirm Booking'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Confirm Booking'));
     await tester.pumpAndSettle();
 

@@ -13,6 +13,7 @@ import '../../payments/presentation/widgets/payment_method_sheet.dart';
 import '../../trip/data/live_trip_source.dart' show TripWaypoint;
 import '../../trip/presentation/widgets/trip_route_header.dart';
 import '../data/fare_repository.dart';
+import '../data/promo_repository.dart';
 import '../data/vehicle_repository.dart';
 import 'widgets/fare_legs_breakdown.dart';
 import 'widgets/map_markers.dart';
@@ -69,6 +70,7 @@ class FareConfirmScreen extends ConsumerStatefulWidget {
     VehicleCategory category,
     FareEstimate? estimate,
     String note,
+    String promoCode,
   )?
   onConfirm;
 
@@ -95,6 +97,12 @@ class _FareConfirmScreenState extends ConsumerState<FareConfirmScreen> {
   /// and every fare that resolves, and a controller created down there would
   /// wipe a half-typed note each time.
   final _note = TextEditingController();
+
+  /// The promo code the rider typed. Codes have always been creatable in the
+  /// admin panel and redeemable by the API; there was simply no field, so
+  /// nothing created there could be used. Held here rather than in the sheet so
+  /// a collapse/expand does not wipe a half-typed code.
+  final _promo = TextEditingController();
   String? _selectedId;
 
   /// A pin, every stop numbered, dropoff B — built async (canvas bitmaps).
@@ -270,12 +278,13 @@ class _FareConfirmScreenState extends ConsumerState<FareConfirmScreen> {
               waypoints: widget.waypoints,
               confirmEnabled: _selectedId != null && _selectedHasFare,
               noteController: _note,
+              promoController: _promo,
               onConfirm: () {
                 final category = widget.categories.firstWhere(
                   (c) => c.id == _selectedId,
                 );
-                widget.onConfirm
-                    ?.call(category, _selectedEstimate, _note.text.trim());
+                widget.onConfirm?.call(category, _selectedEstimate,
+                    _note.text.trim(), _promo.text.trim());
               },
             )),
           ),
@@ -297,6 +306,7 @@ class _Sheet extends ConsumerWidget {
   final List<LatLng> waypoints;
   final bool confirmEnabled;
   final TextEditingController noteController;
+  final TextEditingController promoController;
   final VoidCallback onConfirm;
 
   const _Sheet({
@@ -311,6 +321,7 @@ class _Sheet extends ConsumerWidget {
     required this.waypoints,
     required this.confirmEnabled,
     required this.noteController,
+    required this.promoController,
     required this.onConfirm,
   });
 
@@ -431,6 +442,8 @@ class _Sheet extends ConsumerWidget {
                 const SizedBox(height: 14),
                 _DriverNoteField(controller: noteController),
                 const SizedBox(height: 14),
+                _PromoField(controller: promoController),
+                const SizedBox(height: 14),
                 // Waiting is never in the estimate and accrues live --
                 // state that it may apply without attaching a number the
                 // app cannot know.
@@ -482,6 +495,121 @@ class _Sheet extends ConsumerWidget {
 /// Capped at the column's 300 characters (mig 130) with the counter only
 /// appearing near the limit — a live "0/300" under an empty optional box reads
 /// as a form to fill in.
+/// Promo code entry.
+///
+/// Deliberately validates on demand rather than on every keystroke: the check is
+/// a network round-trip, and a rider halfway through typing SUMMER25 should not
+/// be told SUMMER2 is invalid.
+///
+/// The check here is the PRE-RIDE one, which cannot see the fare or the pickup
+/// zone — no ride exists yet. So a code can pass here and still be refused when
+/// it is applied to the actual ride. The copy says "will be applied" rather than
+/// claiming a discount this screen cannot compute.
+class _PromoField extends ConsumerStatefulWidget {
+  final TextEditingController controller;
+
+  const _PromoField({required this.controller});
+
+  @override
+  ConsumerState<_PromoField> createState() => _PromoFieldState();
+}
+
+class _PromoFieldState extends ConsumerState<_PromoField> {
+  bool _checking = false;
+  String? _error;
+  String? _accepted; // the code the last successful check was for
+
+  Future<void> _check() async {
+    final code = widget.controller.text.trim();
+    if (code.isEmpty || _checking) return;
+    setState(() {
+      _checking = true;
+      _error = null;
+      _accepted = null;
+    });
+    final result = await ref.read(promoRepositoryProvider).validate(code);
+    if (!mounted) return;
+    setState(() {
+      _checking = false;
+      switch (result) {
+        case Ok():
+          _accepted = code.toUpperCase();
+        case Err(:final error):
+          _error = RiderErrorCopy.messageFor(error);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    // A code that has been edited since the check is no longer the checked one.
+    final stillAccepted =
+        _accepted != null && _accepted == widget.controller.text.trim().toUpperCase();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Promo code',
+          style: theme.textTheme.titleMedium
+              ?.copyWith(fontSize: 15, color: AppColors.navy),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                key: const Key('promo-code-field'),
+                controller: widget.controller,
+                textCapitalization: TextCapitalization.characters,
+                textInputAction: TextInputAction.done,
+                style: const TextStyle(fontSize: 13),
+                onChanged: (_) {
+                  if (_error != null || _accepted != null) {
+                    setState(() {
+                      _error = null;
+                      _accepted = null;
+                    });
+                  }
+                },
+                onSubmitted: (_) => _check(),
+                decoration: const InputDecoration(
+                  hintText: 'Have a code?',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            TextButton(
+              onPressed: _checking ? null : _check,
+              child: Text(_checking ? 'Checking…' : 'Apply'),
+            ),
+          ],
+        ),
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(_error!,
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: theme.colorScheme.error)),
+          )
+        else if (stillAccepted)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              // Not "you saved £X" — this check has not seen the fare.
+              'Code accepted. The discount is applied to your fare when you book.',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: const Color(0xFF0B7A52)),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class _DriverNoteField extends StatelessWidget {
   final TextEditingController controller;
 
@@ -500,6 +628,7 @@ class _DriverNoteField extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         TextField(
+          key: const Key('driver-note-field'),
           controller: controller,
           maxLines: 2,
           maxLength: 300,

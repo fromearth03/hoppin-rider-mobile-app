@@ -92,7 +92,7 @@ Widget _harness(
   Brightness brightness = Brightness.light,
   List<VehicleCategory> categories = const [_standard],
   List<LatLng> waypoints = const [],
-  void Function(VehicleCategory, FareEstimate?, String)? onConfirm,
+  void Function(VehicleCategory, FareEstimate?, String, String)? onConfirm,
 }) =>
     ProviderScope(
       overrides: [
@@ -246,7 +246,7 @@ void main() {
 
       VehicleCategory? confirmed;
       await tester.pumpWidget(
-          _harness(repo, onConfirm: (c, _, __) => confirmed = c));
+          _harness(repo, onConfirm: (c, _, __, ___) => confirmed = c));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Standard'));
@@ -262,6 +262,11 @@ void main() {
                   of: find.byType(DraggableScrollableSheet),
                   matching: find.byType(Scrollable))
               .first);
+      // scrollUntilVisible only brings it inside the SHEET's extent; the sheet
+      // itself can sit below the viewport, so the button is findable but not
+      // tappable. ensureVisible scrolls the ancestors too.
+      await tester.ensureVisible(find.text('Confirm Booking'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Confirm Booking'));
       await tester.pumpAndSettle();
 
@@ -432,7 +437,7 @@ void main() {
 
       String? note;
       await tester.pumpWidget(
-          _harness(repo, onConfirm: (_, __, n) => note = n));
+          _harness(repo, onConfirm: (_, __, n, ___) => note = n));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Standard'));
@@ -447,12 +452,16 @@ void main() {
           .first;
       await tester.scrollUntilVisible(find.text('Note for your driver'), 80,
           scrollable: sheet);
+      // Keyed: the sheet now has a promo field too, and find.byType(TextField)
+      // would match both.
       await tester.enterText(
-          find.byType(TextField), '  Second gate past the barrier  ');
+          find.byKey(const Key('driver-note-field')), '  Second gate past the barrier  ');
       await tester.pumpAndSettle();
 
       await tester.scrollUntilVisible(find.text('Confirm Booking'), 80,
           scrollable: sheet);
+      await tester.ensureVisible(find.text('Confirm Booking'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Confirm Booking'));
       await tester.pumpAndSettle();
 
