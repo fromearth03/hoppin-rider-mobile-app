@@ -50,6 +50,40 @@ class RiderCancelReason {
   }
 }
 
+/// What cancelling costs right now, as the server would charge it.
+class CancellationQuote {
+  final int feePence;
+  final bool free;
+  final String explain;
+
+  const CancellationQuote({
+    required this.feePence,
+    required this.free,
+    required this.explain,
+  });
+
+  const CancellationQuote.free()
+      : feePence = 0,
+        free = true,
+        explain = 'Cancelling this trip is free.';
+
+  factory CancellationQuote.fromJson(Map<String, dynamic> json) {
+    final pence = (json['fee_pence'] as num?)?.toInt() ?? 0;
+    // A quote that says "not free" with no amount cannot be shown as a charge —
+    // fall back to free rather than warning about a number we do not have.
+    final isFree = json['free'] == true || pence <= 0;
+    return CancellationQuote(
+      feePence: isFree ? 0 : pence,
+      free: isFree,
+      explain: (json['explain'] as String?)?.trim().isNotEmpty == true
+          ? json['explain'] as String
+          : (isFree
+              ? 'Cancelling this trip is free.'
+              : 'A cancellation fee applies.'),
+    );
+  }
+}
+
 /// Rider-initiated actions on a live ride: cancellation, with its reasons.
 ///
 /// Contract read from `ride_handler.go` (~1065–1135): `PATCH
@@ -64,6 +98,25 @@ class RideActionsRepository {
   const RideActionsRepository(this._api, this._userId);
 
   /// The active rider reasons for the cancel sheet's picker.
+  /// What cancelling this ride RIGHT NOW would cost.
+  ///
+  /// The reason list cannot answer this. The fee-bearing events — cancelling
+  /// after a driver has committed, or mid-trip — are derived by the server from
+  /// ride state, so they are deliberately absent from the picker: they are not
+  /// things you choose. Every option therefore reads as free while the server
+  /// charges the derived event anyway.
+  ///
+  /// A failure returns a free quote rather than an error: a rider must always be
+  /// able to escape a ride, and a broken quote must not stand in the way.
+  Future<CancellationQuote> cancellationQuote(String rideId) async {
+    final result = await _api
+        .get<Map<String, dynamic>>('/rides/$rideId/cancellation-quote');
+    return switch (result) {
+      Ok(:final value) => CancellationQuote.fromJson(value),
+      Err() => const CancellationQuote.free(),
+    };
+  }
+
   Future<Result<List<RiderCancelReason>>> cancellationReasons() async {
     final result = await _api
         .get<Map<String, dynamic>>('/cancellation-reasons', query: {

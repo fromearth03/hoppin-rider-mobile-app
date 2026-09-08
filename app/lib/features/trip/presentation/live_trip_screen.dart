@@ -288,6 +288,10 @@ class _LiveTripBody extends ConsumerWidget {
       Ok(:final value) => value,
       Err() => const <RiderCancelReason>[],
     };
+    // What it will actually cost, derived server-side from ride state.
+    final quote = await ref
+        .read(rideActionsRepositoryProvider)
+        .cancellationQuote(rideId);
     if (!context.mounted) return;
 
     final outcome = await showModalBottomSheet<(bool, String?)>(
@@ -297,7 +301,8 @@ class _LiveTripBody extends ConsumerWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) =>
-          PointerInterceptor(child: _CancelReasonSheet(reasons: reasons)),
+          PointerInterceptor(
+              child: _CancelReasonSheet(reasons: reasons, quote: quote)),
     );
     if (outcome == null || outcome.$1 != true || !context.mounted) return;
 
@@ -514,7 +519,14 @@ class _TripMapState extends ConsumerState<_TripMap> {
 /// and the server derives any fee from ride state either way.
 class _CancelReasonSheet extends StatefulWidget {
   final List<RiderCancelReason> reasons;
-  const _CancelReasonSheet({required this.reasons});
+
+  /// What cancelling actually costs, from the server. The per-reason hints
+  /// cannot say: the fee-bearing events are derived from ride state and are
+  /// absent from this list by design, so every option here reads as free while
+  /// the server charges the derived event anyway.
+  final CancellationQuote quote;
+
+  const _CancelReasonSheet({required this.reasons, required this.quote});
 
   @override
   State<_CancelReasonSheet> createState() => _CancelReasonSheetState();
@@ -562,7 +574,50 @@ class _CancelReasonSheetState extends State<_CancelReasonSheet> {
                 color: AppColors.navy,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 8),
+            // The cost, stated before anything is picked. This is the number the
+            // server will charge whatever reason is chosen below.
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: widget.quote.free
+                    ? const Color(0xFFEFF7F1)
+                    : const Color(0xFFFDF6E6),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: widget.quote.free
+                      ? const Color(0xFFB7DFC6)
+                      : const Color(0xFFF0C36D),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    widget.quote.free
+                        ? Icons.check_circle_outline
+                        : Icons.info_outline,
+                    size: 18,
+                    color: widget.quote.free
+                        ? const Color(0xFF0B7A52)
+                        : const Color(0xFF8A6D1F),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      widget.quote.explain,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: widget.quote.free
+                            ? const Color(0xFF0B7A52)
+                            : const Color(0xFF8A6D1F),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
             Text(
               'Tell us why (optional):',
               textAlign: TextAlign.center,
