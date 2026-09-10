@@ -18,12 +18,25 @@ class AppStatus {
   final bool updateAvailable;
   final String latestVersion;
 
+  /// Which basemap ops wants drawn: 'auto', 'osm' or 'google'. Empty means the
+  /// server said nothing, which is treated as 'auto'.
+  ///
+  /// This exists because the app CANNOT tell when Google Maps is broken. A
+  /// failed SDK authorisation — key fine, but "Maps SDK for Android" not
+  /// enabled, or billing/quota — still builds the view, still returns a
+  /// controller, and still fires every callback; the map is just grey. The same
+  /// key answers Geocoding with OK, so a client-side probe cannot see it
+  /// either. Someone has to be able to say "use the other one" and have every
+  /// installed app obey without a release.
+  final String mapsEngine;
+
   const AppStatus({
     this.maintenanceMode = false,
     this.maintenanceMessage,
     this.forceUpdateRequired = false,
     this.updateAvailable = false,
     this.latestVersion = '',
+    this.mapsEngine = '',
   });
 
   /// What the app assumes when the check itself fails.
@@ -45,6 +58,10 @@ class AppStatus {
         updateAvailable: json['update_available'] == true,
         latestVersion: switch (json['latest_version']) {
           String s => s,
+          _ => '',
+        },
+        mapsEngine: switch (json['maps_engine']) {
+          String s when s.trim().isNotEmpty => s.trim(),
           _ => '',
         },
       );

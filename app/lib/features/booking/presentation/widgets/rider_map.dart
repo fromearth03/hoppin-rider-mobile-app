@@ -5,6 +5,9 @@ import 'dart:io' show Platform;
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../core/app_status.dart';
 import 'package:flutter_map/flutter_map.dart' as fmap;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -59,7 +62,7 @@ class RiderMapController {
 /// widget tests run on the host OS and must get the placeholder, and
 /// `defaultTargetPlatform` lies to them (it reports android inside
 /// `flutter_test`).
-class RiderMap extends StatefulWidget {
+class RiderMap extends ConsumerStatefulWidget {
   /// Where the camera starts until a live position is known. Hoppin's launch
   /// city is Wolverhampton; its centre is the least-wrong default — the same
   /// centre the admin live map uses.
@@ -103,10 +106,10 @@ class RiderMap extends StatefulWidget {
   }
 
   @override
-  State<RiderMap> createState() => _RiderMapState();
+  ConsumerState<RiderMap> createState() => _RiderMapState();
 }
 
-class _RiderMapState extends State<RiderMap> {
+class _RiderMapState extends ConsumerState<RiderMap> {
   /// Which engine to prefer. `auto` probes Google and falls back; `osm`
   /// forces the self-hosted-stack tiles (the current web default — the
   /// Google JS plugin crashes in-browser: IntersectionObserver TypeError
@@ -215,6 +218,31 @@ class _RiderMapState extends State<RiderMap> {
   @override
   Widget build(BuildContext context) {
     if (!RiderMap.mapSupported) return const MapPlaceholder();
+
+    // The server's choice outranks everything the device worked out for itself.
+    //
+    // This is the only reliable lever when Google is broken: a failed Maps SDK
+    // authorisation still builds the view, still returns a controller and still
+    // fires every callback, so the app sees a perfectly healthy map that
+    // happens to be grey. Ops sets app_configurations.maps_engine and every
+    // installed app switches on its next status poll, with no release.
+    //
+    // 'google' is honoured too, for pinning the engine while debugging. Only a
+    // build that hardcoded MAPS_ENGINE wins over this, because that is someone
+    // deliberately overriding for one build.
+    if (_engine == 'auto') {
+      final serverEngine =
+          ref.watch(appStatusProvider).valueOrNull?.mapsEngine ?? '';
+      if (serverEngine == 'osm' && _useGoogle != false) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() => _useGoogle = false);
+        });
+      } else if (serverEngine == 'google' && _useGoogle != true) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() => _useGoogle = true);
+        });
+      }
+    }
 
     return switch (_useGoogle) {
       null => const MapPlaceholder(),
