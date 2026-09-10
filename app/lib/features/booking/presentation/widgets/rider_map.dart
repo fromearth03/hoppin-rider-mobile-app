@@ -79,6 +79,11 @@ class RiderMap extends StatefulWidget {
   /// sheet.
   final EdgeInsets padding;
 
+  /// Draw the rider's own position. Only pass true once runtime location
+  /// permission is actually GRANTED — the platform layer assumes it and the
+  /// caller owns the asking (see LocationPermissionService).
+  final bool showMyLocation;
+
   const RiderMap({
     super.key,
     this.camera,
@@ -87,6 +92,7 @@ class RiderMap extends StatefulWidget {
     this.onMapCreated,
     this.onTap,
     this.padding = EdgeInsets.zero,
+    this.showMyLocation = false,
   });
 
   static bool get mapSupported {
@@ -165,10 +171,13 @@ class _RiderMapState extends State<RiderMap> {
           // zoom chrome out from underneath it.
           zoomControlsEnabled: false,
           mapToolbarEnabled: false,
-          // Location layer needs runtime permissions that are not requested
-          // yet — leaving it off beats a crash on first open.
-          myLocationEnabled: false,
-          myLocationButtonEnabled: false,
+          // Permission IS requested now — Home asks on open via
+          // LocationPermissionService — so the layer follows the grant instead
+          // of being hardcoded off. It stays off until the rider has actually
+          // said yes, which is what the old comment here was really protecting
+          // against: enabling a layer nothing had permission for.
+          myLocationEnabled: widget.showMyLocation,
+          myLocationButtonEnabled: widget.showMyLocation,
         ),
       false => _OsmMap(
           camera: widget.camera ?? RiderMap.initialCamera,

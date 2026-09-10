@@ -16,6 +16,7 @@ import '../data/vehicle_repository.dart';
 import 'rebook.dart';
 import 'route_entry_screen.dart' show RoutePoint, RoutePrefill;
 import 'widgets/rider_map.dart';
+import '../../../core/location/location_permission.dart';
 
 /// The categories the rider can book, cheapest first.
 ///
@@ -68,6 +69,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   RiderMapController? _map;
 
+  /// Whether the map may show the rider's own position. Starts false so the
+  /// first frame never asks the platform for a layer it has no permission for.
+  bool _locationGranted = false;
+
   @override
   void initState() {
     super.initState();
@@ -75,6 +80,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _resumeCheckedThisLaunch = true;
       WidgetsBinding.instance.addPostFrameCallback((_) => _resumeActiveRide());
     }
+    // Home is where the rider is deciding where they are going, so it is the
+    // one moment the request explains itself. Previously nothing in the app
+    // asked at all until a trip was already under way — see
+    // LocationPermissionService for what that cost.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _askForLocation());
+  }
+
+  Future<void> _askForLocation() async {
+    final granted = await LocationPermissionService.ensure();
+    // Booking works fine from a typed address, so a refusal changes nothing
+    // except the blue dot. Never block, never nag.
+    if (!mounted || granted == _locationGranted) return;
+    setState(() => _locationGranted = granted);
   }
 
   Future<void> _resumeActiveRide() async {
@@ -100,7 +118,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: RiderMap(onMapCreated: (c) => _map = c),
+            child: RiderMap(
+              onMapCreated: (c) => _map = c,
+              showMyLocation: _locationGranted,
+            ),
           ),
           Positioned(
             top: MediaQuery.of(context).padding.top + 12,
