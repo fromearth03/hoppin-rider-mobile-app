@@ -1137,10 +1137,10 @@ packages:
     dependency: transitive
     description:
       name: stripe_android
-      sha256: fd42b88bc2f5c53e5e1fec1d6f09a6f8ed7d0976928105be602f770c4a01f0f3
+      sha256: dcfec950ced9acb3878e8976df6ac9cf8c81aed3cc9eaaf7bd0667ad38f7b992
       url: "https://pub.dev"
     source: hosted
-    version: "14.0.0"
+    version: "14.0.1"
   stripe_ios:
     dependency: transitive
     description:

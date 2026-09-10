@@ -64,3 +64,12 @@ NUL
 # Local tooling state
 .claude/settings.local.json
 .superpowers/
+
+# The Stripe React Native shim (see android/build.gradle.kts) lives in the Java
+# package com.facebook.react.common.build, so its directory is literally named
+# `build` and the rule above swallows it. Without these negations the file is
+# never committed and a clean checkout cannot build the Android release.
+# Git cannot re-include a file inside an excluded directory, so the directory
+# itself has to be un-ignored first.
+!app/android/rn-shim/com/facebook/react/common/build/
+!app/android/rn-shim/com/facebook/react/common/build/ReactBuildConfig.java
