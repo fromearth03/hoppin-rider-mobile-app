@@ -117,6 +117,11 @@ class _RiderMapState extends State<RiderMap> {
   bool? _useGoogle;
   Timer? _probe;
 
+  /// Set the moment GoogleMap reports itself initialised. Until then, on
+  /// native, the deadline below is what decides whether Google is working.
+  bool _googleReady = false;
+  Timer? _nativeDeadline;
+
   @override
   void initState() {
     super.initState();
@@ -125,8 +130,25 @@ class _RiderMapState extends State<RiderMap> {
       _useGoogle = false;
       return;
     }
-    if (!kIsWeb || _engine == 'google') {
+    if (_engine == 'google') {
       _useGoogle = true;
+      return;
+    }
+    if (!kIsWeb) {
+      // Native binds the Maps SDK at build time, so there is no script to
+      // probe — this used to `return` here and native was simply ASSUMED to
+      // work. It is not always true: a missing or unauthorised API key, a
+      // disabled Maps SDK for Android, or an exhausted quota all render a grey
+      // tile field with no error the app can see, and the fallback below was
+      // unreachable in that state.
+      //
+      // So prefer Google, but hold a deadline: GoogleMap calls onMapCreated
+      // once it has actually initialised. If that has not happened by the time
+      // this fires, the engine is not coming up and tiles are better than grey.
+      _useGoogle = true;
+      _nativeDeadline = Timer(const Duration(seconds: 6), () {
+        if (mounted && !_googleReady) setState(() => _useGoogle = false);
+      });
       return;
     }
     if (googleMapsJsLoaded()) {
@@ -150,6 +172,7 @@ class _RiderMapState extends State<RiderMap> {
   @override
   void dispose() {
     _probe?.cancel();
+    _nativeDeadline?.cancel();
     super.dispose();
   }
 
@@ -163,8 +186,12 @@ class _RiderMapState extends State<RiderMap> {
           initialCameraPosition: widget.camera ?? RiderMap.initialCamera,
           markers: widget.markers,
           polylines: widget.polylines,
-          onMapCreated: (c) =>
-              widget.onMapCreated?.call(RiderMapController._google(c)),
+          onMapCreated: (c) {
+            // Proof the native SDK came up; cancels the fallback deadline.
+            _googleReady = true;
+            _nativeDeadline?.cancel();
+            widget.onMapCreated?.call(RiderMapController._google(c));
+          },
           onTap: widget.onTap,
           padding: widget.padding,
           // The booking sheet owns the bottom of the screen; keep Google's
@@ -189,6 +216,25 @@ class _RiderMapState extends State<RiderMap> {
     };
   }
 }
+
+/// Raster tile source for the fallback map.
+///
+/// Defaults to the public OSM community server, which is what shipped — but
+/// that is explicitly against OSM's tile usage policy for app traffic, and they
+/// block by User-Agent, which this sends as `tech.hoppin.hoppin_rider`. So the
+/// fallback would fail exactly when it was needed most.
+///
+/// The fleet already runs TileServer GL on the VM covering all of Great
+/// Britain, serving raster at
+/// `/styles/basic-preview/256/{z}/{x}/{y}.png`. It is tailnet-only today, so a
+/// rider on mobile data cannot reach it — point TILE_URL at it once it is
+/// published through the Cloudflare tunnel:
+///
+///   --dart-define=TILE_URL=https://tiles.hoppin.tech/styles/basic-preview/256/{z}/{x}/{y}.png
+const _tileUrl = String.fromEnvironment(
+  'TILE_URL',
+  defaultValue: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+);
 
 /// The self-hosted-stack fallback: flutter_map over the OSM raster tiles the
 /// admin panel already uses. Speaks the same gmaps marker/polyline types as
@@ -274,7 +320,7 @@ class _OsmMapState extends State<_OsmMap> {
       ),
       children: [
         fmap.TileLayer(
-          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          urlTemplate: _tileUrl,
           userAgentPackageName: 'tech.hoppin.hoppin_rider',
         ),
         if (widget.polylines.isNotEmpty)
