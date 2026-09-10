@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io' show Platform;
 
+import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart' as fmap;
@@ -135,20 +137,26 @@ class _RiderMapState extends State<RiderMap> {
       return;
     }
     if (!kIsWeb) {
-      // Native binds the Maps SDK at build time, so there is no script to
-      // probe — this used to `return` here and native was simply ASSUMED to
-      // work. It is not always true: a missing or unauthorised API key, a
-      // disabled Maps SDK for Android, or an exhausted quota all render a grey
-      // tile field with no error the app can see, and the fallback below was
-      // unreachable in that state.
+      // Native binds the Maps SDK at build time, so there is no script to probe
+      // — this used to `return` here and native was simply ASSUMED to work. It
+      // is not: a missing or unauthorised API key, a disabled Maps SDK for
+      // Android, or an exhausted quota all render a grey tile field.
       //
-      // So prefer Google, but hold a deadline: GoogleMap calls onMapCreated
-      // once it has actually initialised. If that has not happened by the time
-      // this fires, the engine is not coming up and tiles are better than grey.
+      // onMapCreated is NOT a usable health signal on its own. When the SDK
+      // fails authorisation it still constructs the view and still hands back a
+      // controller — the map is grey but every callback fires normally. A
+      // deadline on onMapCreated therefore misses precisely the failure we care
+      // about.
+      //
+      // So ask something that actually answers: the Maps HTTP API, with the
+      // same key the SDK uses. A key that cannot geocode is a key that cannot
+      // draw tiles, and a project with Maps disabled fails both. The deadline
+      // stays as a second net for the case where the SDK never comes up at all.
       _useGoogle = true;
-      _nativeDeadline = Timer(const Duration(seconds: 6), () {
+      _nativeDeadline = Timer(const Duration(seconds: 8), () {
         if (mounted && !_googleReady) setState(() => _useGoogle = false);
       });
+      unawaited(_verifyGoogleUsable());
       return;
     }
     if (googleMapsJsLoaded()) {
@@ -167,6 +175,34 @@ class _RiderMapState extends State<RiderMap> {
         setState(() => _useGoogle = false);
       }
     });
+  }
+
+  /// Ask Google whether this key still works, and drop to the fallback if not.
+  ///
+  /// Cheap (one small JSON call, once per map mount) and decisive: Google
+  /// answers REQUEST_DENIED for a disabled API, an unauthorised key or a
+  /// billing problem, which are the states that leave the SDK drawing grey.
+  /// Anything else — including a network failure — is left alone, because a
+  /// flaky connection is not a reason to abandon the better renderer.
+  Future<void> _verifyGoogleUsable() async {
+    if (_mapsApiKey.isEmpty) return;
+    try {
+      final uri = Uri.https('maps.googleapis.com', '/maps/api/geocode/json', {
+        'address': 'London',
+        'key': _mapsApiKey,
+      });
+      final res = await http.get(uri).timeout(const Duration(seconds: 6));
+      if (res.statusCode != 200) return;
+      final status = (jsonDecode(res.body) as Map)['status'];
+      if (status == 'REQUEST_DENIED' || status == 'OVER_QUERY_LIMIT') {
+        if (mounted) {
+          _nativeDeadline?.cancel();
+          setState(() => _useGoogle = false);
+        }
+      }
+    } catch (_) {
+      // Network trouble says nothing about the key. Keep Google.
+    }
   }
 
   @override
@@ -231,6 +267,10 @@ class _RiderMapState extends State<RiderMap> {
 /// published through the Cloudflare tunnel:
 ///
 ///   --dart-define=TILE_URL=https://tiles.hoppin.tech/styles/basic-preview/256/{z}/{x}/{y}.png
+/// The same key the Android/iOS SDK is configured with, so the probe tests the
+/// credential that actually draws the map.
+const _mapsApiKey = String.fromEnvironment('MAPS_API_KEY');
+
 const _tileUrl = String.fromEnvironment(
   'TILE_URL',
   defaultValue: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',

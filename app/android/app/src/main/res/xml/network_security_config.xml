@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cleartext is OFF everywhere by default (Android 9+ behaviour, kept).
+
+  The one exception is the self-hosted TileServer GL on the Tailscale VM, which
+  serves the MapLibre fallback basemap over plain HTTP on the tailnet. It has no
+  certificate and is not publicly routable, so there is nothing to terminate TLS
+  with until it is published through the Cloudflare tunnel — at which point this
+  exception should be deleted and TILE_URL pointed at the https host.
+
+  Scoped to that single host: no other cleartext destination is permitted, and
+  API traffic keeps using https://api.hoppin.tech as before.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">100.99.10.35</domain>
+    </domain-config>
+</network-security-config>
