@@ -3,3 +3,9 @@
 # build on the dangling references unless told they are expected.
 -dontwarn com.stripe.android.pushProvisioning.**
 -dontwarn com.reactnativestripesdk.pushprovisioning.**
+
+# flutter_callkit_incoming (in-app calls) serialises each call's settings by
+# field name — ringtone, extras, ids — and R8 renames those fields in release
+# builds, so settings silently fall off between Dart and the native ring screen
+# (the phone rang without its ringtone). Required by the plugin's README.
+-keep class com.hiennv.flutter_callkit_incoming.** { *; }

@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'core/config.dart';
 import 'core/push/push_registrar.dart';
+import 'core/push/call_push.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,6 +28,8 @@ Future<void> main() async {
   // Push boot — guarded, never fatal. Token registration itself happens on
   // sign-in (see authControllerProvider's onSignedIn hook).
   await initFirebaseGuarded();
+  // Rings the phone for an incoming call while the app is closed.
+  registerCallBackgroundHandler();
 
   // flutter_stripe has no web platform implementation in the version this
   // app depends on - CardField is only ever shown on mobile (see

@@ -17,7 +17,7 @@ dependencies:
   http: ^1.2.2
   intl: ^0.19.0
   flutter_secure_storage: ^9.2.2
-  device_info_plus: ^10.1.2
+  device_info_plus: ^12.3.0
   flutter_svg: ^2.0.10
   flutter_stripe: ^14.0.0
   google_maps_flutter: ^2.10.0
@@ -34,6 +34,8 @@ dependencies:
   # Rider position for the pickup gates (arrive within 30m, start within 15m).
   # Streamed only between a driver accepting and the trip starting.
   geolocator: ^13.0.2
+  livekit_client: ^2.12.0
+  flutter_callkit_incoming: ^3.1.5
 
 dev_dependencies:
   flutter_test:

@@ -22,7 +22,21 @@ subprojects {
 // flutter_stripe's stripe_android compiles Kotlin at the JDK-21 toolchain default while
 // Flutter pins Java to 17; Gradle rejects the inconsistency ("Inconsistent JVM-target").
 // Force every subproject's Kotlin compilation to JVM 17 to match the Java target.
+//
+// Except the plugins that pin both their Java and their Kotlin to 1.8 in their
+// own build file: forcing only the Kotlin half to 17 is exactly what would make
+// them inconsistent. flutter_webrtc cannot be upgraded out of it (livekit_client
+// pins it to 1.6.0). Re-check this list when adding a plugin: grep its
+// android/build.gradle for VERSION_1_8.
+val pinnedToJava8 = setOf(
+    "flutter_callkit_incoming",
+    "flutter_secure_storage",
+    "flutter_webrtc",
+    "geolocator_android",
+    "livekit_client",
+)
 subprojects {
+    if (name in pinnedToJava8) return@subprojects
     tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
         compilerOptions {
             jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)

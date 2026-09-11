@@ -23,6 +23,7 @@ import 'widgets/glass_chip.dart';
 import 'widgets/trip_route_header.dart';
 import 'widgets/trip_status_banner.dart';
 import 'widgets/turn_banner.dart';
+import '../../calls/application/call_controller.dart';
 
 /// Streams [LiveTripInfo] for one ride from [LiveTripSource].
 ///
@@ -678,17 +679,27 @@ class _CancelReasonSheetState extends State<_CancelReasonSheet> {
   }
 }
 
-class _QuickActions extends StatelessWidget {
+class _QuickActions extends ConsumerWidget {
   final String rideId;
   final String? driverName;
 
   const _QuickActions({required this.rideId, required this.driverName});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // An in-app call through Hoppin's own call server: neither side ever
+        // sees the other's phone number. The call screen appears by itself
+        // (CallOverlay) — nothing to navigate to.
+        _CircleButton(
+          icon: Icons.phone,
+          onTap: () => ref
+              .read(callControllerProvider.notifier)
+              .placeCall(rideId, peerName: driverName ?? ''),
+        ),
+        const SizedBox(width: 10),
         _CircleButton(
           icon: Icons.chat_bubble,
           onTap: () => context.push(

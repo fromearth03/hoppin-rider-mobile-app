@@ -14,6 +14,8 @@ import 'features/auth/domain/auth_state.dart';
 import 'shared/widgets/app_gate.dart';
 import 'shared/widgets/offline.dart';
 import 'shared/widgets/startup_splash.dart';
+import 'features/calls/application/call_coordinator.dart';
+import 'features/calls/presentation/call_overlay.dart';
 
 class HoppinApp extends ConsumerStatefulWidget {
   const HoppinApp({super.key});
@@ -41,6 +43,8 @@ class _HoppinAppState extends ConsumerState<HoppinApp> {
 
   @override
   Widget build(BuildContext context) {
+    // Created at start-up so a call can ring whatever screen is showing.
+    ref.watch(callCoordinatorProvider);
     final router = ref.watch(appRouterProvider);
     return MaterialApp.router(
       title: 'Hoppin Rider',
@@ -75,10 +79,14 @@ class _HoppinAppState extends ConsumerState<HoppinApp> {
             // AppGate wraps the router's output rather than living on a route:
             // a maintenance screen the rider can navigate away from is not a
             // maintenance screen.
-            : AppGate(
-                child: _OfflineShell(
-                  router: router,
-                  child: child ?? const SizedBox.shrink(),
+            // CallOverlay sits above everything the router shows, so a live
+            // call's screen can never be navigated away from.
+            : CallOverlay(
+                child: AppGate(
+                  child: _OfflineShell(
+                    router: router,
+                    child: child ?? const SizedBox.shrink(),
+                  ),
                 ),
               );
         if (!kIsWeb) return shell;

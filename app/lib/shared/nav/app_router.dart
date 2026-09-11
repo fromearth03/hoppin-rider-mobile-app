@@ -62,6 +62,7 @@ class AppRoutes {
   static const route = '/route';
   static const safety = '/safety';
   static const chat = '/chat';
+
 }
 
 /// Where a rider in [status] currently at [location] should be sent, or null

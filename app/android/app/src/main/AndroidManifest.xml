@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <!-- The rider's position, used ONLY between a driver accepting and the trip
          starting: the driver may not announce arrival beyond 30m or start the
          trip beyond 15m, and both are a distance between two people. Coarse is
@@ -6,6 +7,19 @@
          still gets a usable app rather than a broken one. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- In-app calls with the driver (self-hosted LiveKit). Microphone, audio
+         routing to earpiece/speaker/Bluetooth, and the incoming-call screen. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- flutter_callkit_incoming merges camera permissions in for video calls.
+         Hoppin calls are audio-only, and Play asks an app to justify every
+         camera permission it declares — so strip them rather than ship them. -->
+    <uses-permission android:name="android.permission.CAMERA" tools:node="remove" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" tools:node="remove" />
     <application
         android:label="Hoppin"
         android:name="${applicationName}"
@@ -13,7 +27,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:launchMode="singleTop"
+            android:launchMode="singleTask"
             android:taskAffinity=""
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
