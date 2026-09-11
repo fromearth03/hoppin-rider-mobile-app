@@ -301,7 +301,11 @@ const _mapsApiKey = String.fromEnvironment('MAPS_API_KEY');
 
 const _tileUrl = String.fromEnvironment(
   'TILE_URL',
-  defaultValue: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  // Our own TileServer GL (all of Great Britain), published through the
+  // Cloudflare tunnel and cached at the edge. Replaces the public OSM server,
+  // whose usage policy forbids app traffic and which blocks by User-Agent.
+  defaultValue:
+      'https://tiles.hoppin.tech/styles/basic-preview/256/{z}/{x}/{y}.png',
 );
 
 /// The self-hosted-stack fallback: flutter_map over the OSM raster tiles the
@@ -405,6 +409,9 @@ class _OsmMapState extends State<_OsmMap> {
         if (markers.isNotEmpty) fmap.MarkerLayer(markers: markers),
         const fmap.RichAttributionWidget(
           attributions: [
+            // Required by the data licences: the basemap is OpenMapTiles
+            // vector data built from OpenStreetMap (ODbL).
+            fmap.TextSourceAttribution('OpenMapTiles'),
             fmap.TextSourceAttribution('OpenStreetMap contributors'),
           ],
         ),
