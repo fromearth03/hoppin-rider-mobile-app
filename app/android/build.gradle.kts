@@ -61,6 +61,18 @@ subprojects {
 // the React Native spec file.
 subprojects {
     if (name == "stripe_android") {
+        // The source() hook below does not survive AGP's variant finalisation in the
+        // current AGP/Gradle (the release JavaCompile ignores the appended source), so
+        // the build failed with "package com.facebook.react.common.build does not
+        // exist". Also copy the stub into the plugin's OWN source set (its
+        // src/main/kotlin, which it compiles as Java) at configuration time, where it
+        // is guaranteed to be compiled with the plugin. Idempotent + guarded.
+        val shimSrc = rootProject.file("rn-shim/com/facebook/react/common/build/ReactBuildConfig.java")
+        val shimDst = project.file("src/main/kotlin/com/facebook/react/common/build/ReactBuildConfig.java")
+        if (shimSrc.exists() && !shimDst.exists()) {
+            shimDst.parentFile.mkdirs()
+            shimSrc.copyTo(shimDst, overwrite = true)
+        }
         tasks.withType<JavaCompile>().configureEach {
             source(rootProject.file("rn-shim"))
         }
