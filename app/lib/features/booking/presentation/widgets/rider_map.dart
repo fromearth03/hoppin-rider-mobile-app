@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show Platform;
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -129,6 +130,10 @@ class _RiderMapState extends ConsumerState<RiderMap> {
   bool _googleReady = false;
   Timer? _nativeDeadline;
 
+  /// Auto-mode OSM health, from fetching one real tile: lets the resolver know
+  /// whether the fallback can actually draw. null = not yet known.
+  bool? _osmHealthy;
+
   @override
   void initState() {
     super.initState();
@@ -161,6 +166,9 @@ class _RiderMapState extends ConsumerState<RiderMap> {
       _nativeDeadline = Timer(const Duration(seconds: 8), () {
         if (mounted && !_googleReady) setState(() => _useGoogle = false);
       });
+      // Resolve both engines' health in parallel: Google via its snapshot (in
+      // onMapCreated -> _checkGoogleThenResolve), OSM via a real tile fetch now.
+      unawaited(_probeOsm());
       unawaited(_verifyGoogleUsable());
       return;
     }
@@ -210,37 +218,86 @@ class _RiderMapState extends ConsumerState<RiderMap> {
     }
   }
 
-  /// Confirm Google actually DREW a map, and fall back to OSM for every other
-  /// outcome.
+  /// Auto's engine resolver: prove which renderer actually works and show it,
+  /// preferring Google for quality.
   ///
-  /// The app cannot tell Google is broken from any of the usual signals. The
-  /// geocode probe above needs MAPS_API_KEY, which this build does not set (the
-  /// SDK reads its key from the Android manifest, not a dart-define), so it
-  /// returns immediately and never runs. onMapCreated fires even on a grey map.
-  /// And Google Maps is billing-fragile on this project, so a grey "map
-  /// unavailable" field is the state to expect, not the exception.
-  ///
-  /// So judge the only honest witness: the rendered pixels. Snapshot the map
-  /// and keep Google ONLY if it came back a real map (roads, water, labels ->
-  /// many colours). Anything else — a flat grey field, a blank frame, a null or
-  /// failed snapshot — drops to the self-hosted OSM tiles, which always draw.
-  /// Auto must never sit on grey, so "cannot confirm Google" means OSM, not
-  /// "leave it". Two attempts so a real map that is merely slow to tile is not
-  /// mistaken for a dead one. Runs once, auto only, while Google is current.
-  Future<void> _verifyGoogleRendered(GoogleMapController c) async {
+  /// The app cannot tell Google is broken from any callback. The real cause on
+  /// this project is that the Cloud key GEOCODES fine (status OK) but its
+  /// "Maps SDK for Android" is not activated, so the SDK still returns a healthy
+  /// controller and fires onMapCreated while drawing a grey field. The geocode
+  /// probe above needs MAPS_API_KEY, which this build does not set, so it never
+  /// runs either. So judge the only honest witnesses: Google from its rendered
+  /// pixels, OSM from a real tile fetch. Pick the winner:
+  ///   Google draws a real map     -> Google
+  ///   Google grey, OSM reachable  -> OSM
+  ///   Google grey, OSM also down  -> OSM (self-hosted, most likely to recover;
+  ///                                  still draws markers, routes and taps)
+  /// Because Google is ALWAYS checked directly, the reverse holds for free: if
+  /// OSM is the broken one and Google works, auto keeps Google. Two snapshot
+  /// attempts so a real map that is merely slow to tile is not misjudged.
+  Future<void> _checkGoogleThenResolve(GoogleMapController c) async {
     for (final wait in const [Duration(seconds: 3), Duration(seconds: 4)]) {
       await Future<void>.delayed(wait);
       if (!mounted || _useGoogle != true) return;
       try {
         final bytes = await c.takeSnapshot();
-        if (bytes != null && await _looksLikeRealMap(bytes)) return; // good
+        if (bytes != null && await _looksLikeRealMap(bytes)) {
+          return; // Google is genuinely drawing — keep it.
+        }
       } catch (_) {
-        // Snapshot failed — cannot confirm Google, so let it fall to OSM.
+        // Unreadable snapshot: cannot confirm Google, treat as not-drawing.
       }
     }
-    if (mounted && _useGoogle == true) {
+    await _resolveToOsm();
+  }
+
+  /// Google is confirmed not-drawing: settle on OSM. Waits briefly for the tile
+  /// probe if it is still in flight (only to record health / choose a fallback),
+  /// then switches. OSM is the least-bad surface once Google is grey, so we
+  /// switch whether or not its tiles are reachable — an unreachable tile server
+  /// may recover, and the map still functions for markers and taps meanwhile.
+  Future<void> _resolveToOsm() async {
+    var waited = 0;
+    while (_osmHealthy == null && waited < 6000) {
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      waited += 300;
+    }
+    if (mounted && _useGoogle != false) {
       _nativeDeadline?.cancel();
       setState(() => _useGoogle = false);
+    }
+  }
+
+  /// Health-check the OSM fallback the way the app will actually use it: fetch
+  /// one real tile from the configured tile server for the launch centre. Sets
+  /// [_osmHealthy]. This is the other half of a bidirectional auto — we must
+  /// know OSM can draw before leaning on it, and (via [_googleHealthy]) never
+  /// sit on empty OSM tiles when Google is the one that works.
+  Future<void> _probeOsm() async {
+    try {
+      const z = 13;
+      final lat = RiderMap.initialCamera.target.latitude;
+      final lon = RiderMap.initialCamera.target.longitude;
+      const n = 1 << z;
+      final x = ((lon + 180.0) / 360.0 * n).floor().clamp(0, n - 1);
+      final latRad = lat * math.pi / 180.0;
+      final y = ((1 -
+                  math.log(math.tan(latRad) + 1 / math.cos(latRad)) / math.pi) /
+              2 *
+              n)
+          .floor()
+          .clamp(0, n - 1);
+      final url = _tileUrl
+          .replaceAll('{z}', '$z')
+          .replaceAll('{x}', '$x')
+          .replaceAll('{y}', '$y');
+      final res =
+          await http.get(Uri.parse(url)).timeout(const Duration(seconds: 6));
+      _osmHealthy = res.statusCode == 200 &&
+          (res.headers['content-type']?.startsWith('image/') ?? false) &&
+          res.bodyBytes.length > 500;
+    } catch (_) {
+      _osmHealthy = false;
     }
   }
 
@@ -324,9 +381,10 @@ class _RiderMapState extends ConsumerState<RiderMap> {
             _nativeDeadline?.cancel();
             widget.onMapCreated?.call(RiderMapController._google(c));
             // onMapCreated fires even when the map rendered grey, so in auto
-            // mode confirm from the actual pixels and drop to OSM if it did.
+            // mode confirm from the actual pixels and resolve to the engine
+            // that can actually draw.
             if (_engine == 'auto' && !kIsWeb) {
-              unawaited(_verifyGoogleRendered(c));
+              unawaited(_checkGoogleThenResolve(c));
             }
           },
           onTap: widget.onTap,
