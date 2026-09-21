@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show Platform;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -208,6 +210,70 @@ class _RiderMapState extends ConsumerState<RiderMap> {
     }
   }
 
+  /// Look at what Google ACTUALLY drew and fall back to OSM if it is the grey
+  /// "map unavailable" field.
+  ///
+  /// This is the only check that works in this build. The geocode probe above
+  /// needs MAPS_API_KEY, which the app is not built with (the SDK reads its key
+  /// from the Android manifest, not a dart-define), so `_verifyGoogleUsable`
+  /// returns immediately and never runs. And onMapCreated fires even on a grey
+  /// map. So auto mode had no signal at all for the grey case and never fell
+  /// back — the exact bug we are fixing.
+  ///
+  /// A failed Maps authorisation still constructs the view, so the pixels are
+  /// the only honest witness: snapshot the rendered map and, if it came back a
+  /// flat grey field, switch to OSM. Runs once, only in auto mode, only while
+  /// Google is the current choice.
+  Future<void> _verifyGoogleRendered(GoogleMapController c) async {
+    // Let tiles load before judging; a real map mid-load can look bare.
+    await Future<void>.delayed(const Duration(seconds: 4));
+    if (!mounted || _useGoogle != true) return;
+    try {
+      final bytes = await c.takeSnapshot();
+      if (bytes == null) return; // snapshot unavailable — say nothing
+      if (await _looksLikeGreyField(bytes)) {
+        if (mounted) {
+          _nativeDeadline?.cancel();
+          setState(() => _useGoogle = false);
+        }
+      }
+    } catch (_) {
+      // Snapshot failed — can't conclude anything, leave Google in place.
+    }
+  }
+
+  /// True when a decoded map snapshot is the grey unavailable-field: nearly one
+  /// colour AND that colour is Google's light grey (R≈G≈B, bright). A real map
+  /// carries roads, labels and the Google watermark, so it has many colours; a
+  /// uniform ocean is uniform but blue, not grey, so it is not mistaken for one.
+  Future<bool> _looksLikeGreyField(Uint8List png) async {
+    final codec = await ui.instantiateImageCodec(png);
+    final frame = await codec.getNextFrame();
+    final img = frame.image;
+    final w = img.width, h = img.height;
+    final data = await img.toByteData(format: ui.ImageByteFormat.rawRgba);
+    img.dispose();
+    if (data == null || w == 0 || h == 0) return false;
+
+    final seen = <int>{};
+    var greyish = 0, total = 0;
+    const grid = 8;
+    for (var gy = 1; gy < grid; gy++) {
+      for (var gx = 1; gx < grid; gx++) {
+        final x = (w * gx) ~/ grid, y = (h * gy) ~/ grid;
+        final o = (y * w + x) * 4;
+        final r = data.getUint8(o), g = data.getUint8(o + 1), b = data.getUint8(o + 2);
+        seen.add(((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4)); // quantise 4bpc
+        final maxc = r > g ? (r > b ? r : b) : (g > b ? g : b);
+        final minc = r < g ? (r < b ? r : b) : (g < b ? g : b);
+        if (maxc - minc <= 12 && r >= 200 && r <= 245) greyish++;
+        total++;
+      }
+    }
+    // Few distinct colours AND overwhelmingly the light-grey signature.
+    return seen.length <= 3 && greyish >= (total * 0.8).round();
+  }
+
   @override
   void dispose() {
     _probe?.cancel();
@@ -255,6 +321,11 @@ class _RiderMapState extends ConsumerState<RiderMap> {
             _googleReady = true;
             _nativeDeadline?.cancel();
             widget.onMapCreated?.call(RiderMapController._google(c));
+            // onMapCreated fires even when the map rendered grey, so in auto
+            // mode confirm from the actual pixels and drop to OSM if it did.
+            if (_engine == 'auto' && !kIsWeb) {
+              unawaited(_verifyGoogleRendered(c));
+            }
           },
           onTap: widget.onTap,
           padding: widget.padding,
