@@ -210,43 +210,47 @@ class _RiderMapState extends ConsumerState<RiderMap> {
     }
   }
 
-  /// Look at what Google ACTUALLY drew and fall back to OSM if it is the grey
-  /// "map unavailable" field.
+  /// Confirm Google actually DREW a map, and fall back to OSM for every other
+  /// outcome.
   ///
-  /// This is the only check that works in this build. The geocode probe above
-  /// needs MAPS_API_KEY, which the app is not built with (the SDK reads its key
-  /// from the Android manifest, not a dart-define), so `_verifyGoogleUsable`
-  /// returns immediately and never runs. And onMapCreated fires even on a grey
-  /// map. So auto mode had no signal at all for the grey case and never fell
-  /// back — the exact bug we are fixing.
+  /// The app cannot tell Google is broken from any of the usual signals. The
+  /// geocode probe above needs MAPS_API_KEY, which this build does not set (the
+  /// SDK reads its key from the Android manifest, not a dart-define), so it
+  /// returns immediately and never runs. onMapCreated fires even on a grey map.
+  /// And Google Maps is billing-fragile on this project, so a grey "map
+  /// unavailable" field is the state to expect, not the exception.
   ///
-  /// A failed Maps authorisation still constructs the view, so the pixels are
-  /// the only honest witness: snapshot the rendered map and, if it came back a
-  /// flat grey field, switch to OSM. Runs once, only in auto mode, only while
-  /// Google is the current choice.
+  /// So judge the only honest witness: the rendered pixels. Snapshot the map
+  /// and keep Google ONLY if it came back a real map (roads, water, labels ->
+  /// many colours). Anything else — a flat grey field, a blank frame, a null or
+  /// failed snapshot — drops to the self-hosted OSM tiles, which always draw.
+  /// Auto must never sit on grey, so "cannot confirm Google" means OSM, not
+  /// "leave it". Two attempts so a real map that is merely slow to tile is not
+  /// mistaken for a dead one. Runs once, auto only, while Google is current.
   Future<void> _verifyGoogleRendered(GoogleMapController c) async {
-    // Let tiles load before judging; a real map mid-load can look bare.
-    await Future<void>.delayed(const Duration(seconds: 4));
-    if (!mounted || _useGoogle != true) return;
-    try {
-      final bytes = await c.takeSnapshot();
-      if (bytes == null) return; // snapshot unavailable — say nothing
-      if (await _looksLikeGreyField(bytes)) {
-        if (mounted) {
-          _nativeDeadline?.cancel();
-          setState(() => _useGoogle = false);
-        }
+    for (final wait in const [Duration(seconds: 3), Duration(seconds: 4)]) {
+      await Future<void>.delayed(wait);
+      if (!mounted || _useGoogle != true) return;
+      try {
+        final bytes = await c.takeSnapshot();
+        if (bytes != null && await _looksLikeRealMap(bytes)) return; // good
+      } catch (_) {
+        // Snapshot failed — cannot confirm Google, so let it fall to OSM.
       }
-    } catch (_) {
-      // Snapshot failed — can't conclude anything, leave Google in place.
+    }
+    if (mounted && _useGoogle == true) {
+      _nativeDeadline?.cancel();
+      setState(() => _useGoogle = false);
     }
   }
 
-  /// True when a decoded map snapshot is the grey unavailable-field: nearly one
-  /// colour AND that colour is Google's light grey (R≈G≈B, bright). A real map
-  /// carries roads, labels and the Google watermark, so it has many colours; a
-  /// uniform ocean is uniform but blue, not grey, so it is not mistaken for one.
-  Future<bool> _looksLikeGreyField(Uint8List png) async {
+  /// True when a decoded map snapshot carries real map content. Samples the
+  /// central 60% (so the Google logo bottom-left and attribution bottom-right
+  /// cannot lend colour to a grey field) and counts distinct quantised colours.
+  /// A real map's centre has roads, water, parks and labels — many colours; the
+  /// grey unavailable-field is near-uniform, one to three. Robust to the exact
+  /// shade of grey because it tests richness, not a specific colour.
+  Future<bool> _looksLikeRealMap(Uint8List png) async {
     final codec = await ui.instantiateImageCodec(png);
     final frame = await codec.getNextFrame();
     final img = frame.image;
@@ -255,23 +259,21 @@ class _RiderMapState extends ConsumerState<RiderMap> {
     img.dispose();
     if (data == null || w == 0 || h == 0) return false;
 
+    final x0 = (w * 0.2).floor(), x1 = (w * 0.8).floor();
+    final y0 = (h * 0.2).floor(), y1 = (h * 0.8).floor();
     final seen = <int>{};
-    var greyish = 0, total = 0;
-    const grid = 8;
-    for (var gy = 1; gy < grid; gy++) {
-      for (var gx = 1; gx < grid; gx++) {
-        final x = (w * gx) ~/ grid, y = (h * gy) ~/ grid;
+    const grid = 10;
+    for (var gy = 0; gy < grid; gy++) {
+      for (var gx = 0; gx < grid; gx++) {
+        final x = x0 + ((x1 - x0) * gx) ~/ grid;
+        final y = y0 + ((y1 - y0) * gy) ~/ grid;
         final o = (y * w + x) * 4;
         final r = data.getUint8(o), g = data.getUint8(o + 1), b = data.getUint8(o + 2);
         seen.add(((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4)); // quantise 4bpc
-        final maxc = r > g ? (r > b ? r : b) : (g > b ? g : b);
-        final minc = r < g ? (r < b ? r : b) : (g < b ? g : b);
-        if (maxc - minc <= 12 && r >= 200 && r <= 245) greyish++;
-        total++;
       }
     }
-    // Few distinct colours AND overwhelmingly the light-grey signature.
-    return seen.length <= 3 && greyish >= (total * 0.8).round();
+    // Grey/blank fields are 1-3 distinct colours; a real map is far richer.
+    return seen.length >= 5;
   }
 
   @override
