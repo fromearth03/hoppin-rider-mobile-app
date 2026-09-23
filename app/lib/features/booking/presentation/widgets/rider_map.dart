@@ -125,9 +125,11 @@ class _RiderMapState extends ConsumerState<RiderMap> {
   bool? _useGoogle;
   Timer? _probe;
 
-  /// Set the moment GoogleMap reports itself initialised. Until then, on
-  /// native, the deadline below is what decides whether Google is working.
-  bool _googleReady = false;
+  /// Auto: set only once Google's rendered pixels prove it drew a REAL map.
+  /// Until that happens the guarantee timer below forces OSM, so a grey field, a
+  /// snapshot that never returns, or an onMapCreated that never fires can never
+  /// leave the map stuck on grey.
+  bool _googleConfirmed = false;
   Timer? _nativeDeadline;
 
   /// Auto-mode OSM health, from fetching one real tile: lets the resolver know
@@ -163,8 +165,17 @@ class _RiderMapState extends ConsumerState<RiderMap> {
       // draw tiles, and a project with Maps disabled fails both. The deadline
       // stays as a second net for the case where the SDK never comes up at all.
       _useGoogle = true;
-      _nativeDeadline = Timer(const Duration(seconds: 8), () {
-        if (mounted && !_googleReady) setState(() => _useGoogle = false);
+      // ABSOLUTE GUARANTEE. This is a Timer, so no hung snapshot or blocked
+      // await can stop it firing. Within this window auto MUST show a working
+      // map: unless Google has been positively confirmed as drawing a real map,
+      // force OSM. This one line is what makes the fallback impossible to skip —
+      // it catches a grey field, a takeSnapshot that never returns, and an
+      // onMapCreated that never fires, all the same. It is cancelled ONLY by a
+      // confirmed-real-map snapshot, never by onMapCreated (which fires on grey).
+      _nativeDeadline = Timer(const Duration(seconds: 9), () {
+        if (mounted && !_googleConfirmed && _useGoogle != false) {
+          setState(() => _useGoogle = false);
+        }
       });
       // Resolve both engines' health in parallel: Google via its snapshot (in
       // onMapCreated -> _checkGoogleThenResolve), OSM via a real tile fetch now.
@@ -236,16 +247,24 @@ class _RiderMapState extends ConsumerState<RiderMap> {
   /// OSM is the broken one and Google works, auto keeps Google. Two snapshot
   /// attempts so a real map that is merely slow to tile is not misjudged.
   Future<void> _checkGoogleThenResolve(GoogleMapController c) async {
-    for (final wait in const [Duration(seconds: 3), Duration(seconds: 4)]) {
+    for (final wait in const [Duration(seconds: 2), Duration(seconds: 3)]) {
       await Future<void>.delayed(wait);
       if (!mounted || _useGoogle != true) return;
+      Uint8List? bytes;
       try {
-        final bytes = await c.takeSnapshot();
-        if (bytes != null && await _looksLikeRealMap(bytes)) {
-          return; // Google is genuinely drawing — keep it.
-        }
+        // NEVER await the snapshot unguarded. On a broken / unauthorised Google
+        // map the snapshot callback can simply never fire, and a bare await would
+        // hang here forever — which is exactly why auto used to sit on grey. The
+        // timeout turns a hang into "could not confirm Google", and the guarantee
+        // timer above is the final backstop if even this is somehow blocked.
+        bytes = await c.takeSnapshot().timeout(const Duration(seconds: 3));
       } catch (_) {
-        // Unreadable snapshot: cannot confirm Google, treat as not-drawing.
+        bytes = null; // timed out / threw -> treat as not-drawing
+      }
+      if (bytes != null && await _looksLikeRealMap(bytes)) {
+        _googleConfirmed = true; // proven real -> keep Google, disarm the timer
+        _nativeDeadline?.cancel();
+        return;
       }
     }
     await _resolveToOsm();
@@ -376,13 +395,11 @@ class _RiderMapState extends ConsumerState<RiderMap> {
           markers: widget.markers,
           polylines: widget.polylines,
           onMapCreated: (c) {
-            // Proof the native SDK came up; cancels the fallback deadline.
-            _googleReady = true;
-            _nativeDeadline?.cancel();
+            // The SDK constructed a view — but it fires this even when the map
+            // rendered grey, so this is NOT proof Google works and must NOT
+            // cancel the guarantee timer. Only a confirmed-real-map snapshot
+            // (in _checkGoogleThenResolve) cancels it.
             widget.onMapCreated?.call(RiderMapController._google(c));
-            // onMapCreated fires even when the map rendered grey, so in auto
-            // mode confirm from the actual pixels and resolve to the engine
-            // that can actually draw.
             if (_engine == 'auto' && !kIsWeb) {
               unawaited(_checkGoogleThenResolve(c));
             }
