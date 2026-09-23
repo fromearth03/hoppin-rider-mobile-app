@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'api/api_client.dart';
 import 'result.dart';
@@ -74,13 +75,42 @@ class AppStatusRepository {
   final ApiClient _api;
   const AppStatusRepository(this._api);
 
-  static const _appVersion =
+  // This IS the rider app. The gate keys config by (app, platform); the driver
+  // app sends 'driver'. A compile-time constant, so it can never be the wrong
+  // app at runtime.
+  static const _app = 'rider';
+
+  // Only used if the real installed version cannot be read (see _version).
+  static const _fallbackVersion =
       String.fromEnvironment('APP_VERSION', defaultValue: 'dev');
+
+  // The REAL installed version, read once from the build (pubspec -> store
+  // versionName) via package_info. This replaces the hand-passed APP_VERSION
+  // dart-define, which could silently drift from the actual build; now the
+  // number the update-gate compares is always the true installed version.
+  static String? _cachedVersion;
+  Future<String> _version() async {
+    final cached = _cachedVersion;
+    if (cached != null) return cached;
+    var v = _fallbackVersion;
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (info.version.isNotEmpty) v = info.version;
+    } catch (_) {
+      // Fall back to the dart-define; never let a version read break the gate.
+    }
+    _cachedVersion = v;
+    return v;
+  }
 
   Future<AppStatus> fetch() async {
     final res = await _api.get<Map<String, dynamic>>(
       '/app-status',
-      query: {'platform': _platform(), 'version': _appVersion},
+      query: {
+        'app': _app,
+        'platform': _platform(),
+        'version': await _version(),
+      },
     );
     return switch (res) {
       Ok(:final value) => AppStatus.fromJson(value),

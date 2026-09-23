@@ -18,6 +18,10 @@ dependencies:
   intl: ^0.19.0
   flutter_secure_storage: ^9.2.2
   device_info_plus: ^12.3.0
+  # Reports the REAL installed version (from pubspec/store) to the /app-status
+  # update-gate, instead of a hand-passed APP_VERSION dart-define that could
+  # drift from the actual build. See core/app_status.dart.
+  package_info_plus: ^8.1.0
   flutter_svg: ^2.0.10
   flutter_stripe: ^14.0.0
   google_maps_flutter: ^2.10.0
