@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/api/error_codes.dart';
@@ -105,7 +106,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             onPressed: state.isBusy
                 ? null
                 : () => ref.read(authControllerProvider.notifier).signInWithGoogle(),
-            icon: const Icon(Icons.g_mobiledata, size: 30, color: Color(0xFF4285F4)),
+            icon: SvgPicture.asset(
+              'assets/icons/google_g.svg',
+              height: 20,
+              width: 20,
+            ),
             label: const Text('Continue with Google'),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size.fromHeight(52),
