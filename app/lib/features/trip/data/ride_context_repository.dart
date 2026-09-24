@@ -260,3 +260,17 @@ class RideContextRepository {
 
 final rideContextRepositoryProvider = Provider<RideContextRepository>(
     (ref) => RideContextRepository(ref.watch(apiClientProvider)));
+
+/// The rider's current non-terminal ride id (null if none). The app gate reads
+/// this so maintenance mode lets a rider with a LIVE ride keep using their trip
+/// instead of yanking them to the maintenance screen, while a rider with no ride
+/// placed goes straight to it. autoDispose so it is re-checked each time the gate
+/// subscribes (e.g. after the maintenance status is re-fetched). Fails to null so
+/// a transport error shows maintenance rather than hiding it.
+final activeRideIdProvider = FutureProvider.autoDispose<String?>((ref) async {
+  try {
+    return await ref.watch(rideContextRepositoryProvider).activeRideId();
+  } catch (_) {
+    return null;
+  }
+});

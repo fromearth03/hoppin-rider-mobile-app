@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_status.dart';
 import '../../core/theme/colors.dart';
+import '../../features/trip/data/ride_context_repository.dart';
 import 'hoppin_logo.dart';
 
 /// Blocks the entire app while the operator has the platform down, or while
@@ -27,6 +28,21 @@ class AppGate extends ConsumerWidget {
     final status = ref.watch(appStatusProvider).valueOrNull ?? AppStatus.unknown;
 
     if (status.maintenanceMode) {
+      // A rider must not be yanked to the maintenance screen mid-ride. Only block
+      // when there is no live ride; a rider with an active trip is let straight
+      // through so it keeps working. "Ride not placed" -> maintenance screen.
+      final active = ref.watch(activeRideIdProvider);
+      if (active.valueOrNull != null) {
+        return child; // live ride in progress — let the trip run
+      }
+      if (active.isLoading) {
+        // Briefly confirming whether a live ride exists; don't flash the wrong
+        // screen. Resolves in a moment to either the trip or the block below.
+        return const Scaffold(
+          backgroundColor: Colors.white,
+          body: Center(child: CircularProgressIndicator()),
+        );
+      }
       return _Blocked(
         icon: Icons.construction_outlined,
         title: 'Hoppin is down for maintenance',
@@ -34,7 +50,10 @@ class AppGate extends ConsumerWidget {
             "We're making some improvements and will be back shortly. "
                 'Thanks for your patience.',
         actionLabel: 'Try again',
-        onAction: () => ref.invalidate(appStatusProvider),
+        onAction: () {
+          ref.invalidate(activeRideIdProvider);
+          ref.invalidate(appStatusProvider);
+        },
       );
     }
 
