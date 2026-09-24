@@ -89,6 +89,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 .read(authControllerProvider.notifier)
                 .signIn(_email.text, _password.text),
           ),
+          const SizedBox(height: 14),
+          Row(children: [
+            const Expanded(child: Divider()),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Text('or', style: theme.textTheme.bodySmall),
+            ),
+            const Expanded(child: Divider()),
+          ]),
+          const SizedBox(height: 14),
+          // Continue with Google: opens the Google sign-in; the session returns
+          // via the deep link and signs the rider in (see AuthController).
+          OutlinedButton.icon(
+            onPressed: state.isBusy
+                ? null
+                : () => ref.read(authControllerProvider.notifier).signInWithGoogle(),
+            icon: const Icon(Icons.g_mobiledata, size: 30, color: Color(0xFF4285F4)),
+            label: const Text('Continue with Google'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(52),
+              foregroundColor: const Color(0xFF181C39),
+              side: const BorderSide(color: Color(0xFFE5E7EB)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
           const SizedBox(height: 8),
           // Without this the sign-up screen is unreachable: the app opens on
           // login and the redirect keeps a signed-out rider on an auth route,

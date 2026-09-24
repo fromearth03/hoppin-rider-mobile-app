@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_exception.dart';
@@ -25,9 +27,43 @@ class AuthController extends StateNotifier<AuthSnapshot> {
   /// network.
   final Future<void> Function()? _onSignedIn;
 
+  // True between launching Google sign-in and the session arriving via the auth
+  // stream, so we only react to that stream for the OAuth flow (the password
+  // flow loads the profile itself).
+  bool _awaitingOAuth = false;
+  StreamSubscription? _authSub;
+
   AuthController(this._auth, this._profiles, {Future<void> Function()? onSignedIn})
       : _onSignedIn = onSignedIn,
-        super(const AuthSnapshot());
+        super(const AuthSnapshot()) {
+    // Sign in with Google returns through a deep link, so the session appears on
+    // the auth stream rather than from a call we await. Pick it up here.
+    _authSub = _auth.authStateChanges.listen((s) {
+      if (_awaitingOAuth && s.session != null) {
+        _awaitingOAuth = false;
+        _loadProfile();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    super.dispose();
+  }
+
+  /// Launch Sign in with Google. The browser opens; on success the app reopens
+  /// via the deep link and the session arrives on the auth stream (handled in
+  /// the constructor), which loads the profile and signs the rider in.
+  Future<void> signInWithGoogle() async {
+    state = state.copyWith(clearError: true);
+    _awaitingOAuth = true;
+    final result = await _auth.signInWithGoogle();
+    if (result case Err(:final error)) {
+      _awaitingOAuth = false;
+      state = AuthSnapshot(status: AuthStatus.signedOut, error: error);
+    }
+  }
 
   /// Resolves the startup state, moving the app off [AuthStatus.unknown].
   ///

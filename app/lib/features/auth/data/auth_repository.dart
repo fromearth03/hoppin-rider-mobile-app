@@ -63,6 +63,30 @@ class AuthRepository {
     }
   }
 
+  /// Deep link the Google OAuth flow returns to. Must be registered in the
+  /// Android manifest and the iOS Info.plist, AND added to the Supabase project's
+  /// Redirect URLs. The session arrives asynchronously via [authStateChanges]
+  /// once the browser redirects back, not from this call's return.
+  static const oauthRedirect = 'tech.hoppin.rider://login-callback';
+
+  /// Launch Sign in with Google. Opens a browser to Google via Supabase; on
+  /// success the app is reopened through [oauthRedirect] and the session shows
+  /// up on [authStateChanges]. Returning Ok here only means the browser was
+  /// launched, not that sign-in completed.
+  Future<Result<void>> signInWithGoogle() async {
+    try {
+      await _auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: oauthRedirect,
+      );
+      return const Ok(null);
+    } on AuthException catch (e) {
+      return Err(_map(e));
+    } catch (e) {
+      return Err(ApiException('INTERNAL', e.toString(), 0));
+    }
+  }
+
   /// Creates the auth user. A database trigger mirrors it into `public.users`
   /// and `rider_profiles`, reading `full_name` from this metadata.
   ///

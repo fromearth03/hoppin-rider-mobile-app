@@ -45,6 +45,15 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Sign in with Google returns to the app through this deep link.
+                 Must match AuthRepository.oauthRedirect and the Supabase project's
+                 Redirect URLs. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="tech.hoppin.rider" android:host="login-callback"/>
+            </intent-filter>
         </activity>
         <!-- Maps SDK for Android key. Restricted to that API only; geocoding,
              places and directions stay on the backend. -->
