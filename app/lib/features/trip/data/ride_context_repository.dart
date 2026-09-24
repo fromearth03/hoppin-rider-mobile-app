@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/app_status.dart';
 import '../../../core/geo.dart';
 import '../../../core/money.dart';
 import '../../../core/result.dart';
@@ -268,6 +269,9 @@ final rideContextRepositoryProvider = Provider<RideContextRepository>(
 /// subscribes (e.g. after the maintenance status is re-fetched). Fails to null so
 /// a transport error shows maintenance rather than hiding it.
 final activeRideIdProvider = FutureProvider.autoDispose<String?>((ref) async {
+  // Re-check on every app-status poll so the gate's decision stays fresh (e.g.
+  // a ride finishing while maintenance is on should then hit the block).
+  ref.watch(appStatusProvider);
   try {
     return await ref.watch(rideContextRepositoryProvider).activeRideId();
   } catch (_) {

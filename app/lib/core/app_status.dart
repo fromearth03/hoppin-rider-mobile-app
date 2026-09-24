@@ -130,10 +130,18 @@ class AppStatusRepository {
 final appStatusRepositoryProvider = Provider<AppStatusRepository>(
     (ref) => AppStatusRepository(ref.watch(apiClientProvider)));
 
-/// Checked once at launch and re-read whenever it is invalidated (the
-/// maintenance screen's Try again). Not polled: a rider being yanked out of a
-/// booking mid-flow by a toggle is worse than them finishing the trip they
-/// already started, and the operator's real lever is that no NEW session can
-/// get past this gate.
-final appStatusProvider = FutureProvider<AppStatus>(
-    (ref) => ref.watch(appStatusRepositoryProvider).fetch());
+/// Polled (~every 30s) as well as re-read on invalidate (the maintenance
+/// screen's Try again), so an operator flipping maintenance / force-update /
+/// maps-engine takes effect on an app that is ALREADY open, not only on a fresh
+/// launch. This used to be a one-shot on purpose, to avoid yanking a rider out
+/// of a live booking by a toggle; that concern is now handled by the app gate
+/// instead (a rider with an active ride is let through maintenance, see
+/// AppGate + activeRideIdProvider), so polling is safe and is what makes "turn
+/// maintenance on and idle apps go to the maintenance screen" actually work.
+final appStatusProvider = StreamProvider<AppStatus>((ref) async* {
+  final repo = ref.watch(appStatusRepositoryProvider);
+  while (true) {
+    yield await repo.fetch();
+    await Future<void>.delayed(const Duration(seconds: 30));
+  }
+});
