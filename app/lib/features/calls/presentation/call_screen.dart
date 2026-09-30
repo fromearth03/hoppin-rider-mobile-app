@@ -35,13 +35,23 @@ class _CallScreenState extends ConsumerState<CallScreen> {
 
   String _status(CallState s) => switch (s.phase) {
     CallPhase.placing => 'Calling…',
-    CallPhase.ringing => 'Ringing…',
+    CallPhase.ringing => s.peerRole == 'support'
+        ? _queued(s.queuePosition)
+        : 'Ringing…',
+
     CallPhase.incoming => 'Incoming call',
     CallPhase.connecting => 'Connecting…',
     CallPhase.reconnecting => 'Reconnecting…',
     CallPhase.connected => _elapsed(s.connectedAt),
     CallPhase.ended => s.endReason ?? 'Call ended',
     CallPhase.idle => '',
+  };
+
+  /// A call to support waits for the next free team member, like a phone
+  /// queue, rather than ringing one person.
+  static String _queued(int position) => switch (position) {
+    <= 1 => 'Waiting for the next available team member…',
+    _ => 'You are number $position in line.\nWaiting for the next available team member…',
   };
 
   static String _elapsed(DateTime? from) {

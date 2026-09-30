@@ -35,10 +35,12 @@ void main() {
 
   testWidgets('call screen: ringing support', (t) => shoot(t, 'call_ringing_support',
       const CallState(phase: CallPhase.ringing, peerName: 'Hoppin Support', peerRole: 'support')));
+  testWidgets('call screen: support queue', (t) => shoot(t, 'call_support_queue',
+      const CallState(phase: CallPhase.ringing, peerName: 'Hoppin Support', peerRole: 'support', queuePosition: 3)));
   testWidgets('call screen: connected driver', (t) => shoot(t, 'call_connected_driver',
       CallState(phase: CallPhase.connected, peerName: 'Ahmed', peerRole: 'driver',
           connectedAt: DateTime.now().subtract(const Duration(seconds: 83)))));
   testWidgets('call screen: ended', (t) => shoot(t, 'call_ended',
       const CallState(phase: CallPhase.ended, peerName: 'Hoppin Support', peerRole: 'support',
-          endReason: 'No one from support is free right now. Please try again in a moment.')));
+          endReason: 'No one from support was free. We will call you back as soon as we can.')));
 }

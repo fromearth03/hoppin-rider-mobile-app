@@ -30,6 +30,11 @@ class CallTicket {
   /// ticket for a call you answered.
   final DateTime? ringsUntil;
 
+  /// How long this outgoing call may ring, or wait in the support queue, in
+  /// seconds. A duration, so the phone counts it on its own clock. 0 when the
+  /// backend did not say.
+  final int waitSeconds;
+
   const CallTicket({
     required this.callId,
     required this.rideId,
@@ -39,6 +44,7 @@ class CallTicket {
     required this.peerName,
     required this.peerRole,
     this.ringsUntil,
+    this.waitSeconds = 0,
   });
 
   factory CallTicket.fromJson(Map<String, dynamic> j) => CallTicket(
@@ -50,6 +56,7 @@ class CallTicket {
     peerName: j['peer_name'] as String? ?? '',
     peerRole: j['peer_role'] as String? ?? '',
     ringsUntil: DateTime.tryParse(j['rings_until'] as String? ?? '')?.toLocal(),
+    waitSeconds: (j['wait_seconds'] as num?)?.toInt() ?? 0,
   );
 }
 
@@ -64,11 +71,16 @@ class CallStatus {
   final String direction;
   final int? durationSeconds;
 
+  /// While a call to Hoppin support waits for a free team member: where it
+  /// stands in the queue, 1 = next. 0 otherwise.
+  final int queuePosition;
+
   const CallStatus({
     required this.id,
     required this.status,
     required this.direction,
     this.durationSeconds,
+    this.queuePosition = 0,
   });
 
   bool get isLive => status == 'ringing' || status == 'answered';
@@ -78,6 +90,7 @@ class CallStatus {
     status: j['status'] as String? ?? '',
     direction: j['direction'] as String? ?? '',
     durationSeconds: (j['duration_seconds'] as num?)?.toInt(),
+    queuePosition: (j['queue_position'] as num?)?.toInt() ?? 0,
   );
 }
 

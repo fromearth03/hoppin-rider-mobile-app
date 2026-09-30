@@ -32,6 +32,10 @@ class CallState {
   final bool speaker;
   final DateTime? connectedAt;
 
+  /// Where a call to Hoppin support stands in the queue while it waits for a
+  /// free team member (1 = next). 0 when not known or not queued.
+  final int queuePosition;
+
   /// Why the call ended, in words the rider can read.
   final String? endReason;
 
@@ -44,6 +48,7 @@ class CallState {
     this.muted = false,
     this.speaker = false,
     this.connectedAt,
+    this.queuePosition = 0,
     this.endReason,
   });
 
@@ -59,6 +64,7 @@ class CallState {
     bool? muted,
     bool? speaker,
     DateTime? connectedAt,
+    int? queuePosition,
     String? endReason,
   }) => CallState(
     phase: phase ?? this.phase,
@@ -69,6 +75,7 @@ class CallState {
     muted: muted ?? this.muted,
     speaker: speaker ?? this.speaker,
     connectedAt: connectedAt ?? this.connectedAt,
+    queuePosition: queuePosition ?? this.queuePosition,
     endReason: endReason ?? this.endReason,
   );
 }
@@ -82,7 +89,12 @@ class CallState {
 /// the voices. No phone numbers are involved at any point.
 class CallController extends Notifier<CallState> {
   /// Backend rings for 45 s; a little longer here so its verdict arrives first.
+  /// A call to support waits in a queue for longer: the ticket says how long.
   static const _ringFallback = Duration(seconds: 50);
+
+  static Duration _fallbackFor(CallTicket t) => t.waitSeconds > 0
+      ? Duration(seconds: t.waitSeconds + 10)
+      : _ringFallback;
 
   Room? _room;
   EventsListener<RoomEvent>? _listener;
@@ -126,7 +138,7 @@ class CallController extends Notifier<CallState> {
   /// What an unanswered call says. Support is a team, not a person who "did
   /// not answer", so it gets its own wording.
   String get _noAnswer => state.peerRole == 'support'
-      ? 'No one from support is free right now. Please try again in a moment.'
+      ? 'No one from support was free. We will call you back as soon as we can.'
       : 'No answer';
 
   Future<void> _placeOutgoing(
@@ -155,7 +167,7 @@ class CallController extends Notifier<CallState> {
         // says so (push, and the 3 s poll). Counted on this phone's own clock,
         // never from rings_until — that is the server's wall-clock time, and a
         // server clock 40 s slow turned every call into "No answer" after ~5 s.
-        _ringTimer = Timer(_ringFallback, () {
+        _ringTimer = Timer(_fallbackFor(value), () {
           if (state.phase == CallPhase.ringing) _endLocally(_noAnswer);
         });
         _pollWhileRinging();
@@ -321,6 +333,10 @@ class CallController extends Notifier<CallState> {
       if (id == null || state.phase != CallPhase.ringing) return;
       final res = await _repo.status(id);
       if (res case Ok(:final value)) {
+        if (value.status == 'ringing' &&
+            value.queuePosition != state.queuePosition) {
+          state = state.copyWith(queuePosition: value.queuePosition);
+        }
         switch (value.status) {
           case 'declined':
             _endLocally('Declined');
