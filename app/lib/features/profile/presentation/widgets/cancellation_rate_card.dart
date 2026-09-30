@@ -6,9 +6,10 @@ import '../../data/cancellation_rate_repository.dart';
 
 /// The rider's cancellation record, on their own profile.
 ///
-/// Here because it can cost them money — over the operator's line, cancelling
-/// charges a higher fee. A rider being charged more for a number they cannot
-/// see has no way to understand the bill or to do anything about it.
+/// Here because it can cost them money: over the operator's line, their fares
+/// carry a surcharge until the rate comes back down. A rider being charged more
+/// for a number they cannot see has no way to understand the bill or to do
+/// anything about it. Cancelling itself stays free before a trip starts.
 ///
 /// Hidden entirely for a rider with no rides in the window. A brand-new rider
 /// does not need a compliance meter on their profile before they have taken a
@@ -74,18 +75,10 @@ class CancellationRateCard extends ConsumerWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              over
-                  // Says what it costs AND how it recovers. "You are over the
-                  // limit" tells a rider off without telling them anything
-                  // they can act on.
-                  ? 'Cancelling costs more while you are above '
-                      '${stats.thresholdPct.toStringAsFixed(0)}%. It comes back '
-                      'down as you complete rides.'
-                  : stats.ridesTotal < stats.minRides
-                      ? 'This starts counting once you have '
-                          '${stats.minRides} bookings.'
-                      : 'Cancelling costs more above '
-                          '${stats.thresholdPct.toStringAsFixed(0)}%.',
+              // Says what it costs AND how it recovers. "You are over the
+              // limit" tells a rider off without telling them anything they
+              // can act on.
+              cancellationRateMessage(stats),
               style: theme.textTheme.bodyMedium?.copyWith(
                   fontSize: 12.5,
                   color: over
@@ -97,4 +90,27 @@ class CancellationRateCard extends ConsumerWidget {
       ),
     );
   }
+}
+
+String _pct(double v) => v.toStringAsFixed(v % 1 == 0 ? 0 : 1);
+
+/// The line under the bar. Always about FARES: cancelling before a trip
+/// starts is free, and the only cost of a high rate is a fare surcharge.
+@visibleForTesting
+String cancellationRateMessage(RiderCancellationRate stats) {
+  final line = _pct(stats.thresholdPct);
+  final surcharge = _pct(stats.fareSurchargePct);
+  if (stats.surchargeActive) {
+    return 'Your fares include a +$surcharge% surcharge while you are above '
+        '$line%. It comes off as you complete rides.';
+  }
+  if (stats.overThreshold) {
+    return 'You are above $line%. It comes back down as you complete rides.';
+  }
+  if (stats.ridesTotal < stats.minRides) {
+    return 'This starts counting once you have ${stats.minRides} bookings.';
+  }
+  return stats.fareSurchargePct > 0
+      ? 'Above $line%, your fares carry a +$surcharge% surcharge.'
+      : 'Try to keep this under $line%.';
 }

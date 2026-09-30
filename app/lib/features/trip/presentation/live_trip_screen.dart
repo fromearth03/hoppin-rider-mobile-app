@@ -326,6 +326,16 @@ class _LiveTripBody extends ConsumerWidget {
           const SnackBar(content: Text('This ride has already ended.')),
         );
         context.go(AppRoutes.home);
+      // "Driver didn't show up" reported too early, or after the driver
+      // arrived: say exactly why, and that a plain cancel is still free.
+      case Err(:final error)
+          when RideActionsRepository.cancelRefusalCopy(error) != null:
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 6),
+            content: Text(RideActionsRepository.cancelRefusalCopy(error)!),
+          ),
+        );
       case Err(:final error):
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(RiderErrorCopy.messageFor(error))),
@@ -514,8 +524,9 @@ class _TripMapState extends ConsumerState<_TripMap> {
 }
 
 /// "Why are you cancelling?" — the admin-configured rider reasons as a radio
-/// list, fee-bearing ones labelled honestly ("a fee may apply", with the
-/// free window when one is configured). The reason is optional: the ride
+/// list. Cancelling before the trip starts is free; the only fee-bearing
+/// option a rider can pick is "Driver didn't show up", which is the DRIVER's
+/// fee (shown as "No charge for you"). The reason is optional: the ride
 /// must always be escapable, so "Prefer not to say" cancels with no reason
 /// and the server derives any fee from ride state either way.
 class _CancelReasonSheet extends StatefulWidget {

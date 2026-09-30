@@ -6,8 +6,9 @@ import '../../../core/result.dart';
 /// The rider's own cancellation record.
 ///
 /// Shown to them because it can cost them money: a rider over the operator's
-/// line pays a higher cancellation fee, and being charged more for a number you
-/// cannot see is indefensible.
+/// line pays a surcharge on their FARES until the rate comes back down, and
+/// being charged more for a number you cannot see is indefensible.
+/// (Cancelling itself is free before a trip starts; the surcharge is on fares.)
 class RiderCancellationRate {
   final int windowDays;
   final int ridesTotal;
@@ -18,12 +19,17 @@ class RiderCancellationRate {
   /// 100% would accuse them of the opposite.
   final double? ratePct;
 
-  /// Whether the higher cancellation fee currently applies to them.
+  /// Whether they are over the operator's line right now.
   final bool overThreshold;
 
   final double thresholdPct;
   final int minRides;
   final bool policyActive;
+
+  /// The fare surcharge the operator has set for riders over the line, and
+  /// whether it applies to this rider now (over the line AND set above 0).
+  final double fareSurchargePct;
+  final bool surchargeActive;
 
   const RiderCancellationRate({
     required this.windowDays,
@@ -34,6 +40,8 @@ class RiderCancellationRate {
     required this.thresholdPct,
     required this.minRides,
     required this.policyActive,
+    this.fareSurchargePct = 0,
+    this.surchargeActive = false,
   });
 
   /// Nothing worth showing until they have actually booked something.
@@ -61,6 +69,8 @@ class RiderCancellationRate {
       thresholdPct: (policy['threshold_pct'] as num?)?.toDouble() ?? 60,
       minRides: (policy['min_rides'] as num?)?.toInt() ?? 5,
       policyActive: policy['is_active'] == true,
+      fareSurchargePct: (policy['fare_surcharge_pct'] as num?)?.toDouble() ?? 0,
+      surchargeActive: json['surcharge_active'] == true,
     );
   }
 }

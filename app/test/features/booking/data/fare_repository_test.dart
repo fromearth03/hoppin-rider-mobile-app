@@ -333,4 +333,65 @@ void main() {
       expect(fare.hasDiscount, isFalse);
     });
   });
+
+  group('cancellation-rate surcharge', () {
+    test('single-stop: read from the breakdown, already inside the total',
+        () async {
+      when(() => api.post<Map<String, dynamic>>(any(), body: any(named: 'body')))
+          .thenAnswer((_) async => const Ok({
+                'estimate': {
+                  'total': 11.5,
+                  'rider_surcharge': 1.5,
+                  'rider_surcharge_pct': 15,
+                },
+                'distance_meters': 100,
+                'duration_seconds': 60,
+              }));
+      final fare = ((await repo.estimate(pickup: pickup, dropoff: dropoff))
+              as Ok<FareEstimate>)
+          .value;
+      expect(fare.totalPence, const Pence(1150));
+      expect(fare.surchargePence, const Pence(150));
+      expect(fare.surchargePct, 15);
+      expect(fare.hasSurcharge, isTrue);
+    });
+
+    test('no surcharge fields means no surcharge line', () async {
+      when(() => api.post<Map<String, dynamic>>(any(), body: any(named: 'body')))
+          .thenAnswer((_) async => const Ok({
+                'estimate': {'total': 10},
+                'distance_meters': 100,
+                'duration_seconds': 60,
+              }));
+      final fare = ((await repo.estimate(pickup: pickup, dropoff: dropoff))
+              as Ok<FareEstimate>)
+          .value;
+      expect(fare.hasSurcharge, isFalse);
+      expect(fare.surchargePence, Pence.zero);
+    });
+
+    test('multi-stop: top-level pence, and the legs still reconcile', () async {
+      when(() => api.post<Map<String, dynamic>>(any(), body: any(named: 'body')))
+          .thenAnswer((_) async => const Ok({
+                'multi_stop': true,
+                'legs': [
+                  {'seq': 0, 'to_label': 'A', 'distance_meters': 1,
+                   'duration_seconds': 1, 'fare_pence': 600},
+                  {'seq': 1, 'to_label': 'B', 'distance_meters': 1,
+                   'duration_seconds': 1, 'fare_pence': 400},
+                ],
+                'total_pence': 1100,
+                'rider_surcharge_pence': 100,
+                'rider_surcharge_pct': 10,
+                'stops_count': 1, 'distance_meters': 2, 'duration_seconds': 2,
+              }));
+      final fare = ((await repo.estimate(
+        pickup: pickup, dropoff: dropoff,
+        waypoints: const [LatLng(1, 1)],
+      )) as Ok<FareEstimate>).value;
+      expect(fare.surchargePence, const Pence(100));
+      // The surcharge is on the whole trip, so legs + surcharge = total.
+      expect(fare.legsReconcile, isTrue);
+    });
+  });
 }

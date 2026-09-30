@@ -69,6 +69,15 @@ class FareEstimate {
   /// Which ETA tier produced the duration: model, google or osrm.
   final String etaSource;
 
+  /// The cancellation-rate surcharge, already inside [totalPence].
+  ///
+  /// A rider whose cancellation rate is over the operator's line pays this
+  /// percentage extra on their fares until the rate comes back down. The
+  /// server decides it (and fixes it for this ride at booking); the app only
+  /// shows it, as its own line, so it is never a surprise.
+  final Pence surchargePence;
+  final double surchargePct;
+
   const FareEstimate({
     required this.totalPence,
     required this.currency,
@@ -82,7 +91,11 @@ class FareEstimate {
     required this.discountPct,
     required this.discountKnown,
     required this.etaSource,
+    this.surchargePence = Pence.zero,
+    this.surchargePct = 0,
   });
+
+  bool get hasSurcharge => surchargePct > 0 && surchargePence.value > 0;
 
   bool get hasDiscount =>
       discountKnown && discountPct > 0 && discountPence.value > 0;
@@ -97,8 +110,12 @@ class FareEstimate {
   /// The screen renders both, so a disagreement reads to the rider as
   /// overcharging. This is checked at render rather than assumed: a hand-built
   /// test fixture that adds up proves nothing about live data.
+  ///
+  /// The surcharge is on the whole trip, not a leg, so it is added back in.
   bool get legsReconcile =>
-      !isMultiStop || legs.isEmpty || legsTotal == totalPence;
+      !isMultiStop ||
+      legs.isEmpty ||
+      legsTotal.value + surchargePence.value == totalPence.value;
 
   /// Pounds arrive as a JSON decimal on the single-stop breakdown; multi-stop
   /// sends integer pence directly. Rounding at the boundary keeps every later
@@ -155,6 +172,15 @@ class FareEstimate {
       discountPct: (breakdown['discount_pct'] as num?)?.toInt() ?? 0,
       discountKnown: breakdown.isNotEmpty,
       etaSource: (json['eta_source'] as String?) ?? '',
+      // Single-stop: pounds inside the breakdown. Multi-stop: top-level pence.
+      surchargePence: multi
+          ? (Pence.fromJson(json['rider_surcharge_pence']) ?? Pence.zero)
+          : _poundsToPence(breakdown['rider_surcharge']),
+      surchargePct: ((multi
+                  ? json['rider_surcharge_pct']
+                  : breakdown['rider_surcharge_pct']) as num?)
+              ?.toDouble() ??
+          0,
     );
   }
 }

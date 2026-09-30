@@ -475,33 +475,38 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
       child: policy.when(
         loading: () => Text('Loading policy…', style: theme.textTheme.bodyMedium),
         error: (_, __) => Text(
-          'Cancellation fees may apply after a driver is assigned.',
+          'Cancelling is free any time before your trip starts.',
           style: theme.textTheme.bodyMedium,
         ),
-        data: (scenarios) => scenarios.isEmpty
-            ? Text('No cancellation fee applies to this trip.',
-                style: theme.textTheme.bodyMedium)
-            : Column(
+        data: (all) {
+          final scenarios = all.where((s) => s.riderPays).toList();
+          Widget row(String label, String value) => Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  for (final s in scenarios) ...[
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                            child: Text(s.label,
-                                style: theme.textTheme.bodyMedium)),
-                        const SizedBox(width: 12),
-                        Text(
-                          s.feePence.value == 0 ? 'Free' : s.feePence.format(),
-                          style: theme.textTheme.bodyMedium,
-                        ),
-                      ],
-                    ),
-                    if (s != scenarios.last) const SizedBox(height: 8),
-                  ],
+                  Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
+                  const SizedBox(width: 12),
+                  Text(value, style: theme.textTheme.bodyMedium),
                 ],
-              ),
+              );
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // The rule that covers almost every cancellation, stated first.
+              row('Cancel any time before your trip starts', 'Free'),
+              for (final s in scenarios) ...[
+                const SizedBox(height: 8),
+                row(
+                  s.label,
+                  s.feePence.value == 0
+                      ? 'Free'
+                      : s.isMidTrip
+                          ? 'Fare so far + ${s.feePence.format()}'
+                          : s.feePence.format(),
+                ),
+              ],
+            ],
+          );
+        },
       ),
     );
   }

@@ -455,8 +455,14 @@ class _Sheet extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
+                // Matches the server's rules: free any time before the trip
+                // starts; once it has started, the fare so far plus a
+                // cancellation fee after a short free window.
                 Text(
-                  'Cancelling after driver assignment may incur a fee. '
+                  'Cancelling is free any time before your trip starts. '
+                  'If you cancel after it has started, you pay the fare so far '
+                  'plus a cancellation fee (not charged in the first moments '
+                  'of the trip). '
                   '${waypoints.isEmpty ? 'Waiting time may apply and is charged live during the trip.' : 'Waiting time may apply at each stop and is charged live during the trip.'}',
                   style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12),
                 ),
@@ -713,6 +719,10 @@ class _FareCard extends StatelessWidget {
         children: [
           if (est.isMultiStop && est.legs.isNotEmpty) ...[
             FareLegsBreakdown(legs: est.legs, totalPence: est.totalPence),
+            if (est.hasSurcharge) ...[
+              const SizedBox(height: 6),
+              _SurchargeLine(estimate: est),
+            ],
             const Divider(height: 18),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -738,6 +748,10 @@ class _FareCard extends StatelessWidget {
             _row(theme, 'Distance', '$km km'),
             const SizedBox(height: 6),
             _row(theme, 'Time', '$mins min'),
+            if (est.hasSurcharge) ...[
+              const SizedBox(height: 6),
+              _SurchargeLine(estimate: est),
+            ],
             const Divider(height: 18),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -916,6 +930,47 @@ class _EmptyState extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// The cancellation-rate surcharge as its own line, with the reason beneath
+/// it, so a higher fare is never unexplained. Already inside the total.
+class _SurchargeLine extends StatelessWidget {
+  final FareEstimate estimate;
+  const _SurchargeLine({required this.estimate});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final pct = estimate.surchargePct;
+    final pctText =
+        pct == pct.roundToDouble() ? pct.toInt().toString() : pct.toString();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Flexible(
+              child: Text(
+                'Cancellation-rate surcharge (+$pctText%)',
+                style: theme.textTheme.bodyMedium,
+              ),
+            ),
+            Text(
+              '+${estimate.surchargePence.format(currency: estimate.currency)}',
+              style: theme.textTheme.bodyLarge?.copyWith(fontSize: 14),
+            ),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Text(
+          'Included in the total because you cancel a lot of your bookings. '
+          'It comes off once your cancellation rate drops.',
+          style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
+        ),
+      ],
     );
   }
 }

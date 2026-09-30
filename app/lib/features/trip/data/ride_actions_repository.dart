@@ -134,6 +134,33 @@ class RideActionsRepository {
     };
   }
 
+  /// The rider-facing message for a cancel the server refused because the
+  /// "Driver didn't show up" report came too soon, or null for any other
+  /// error.
+  ///
+  /// That report fines the driver, so the server only accepts it once the
+  /// driver is genuinely late (their pickup ETA plus a grace period has passed
+  /// with no arrival). Before then, and once the driver has arrived, cancelling
+  /// for any other reason is still free.
+  static String? cancelRefusalCopy(ApiException e) {
+    switch (e.code) {
+      case 'DRIVER_NOT_LATE_YET':
+        final secs = (e.fields['retry_after_seconds'] as num?)?.toInt() ?? 0;
+        final mins = (secs / 60).ceil();
+        final when = secs <= 0
+            ? 'shortly'
+            : mins <= 1
+                ? 'in about a minute'
+                : 'in $mins min';
+        return "Your driver isn't late yet. You can report this $when, "
+            'or cancel for free now with another reason.';
+      case 'DRIVER_ALREADY_ARRIVED':
+        return 'Your driver has arrived, so this can\'t be reported. '
+            'You can still cancel for free with another reason.';
+    }
+    return null;
+  }
+
   Future<Result<void>> cancelRide(String rideId, {String? reasonId}) async {
     final userId = _userId();
     if (rideId.isEmpty || userId == null) {

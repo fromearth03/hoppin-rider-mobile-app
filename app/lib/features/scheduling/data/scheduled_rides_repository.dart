@@ -73,6 +73,7 @@ class ScheduledRide {
 /// free_cancel_seconds/meters, fee_pence, applies.
 class CancellationScenario {
   final String actor;
+  final String code;
   final String label;
   final Pence feePence;
   final int? freeCancelSeconds;
@@ -82,13 +83,22 @@ class CancellationScenario {
     required this.label,
     required this.feePence,
     required this.freeCancelSeconds,
+    this.code = '',
   });
+
+  /// "Driver didn't show up" is picked by the rider but the DRIVER pays it,
+  /// so it is not a cost to list on the rider's policy card.
+  bool get riderPays => code != 'driver_no_show';
+
+  /// The mid-trip fee comes on top of the fare for the distance so far.
+  bool get isMidTrip => code == 'mid_trip' || code == 'rider_mid_trip';
 
   static CancellationScenario? tryFromJson(Map<String, dynamic> json) {
     final label = json['label'];
     if (label is! String || label.isEmpty) return null;
     return CancellationScenario(
       actor: (json['actor'] as String?) ?? '',
+      code: (json['code'] as String?) ?? '',
       label: label,
       feePence: Pence.fromJson(json['fee_pence']) ?? Pence.zero,
       freeCancelSeconds: (json['free_cancel_seconds'] as num?)?.toInt(),

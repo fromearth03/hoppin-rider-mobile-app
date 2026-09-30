@@ -12,6 +12,8 @@ RiderCancellationRate _rate({
   bool over = true,
   bool active = true,
   int minRides = 5,
+  double surcharge = 0,
+  bool surchargeActive = false,
 }) =>
     RiderCancellationRate(
       windowDays: 30,
@@ -22,6 +24,8 @@ RiderCancellationRate _rate({
       thresholdPct: 60,
       minRides: minRides,
       policyActive: active,
+      fareSurchargePct: surcharge,
+      surchargeActive: surchargeActive,
     );
 
 Widget _harness(RiderCancellationRate? rate) => ProviderScope(
@@ -82,5 +86,56 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('Your cancellations'), findsNothing);
+  });
+
+  testWidgets('over the line with a surcharge, says fares cost more and how it recovers',
+      (tester) async {
+    await tester.pumpWidget(
+        _harness(_rate(surcharge: 15, surchargeActive: true)));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Your fares include a +15% surcharge'),
+        findsOneWidget);
+    expect(find.textContaining('comes off as you complete rides'),
+        findsOneWidget);
+  });
+
+  test('never describes cancelling itself as costing more', () {
+    // Cancelling before a trip is free; the only cost of a high rate is a
+    // fare surcharge. No state may say otherwise.
+    for (final r in [
+      _rate(),
+      _rate(surcharge: 10, surchargeActive: true),
+      _rate(over: false, surcharge: 10),
+      _rate(over: false),
+      _rate(total: 2, cancelled: 1, pct: 50, over: false),
+    ]) {
+      final m = cancellationRateMessage(r);
+      expect(m.toLowerCase(), isNot(contains('cancelling costs')));
+      expect(m.toLowerCase(), isNot(contains('fee')));
+    }
+    expect(cancellationRateMessage(_rate(over: false, surcharge: 10)),
+        'Above 60%, your fares carry a +10% surcharge.');
+  });
+
+  test('parses the surcharge fields from GET /me/cancellation-rate', () {
+    final r = RiderCancellationRate.fromJson({
+      'window_days': 30,
+      'rides_total': 10,
+      'cancelled': 7,
+      'rate_pct': 70,
+      'over_threshold': true,
+      'surcharge_active': true,
+      'surcharge_pct': 12.5,
+      'policy': {
+        'threshold_pct': 60,
+        'min_rides': 5,
+        'window_days': 30,
+        'is_active': true,
+        'fare_surcharge_pct': 12.5,
+      },
+    });
+    expect(r.surchargeActive, isTrue);
+    expect(r.fareSurchargePct, 12.5);
   });
 }

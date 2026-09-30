@@ -105,4 +105,36 @@ void main() {
       verifyZeroInteractions(api);
     });
   });
+
+  group('cancelRefusalCopy', () {
+    test('too early: says when it can be reported, and that cancelling is free',
+        () {
+      final m = RideActionsRepository.cancelRefusalCopy(const ApiException(
+          'DRIVER_NOT_LATE_YET', 'x', 409,
+          fields: {'retry_after_seconds': 250}));
+      expect(m, contains('in 5 min'));
+      expect(m, contains('cancel for free'));
+    });
+
+    test('under a minute says about a minute', () {
+      final m = RideActionsRepository.cancelRefusalCopy(const ApiException(
+          'DRIVER_NOT_LATE_YET', 'x', 409,
+          fields: {'retry_after_seconds': 40}));
+      expect(m, contains('in about a minute'));
+    });
+
+    test('driver already arrived still offers a free cancel', () {
+      final m = RideActionsRepository.cancelRefusalCopy(
+          const ApiException('DRIVER_ALREADY_ARRIVED', 'x', 409));
+      expect(m, contains('has arrived'));
+      expect(m, contains('cancel for free'));
+    });
+
+    test('other errors are left to the generic copy', () {
+      expect(
+          RideActionsRepository.cancelRefusalCopy(
+              const ApiException('FORBIDDEN', 'x', 403)),
+          isNull);
+    });
+  });
 }
