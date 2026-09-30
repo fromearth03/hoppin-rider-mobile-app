@@ -101,17 +101,47 @@ class CallController extends Notifier<CallState> {
   CallsRepository get _repo => ref.read(callsRepositoryProvider);
 
   /// Rings the driver on [rideId].
-  Future<void> placeCall(String rideId, {String peerName = ''}) async {
+  Future<void> placeCall(String rideId, {String peerName = ''}) => _placeOutgoing(
+        CallState(phase: CallPhase.placing, rideId: rideId, peerName: peerName),
+        () => _repo.start(rideId),
+        inProgress: 'A call with your driver is already in progress',
+      );
+
+  /// Rings Hoppin support. Whoever on the Hoppin team answers first takes it;
+  /// [sosId] and [rideId] tell them what it is about.
+  Future<void> placeSupportCall({String? sosId, String? rideId}) =>
+      _placeOutgoing(
+        CallState(
+          phase: CallPhase.placing,
+          rideId: rideId,
+          peerName: supportName,
+          peerRole: 'support',
+        ),
+        () => _repo.callSupport(sosId: sosId, rideId: rideId),
+        inProgress: 'You are already on a call with Hoppin Support',
+      );
+
+  static const supportName = 'Hoppin Support';
+
+  /// What an unanswered call says. Support is a team, not a person who "did
+  /// not answer", so it gets its own wording.
+  String get _noAnswer => state.peerRole == 'support'
+      ? 'No one from support is free right now. Please try again in a moment.'
+      : 'No answer';
+
+  Future<void> _placeOutgoing(
+    CallState initial,
+    Future<Result<CallTicket>> Function() start, {
+    required String inProgress,
+  }) async {
     if (state.isActive) return;
-    _begin(
-      CallState(phase: CallPhase.placing, rideId: rideId, peerName: peerName),
-    );
-    final res = await _repo.start(rideId);
+    _begin(initial);
+    final res = await start();
     switch (res) {
       case Err(:final error):
         _finish(
           CallsRepository.liveCallIdOf(error) != null
-              ? 'A call with your driver is already in progress'
+              ? inProgress
               : _friendly(error.code, error.message),
         );
       case Ok(:final value):
@@ -126,7 +156,7 @@ class CallController extends Notifier<CallState> {
         // never from rings_until — that is the server's wall-clock time, and a
         // server clock 40 s slow turned every call into "No answer" after ~5 s.
         _ringTimer = Timer(_ringFallback, () {
-          if (state.phase == CallPhase.ringing) _endLocally('No answer');
+          if (state.phase == CallPhase.ringing) _endLocally(_noAnswer);
         });
         _pollWhileRinging();
         await _join(value, answered: false);
@@ -196,7 +226,7 @@ class CallController extends Notifier<CallState> {
       case 'call_declined':
         _endLocally('Declined');
       case 'call_unanswered':
-        _endLocally('No answer');
+        _endLocally(_noAnswer);
       case 'call_cancelled':
       case 'call_missed':
         _endLocally('Missed call');
@@ -295,7 +325,7 @@ class CallController extends Notifier<CallState> {
           case 'declined':
             _endLocally('Declined');
           case 'missed':
-            _endLocally('No answer');
+            _endLocally(_noAnswer);
           case 'cancelled' || 'failed' || 'ended':
             _endLocally('Call ended');
         }
@@ -310,7 +340,7 @@ class CallController extends Notifier<CallState> {
     // Busy beeps when the other side declined or never picked up; silence
     // for everything else, including hanging up yourself.
     unawaited(
-      reason == 'Declined' || reason == 'No answer'
+      reason == 'Declined' || reason == _noAnswer
           ? CallTones.busy()
           : CallTones.stop(),
     );
@@ -375,6 +405,7 @@ class CallController extends Notifier<CallState> {
       'You can call your driver once they have accepted the ride.',
     'NO_DRIVER_ASSIGNED' => 'No driver yet — you can call once one accepts.',
     'FORBIDDEN' => 'This call is not available.',
+    'SUPPORT_CALL_NOT_ALLOWED' => 'Calling support is not available for this account.',
     _ => message.isNotEmpty ? message : "Couldn't place the call",
   };
 }

@@ -12,6 +12,13 @@ class _MockAuthRepo extends Mock implements AuthRepository {}
 
 class _MockProfileRepo extends Mock implements ProfileRepository {}
 
+// A mock repository with the auth stream the controller subscribes to.
+_MockAuthRepo _authRepo() {
+  final r = _MockAuthRepo();
+  when(() => r.authStateChanges).thenAnswer((_) => const Stream.empty());
+  return r;
+}
+
 void main() {
   group('redirectFor', () {
     test('sends a signed-out rider to login', () {
@@ -61,7 +68,7 @@ void main() {
       // the login screen, which is the entire point of this batch.
       final container = ProviderContainer(
         overrides: [
-          authRepositoryProvider.overrideWithValue(_MockAuthRepo()),
+          authRepositoryProvider.overrideWithValue(_authRepo()),
           profileRepositoryProvider.overrideWithValue(_MockProfileRepo()),
         ],
       );

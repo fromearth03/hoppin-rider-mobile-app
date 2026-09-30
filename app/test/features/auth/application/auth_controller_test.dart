@@ -41,6 +41,8 @@ void main() {
 
   setUp(() {
     auth = _MockAuthRepo();
+    // The controller listens to the auth stream for the Google sign-in return.
+    when(() => auth.authStateChanges).thenAnswer((_) => const Stream.empty());
     profiles = _MockProfileRepo();
     controller = AuthController(auth, profiles);
   });

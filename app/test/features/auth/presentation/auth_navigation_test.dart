@@ -52,6 +52,7 @@ void main() {
 
   setUp(() {
     auth = _MockAuthRepo();
+    when(() => auth.authStateChanges).thenAnswer((_) => const Stream.empty());
     profiles = _MockProfileRepo();
     when(() => auth.currentSession).thenReturn(null);
   });

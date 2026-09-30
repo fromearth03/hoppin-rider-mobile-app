@@ -15,7 +15,12 @@ import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 Future<void> showIncomingCall(Map<String, dynamic> data) async {
   final id = data['call_id'] as String?;
   if (id == null || id.isEmpty) return;
-  final role = data['caller_role'] == 'driver' ? 'Your driver' : 'Your rider';
+  // Hoppin staff always ring as "Hoppin Support", never by their own name.
+  final role = switch (data['caller_role']) {
+    'support' => 'Hoppin Support',
+    'driver' => 'Your driver',
+    _ => 'Your rider',
+  };
   final name = (data['caller_name'] as String?)?.trim() ?? '';
 
   // The backend rings for 45 s and stops this screen early with a

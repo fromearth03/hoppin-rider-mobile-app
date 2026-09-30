@@ -23,7 +23,7 @@ class CallTicket {
   /// nothing but exposure.
   final String peerName;
 
-  /// `rider` or `driver`.
+  /// `rider`, `driver`, or `support` (Hoppin staff).
   final String peerRole;
 
   /// When an outgoing call stops ringing and counts as missed. Null on a
@@ -81,7 +81,8 @@ class CallStatus {
   );
 }
 
-/// In-app voice calls between this rider and their driver. No phone numbers:
+/// In-app voice calls: this rider and their driver, and this rider and
+/// Hoppin support (either side may start those). No phone numbers:
 /// the call runs through Hoppin's own call server, and neither side ever learns
 /// the other's number.
 class CallsRepository {
@@ -92,6 +93,15 @@ class CallsRepository {
   /// [ApiException.fields] — see [liveCallIdOf].
   Future<Result<CallTicket>> start(String rideId) async =>
       _ticket(await _api.post<dynamic>('/rides/$rideId/call'));
+
+  /// Rings Hoppin support. It is answered by whichever staff member picks it
+  /// up in the admin panel; [sosId] and [rideId] tell them what it is about.
+  /// 409 `CALL_IN_PROGRESS` when a support call is already live.
+  Future<Result<CallTicket>> callSupport({String? sosId, String? rideId}) async =>
+      _ticket(await _api.post<dynamic>('/support/call', body: {
+        if (sosId != null && sosId.isNotEmpty) 'sos_id': sosId,
+        if (rideId != null && rideId.isNotEmpty) 'ride_id': rideId,
+      }));
 
   /// Answers a call that is ringing on this phone.
   Future<Result<CallTicket>> accept(String callId) async =>

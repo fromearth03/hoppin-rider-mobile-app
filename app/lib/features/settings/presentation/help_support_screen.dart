@@ -7,6 +7,7 @@ import '../../../core/theme/colors.dart';
 import '../../../shared/nav/app_router.dart';
 import '../../../shared/widgets/bottom_scroll_fade.dart';
 import '../../../shared/widgets/skeleton.dart';
+import '../../calls/presentation/call_support_button.dart';
 import '../../safety/data/safety_repository.dart';
 import '../data/faq_repository.dart';
 import 'widgets/settings_card.dart';
@@ -152,6 +153,12 @@ class HelpSupportScreen extends ConsumerWidget {
                       ),
                     ],
                   ),
+                ),
+                // Talk to a person now, in the app, rather than wait for a
+                // ticket reply.
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: CallSupportButton(),
                 ),
               ],
             ),

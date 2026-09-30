@@ -9,10 +9,12 @@ import 'package:hoppin_rider/shared/widgets/app_gate.dart';
 
 Widget _harness(AsyncValue<AppStatus> status) => ProviderScope(
       overrides: [
+        // appStatusProvider is a stream (re-polled every 30 s so maintenance
+        // reaches an app that is already open), so the fakes are streams too.
         appStatusProvider.overrideWith((ref) => switch (status) {
-              AsyncData(:final value) => Future.value(value),
-              AsyncError(:final error) => Future<AppStatus>.error(error),
-              _ => Completer<AppStatus>().future, // never completes
+              AsyncData(:final value) => Stream.value(value),
+              AsyncError(:final error) => Stream<AppStatus>.error(error),
+              _ => StreamController<AppStatus>().stream, // never emits
             }),
       ],
       child: MaterialApp(

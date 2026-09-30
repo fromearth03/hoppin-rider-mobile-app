@@ -5,6 +5,7 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/api/error_codes.dart';
 import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
+import '../../calls/presentation/call_support_button.dart';
 import '../data/safety_repository.dart';
 
 final emergencyContactsProvider =
@@ -43,6 +44,10 @@ class SafetyScreen extends ConsumerStatefulWidget {
 class _SafetyScreenState extends ConsumerState<SafetyScreen> {
   bool _raising = false;
   String? _message;
+
+  /// The alert raised on this screen, so a follow-up call to support carries
+  /// it and the person answering sees which alert it is.
+  String? _sosId;
   bool _messageIsError = false;
 
   Future<void> _confirmAndRaise() async {
@@ -86,8 +91,10 @@ class _SafetyScreenState extends ConsumerState<SafetyScreen> {
     setState(() {
       _raising = false;
       switch (result) {
-        case Ok():
-          _message = 'Alert raised. Our safety team has been notified.';
+        case Ok(:final value):
+          _sosId = value.id;
+          _message = 'Alert raised. Our safety team has been notified. '
+              'To talk to us now, tap Call Hoppin Support.';
           _messageIsError = false;
         case Err(:final error):
           // Never a silent failure. Telling someone help is coming when it is
@@ -122,6 +129,18 @@ class _SafetyScreenState extends ConsumerState<SafetyScreen> {
               ),
             ),
           ],
+          const SizedBox(height: 16),
+          CallSupportButton(
+            sosId: _sosId,
+            rideId: widget.rideId,
+            urgent: true,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Talk to the Hoppin team through the app. No phone credit needed.',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall,
+          ),
           const SizedBox(height: 28),
           Text('Emergency contacts', style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),

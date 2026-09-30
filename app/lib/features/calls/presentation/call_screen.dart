@@ -61,7 +61,11 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     final scheme = Theme.of(context).colorScheme;
     final name = s.peerName.isNotEmpty
         ? s.peerName
-        : (s.peerRole == 'rider' ? 'Your rider' : 'Your driver');
+        : switch (s.peerRole) {
+            'support' => CallController.supportName,
+            'rider' => 'Your rider',
+            _ => 'Your driver',
+          };
 
     return Scaffold(
       backgroundColor: const Color(0xFF14172B),
@@ -94,7 +98,11 @@ class _CallScreenState extends ConsumerState<CallScreen> {
               ),
               const SizedBox(height: 6),
               Text(
-                s.peerRole == 'rider' ? 'Rider' : 'Driver',
+                switch (s.peerRole) {
+                  'support' => 'Hoppin safety and support team',
+                  'rider' => 'Rider',
+                  _ => 'Driver',
+                },
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.white.withValues(alpha: 0.6),
