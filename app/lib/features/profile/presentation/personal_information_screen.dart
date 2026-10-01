@@ -58,6 +58,7 @@ class _PersonalInformationScreenState
     extends ConsumerState<PersonalInformationScreen> {
   final _name = TextEditingController();
   final _phone = TextEditingController();
+  final _address = TextEditingController();
   final _email = TextEditingController();
 
   RiderProfile? _loadedProfile;
@@ -68,6 +69,7 @@ class _PersonalInformationScreenState
   void dispose() {
     _name.dispose();
     _phone.dispose();
+    _address.dispose();
     _email.dispose();
     super.dispose();
   }
@@ -138,6 +140,7 @@ class _PersonalInformationScreenState
     _loadedProfile = profile;
     _name.text = profile.fullName;
     _phone.text = profile.phoneNumber ?? '';
+    _address.text = profile.address ?? '';
     _email.text = profile.email;
   }
 
@@ -153,6 +156,8 @@ class _PersonalInformationScreenState
     ref.read(personalInformationControllerProvider.notifier).save(
           fullName: name,
           phoneNumber: phone.isEmpty ? null : phone,
+          // Sent as typed: an empty box clears the address.
+          address: _address.text.trim(),
         );
   }
 
@@ -289,6 +294,15 @@ class _PersonalInformationScreenState
                 ),
               ],
             ),
+            const SizedBox(height: 18),
+            HoppinTextField(
+              label: 'Address',
+              controller: _address,
+              hint: 'e.g. 12 Lichfield Street, Wolverhampton WV1 1DG',
+              keyboardType: TextInputType.streetAddress,
+              prefixIcon: const Icon(Icons.home_outlined),
+            ),
+            const SizedBox(height: 18),
             const CancellationRateCard(),
             if (state.saveError != null) ...[
               const SizedBox(height: 16),

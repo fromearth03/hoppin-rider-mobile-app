@@ -42,12 +42,14 @@ class PersonalInformationController
   Future<void> save({
     required String fullName,
     String? phoneNumber,
+    String? address,
   }) async {
     state = state.copyWith(isSaving: true, clearSaveError: true);
 
     final result = await _profiles.patch(
       fullName: fullName,
       phoneNumber: phoneNumber,
+      address: address,
     );
 
     state = switch (result) {

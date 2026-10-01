@@ -65,6 +65,7 @@ void main() {
     when(() => controller.save(
           fullName: any(named: 'fullName'),
           phoneNumber: any(named: 'phoneNumber'),
+          address: any(named: 'address'),
         )).thenAnswer((_) async {});
     stub(const PersonalInformationState());
   });
@@ -158,6 +159,7 @@ void main() {
     verifyNever(() => controller.save(
           fullName: any(named: 'fullName'),
           phoneNumber: any(named: 'phoneNumber'),
+          address: any(named: 'address'),
         ));
     expect(find.text('Enter your name'), findsOneWidget);
   });
@@ -182,6 +184,7 @@ void main() {
     verify(() => controller.save(
           fullName: 'Taimoor Asghar',
           phoneNumber: '+44 123 567 8910',
+          address: '',
         )).called(1);
   });
 

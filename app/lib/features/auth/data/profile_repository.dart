@@ -31,6 +31,10 @@ class RiderProfile {
   final double? rating;
   final int ratingCount;
 
+  /// Home or usual pickup address, free text. Null when not set. The same
+  /// field Hoppin staff see and edit in the admin panel.
+  final String? address;
+
   const RiderProfile({
     required this.fullName,
     required this.phoneNumber,
@@ -39,6 +43,7 @@ class RiderProfile {
     required this.dateOfBirth,
     required this.rating,
     required this.ratingCount,
+    this.address,
   });
 
   /// True exactly when [dateOfBirth] is null — meaning the app must collect
@@ -59,6 +64,7 @@ class RiderProfile {
         dateOfBirth: _orNull(json['date_of_birth']),
         rating: (json['rating'] as num?)?.toDouble(),
         ratingCount: (json['rating_count'] as num?)?.toInt() ?? 0,
+        address: _orNull(json['address']),
       );
 }
 
@@ -105,12 +111,14 @@ class ProfileRepository {
     String? fullName,
     String? phoneNumber,
     String? dateOfBirth,
+    String? address,
   }) async {
     final result =
         await _api.patch<Map<String, dynamic>>('/me/profile', body: {
       if (fullName != null) 'full_name': fullName,
       if (phoneNumber != null) 'phone_number': phoneNumber,
       if (dateOfBirth != null) 'date_of_birth': dateOfBirth,
+      if (address != null) 'address': address,
     });
     return switch (result) {
       Ok(:final value) => Ok(RiderProfile.fromJson(value)),
