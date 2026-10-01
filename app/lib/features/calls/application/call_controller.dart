@@ -427,14 +427,17 @@ class CallController extends Notifier<CallState> {
           ? CallTones.busy()
           : CallTones.stop(),
     );
-    await _teardownRoom();
+    // The screen closes FIRST. Waiting for the room to disconnect before
+    // closing left the call screen stuck after a hang-up whenever that
+    // disconnect stalled (a weak connection, or Android's Telecom still
+    // holding the call). The backend and the other phone are told at once;
+    // the room is torn down in the background, bounded so it cannot hang.
+    _finish(reason);
     if (id != null) {
-      unawaited(
-        _repo.end(id),
-      ); // idempotent; tells the backend and the other phone
+      unawaited(_repo.end(id)); // idempotent; tells the backend and the other phone
       if (_viaCallKit) unawaited(FlutterCallkitIncoming.endCall(id));
     }
-    _finish(reason);
+    unawaited(_teardownRoom().timeout(const Duration(seconds: 5), onTimeout: () {}));
   }
 
   void _begin(CallState s) {
