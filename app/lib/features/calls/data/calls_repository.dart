@@ -110,11 +110,18 @@ class CallsRepository {
   /// Rings Hoppin support. It is answered by whichever staff member picks it
   /// up in the admin panel; [sosId] and [rideId] tell them what it is about.
   /// 409 `CALL_IN_PROGRESS` when a support call is already live.
-  Future<Result<CallTicket>> callSupport({String? sosId, String? rideId}) async =>
-      _ticket(await _api.post<dynamic>('/support/call', body: {
+  Future<Result<CallTicket>> callSupport({
+    String? sosId,
+    String? rideId,
+  }) async => _ticket(
+    await _api.post<dynamic>(
+      '/support/call',
+      body: {
         if (sosId != null && sosId.isNotEmpty) 'sos_id': sosId,
         if (rideId != null && rideId.isNotEmpty) 'ride_id': rideId,
-      }));
+      },
+    ),
+  );
 
   /// Answers a call that is ringing on this phone.
   Future<Result<CallTicket>> accept(String callId) async =>

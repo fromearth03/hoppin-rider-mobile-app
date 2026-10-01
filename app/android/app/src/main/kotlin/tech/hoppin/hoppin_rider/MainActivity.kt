@@ -1,7 +1,15 @@
 package tech.hoppin.hoppin_rider
 
+import android.content.Context
+import android.media.AudioAttributes
 import android.media.AudioManager
+import android.media.Ringtone
+import android.media.RingtoneManager
 import android.media.ToneGenerator
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.os.Handler
 import android.os.Looper
 import io.flutter.embedding.android.FlutterFragmentActivity
@@ -14,6 +22,8 @@ class MainActivity : FlutterFragmentActivity() {
     private var tones: ToneGenerator? = null
     private val handler = Handler(Looper.getMainLooper())
     private var cadence: Runnable? = null
+    private var ringtone: Ringtone? = null
+    private var vibrator: Vibrator? = null
 
     // Call-progress tones for in-app calls: the ringback a caller hears while
     // the other phone rings, and the busy beeps when nobody picks up. Played on
@@ -26,6 +36,7 @@ class MainActivity : FlutterFragmentActivity() {
                 when (call.method) {
                     "ringback" -> { ringback(); result.success(null) }
                     "busy" -> { busy(); result.success(null) }
+                    "ring" -> { ring(); result.success(null) }
                     "stop" -> { stopTones(); result.success(null) }
                     else -> result.notImplemented()
                 }
@@ -54,6 +65,46 @@ class MainActivity : FlutterFragmentActivity() {
         handler.post(step)
     }
 
+    // An incoming call while the app is open: the phone's own ringtone and a
+    // ring-like vibration, started the moment the call arrives. Silent mode
+    // is respected (no sound, no vibration); vibrate mode only vibrates.
+    private fun ring() {
+        stopTones()
+        val audio = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val mode = audio.ringerMode
+        if (mode == AudioManager.RINGER_MODE_SILENT) return
+        if (mode == AudioManager.RINGER_MODE_NORMAL) {
+            try {
+                val uri = RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_RINGTONE)
+                    ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+                ringtone = RingtoneManager.getRingtone(this, uri)?.apply {
+                    audioAttributes = AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build()
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) isLooping = true
+                    play()
+                }
+            } catch (e: RuntimeException) {
+                ringtone = null
+            }
+        }
+        vibrator = (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            (getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }).also {
+            val pattern = longArrayOf(0L, 1000L, 1000L)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                it.vibrate(VibrationEffect.createWaveform(pattern, 0))
+            } else {
+                @Suppress("DEPRECATION")
+                it.vibrate(pattern, 0)
+            }
+        }
+    }
+
     private fun busy() {
         stopTones()
         val gen = newGenerator() ?: return
@@ -72,6 +123,10 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     private fun stopTones() {
+        ringtone?.stop()
+        ringtone = null
+        vibrator?.cancel()
+        vibrator = null
         cadence?.let { handler.removeCallbacks(it) }
         cadence = null
         tones?.stopTone()

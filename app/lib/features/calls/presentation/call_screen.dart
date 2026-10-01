@@ -35,11 +35,10 @@ class _CallScreenState extends ConsumerState<CallScreen> {
 
   String _status(CallState s) => switch (s.phase) {
     CallPhase.placing => 'Calling…',
-    CallPhase.ringing => s.peerRole == 'support'
-        ? _queued(s.queuePosition)
-        : 'Ringing…',
+    CallPhase.ringing =>
+      s.peerRole == 'support' ? _queued(s.queuePosition) : 'Ringing…',
 
-    CallPhase.incoming => 'Incoming call',
+    CallPhase.incoming => 'Incoming voice call',
     CallPhase.connecting => 'Connecting…',
     CallPhase.reconnecting => 'Reconnecting…',
     CallPhase.connected => _elapsed(s.connectedAt),
@@ -51,7 +50,8 @@ class _CallScreenState extends ConsumerState<CallScreen> {
   /// queue, rather than ringing one person.
   static String _queued(int position) => switch (position) {
     <= 1 => 'Waiting for the next available team member…',
-    _ => 'You are number $position in line.\nWaiting for the next available team member…',
+    _ =>
+      'You are number $position in line.\nWaiting for the next available team member…',
   };
 
   static String _elapsed(DateTime? from) {
@@ -158,39 +158,63 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                 pulsing: ringing,
               ),
               const Spacer(),
-              Container(
-                margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.07),
-                  borderRadius: BorderRadius.circular(28),
+              if (s.phase == CallPhase.incoming)
+                // Ringing this phone: just Decline and Answer, like the
+                // phone's own incoming-call screen.
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(40, 0, 40, 40),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _RoundButton(
+                        icon: Icons.call_end,
+                        label: 'Decline',
+                        background: const Color(0xFFEA0038),
+                        onTap: calls.declineShown,
+                      ),
+                      _RoundButton(
+                        icon: Icons.call,
+                        label: 'Answer',
+                        background: const Color(0xFF25D366),
+                        onTap: calls.answerShown,
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Container(
+                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.07),
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _RoundButton(
+                        icon: s.speaker ? Icons.volume_up : Icons.volume_down,
+                        label: 'Speaker',
+                        active: s.speaker,
+                        onTap: s.isActive ? calls.toggleSpeaker : null,
+                      ),
+                      _RoundButton(
+                        icon: s.muted ? Icons.mic_off : Icons.mic,
+                        label: s.muted ? 'Unmute' : 'Mute',
+                        active: s.muted,
+                        onTap: s.phase == CallPhase.connected
+                            ? calls.toggleMute
+                            : null,
+                      ),
+                      _RoundButton(
+                        icon: Icons.call_end,
+                        label: 'End',
+                        background: const Color(0xFFEA0038),
+                        onTap: s.isActive ? calls.hangUp : null,
+                      ),
+                    ],
+                  ),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _RoundButton(
-                      icon: s.speaker ? Icons.volume_up : Icons.volume_down,
-                      label: 'Speaker',
-                      active: s.speaker,
-                      onTap: s.isActive ? calls.toggleSpeaker : null,
-                    ),
-                    _RoundButton(
-                      icon: s.muted ? Icons.mic_off : Icons.mic,
-                      label: s.muted ? 'Unmute' : 'Mute',
-                      active: s.muted,
-                      onTap: s.phase == CallPhase.connected
-                          ? calls.toggleMute
-                          : null,
-                    ),
-                    _RoundButton(
-                      icon: Icons.call_end,
-                      label: 'End',
-                      background: const Color(0xFFEA0038),
-                      onTap: s.isActive ? calls.hangUp : null,
-                    ),
-                  ],
-                ),
-              ),
             ],
           ),
         ),

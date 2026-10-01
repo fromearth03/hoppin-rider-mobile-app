@@ -36,9 +36,16 @@ class CallCoordinator {
   void _onPush(Map<String, dynamic> data) {
     switch (data['type']) {
       case 'incoming_call':
-        // Same native screen as in the background, so a call always looks
-        // and behaves the same.
-        unawaited(showIncomingCall(data));
+        // App open on Android: Hoppin's own call screen, at once. The native
+        // call notification is for when the app is in the background or
+        // closed; in the foreground it arrived seconds after the vibration
+        // and looked nothing like the rest of the call. iOS keeps CallKit,
+        // which is instant and native there.
+        if (defaultTargetPlatform == TargetPlatform.android) {
+          _calls.showIncoming(data);
+        } else {
+          unawaited(showIncomingCall(data));
+        }
       case 'call_cancelled' || 'call_missed':
         unawaited(stopRinging(data));
         _calls.onSignal(data);

@@ -37,6 +37,8 @@ void main() {
       const CallState(phase: CallPhase.ringing, peerName: 'Hoppin Support', peerRole: 'support')));
   testWidgets('call screen: support queue', (t) => shoot(t, 'call_support_queue',
       const CallState(phase: CallPhase.ringing, peerName: 'Hoppin Support', peerRole: 'support', queuePosition: 3)));
+  testWidgets('call screen: incoming from support', (t) => shoot(t, 'call_incoming_support',
+      const CallState(phase: CallPhase.incoming, callId: 'c1', peerName: 'Hoppin Support', peerRole: 'support')));
   testWidgets('call screen: connected driver', (t) => shoot(t, 'call_connected_driver',
       CallState(phase: CallPhase.connected, peerName: 'Ahmed', peerRole: 'driver',
           connectedAt: DateTime.now().subtract(const Duration(seconds: 83)))));

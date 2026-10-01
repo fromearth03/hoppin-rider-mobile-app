@@ -34,8 +34,9 @@ class CallSupportButton extends ConsumerWidget {
         .placeSupportCall(sosId: sosId, rideId: rideId);
     final label = Text(onCall ? 'You are on a call' : 'Call Hoppin Support');
     const icon = Icon(Icons.support_agent);
-    final shape =
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(12));
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+    );
     return SizedBox(
       width: double.infinity,
       height: 52,

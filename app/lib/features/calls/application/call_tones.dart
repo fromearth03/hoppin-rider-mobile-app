@@ -11,6 +11,10 @@ class CallTones {
 
   static Future<void> ringback() => _invoke('ringback');
   static Future<void> busy() => _invoke('busy');
+
+  /// The phone's ringtone and vibration, for a call ringing this phone while
+  /// the app is open.
+  static Future<void> ring() => _invoke('ring');
   static Future<void> stop() => _invoke('stop');
 
   static Future<void> _invoke(String method) async {

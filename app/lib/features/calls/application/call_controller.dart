@@ -92,9 +92,8 @@ class CallController extends Notifier<CallState> {
   /// A call to support waits in a queue for longer: the ticket says how long.
   static const _ringFallback = Duration(seconds: 50);
 
-  static Duration _fallbackFor(CallTicket t) => t.waitSeconds > 0
-      ? Duration(seconds: t.waitSeconds + 10)
-      : _ringFallback;
+  static Duration _fallbackFor(CallTicket t) =>
+      t.waitSeconds > 0 ? Duration(seconds: t.waitSeconds + 10) : _ringFallback;
 
   Room? _room;
   EventsListener<RoomEvent>? _listener;
@@ -113,7 +112,8 @@ class CallController extends Notifier<CallState> {
   CallsRepository get _repo => ref.read(callsRepositoryProvider);
 
   /// Rings the driver on [rideId].
-  Future<void> placeCall(String rideId, {String peerName = ''}) => _placeOutgoing(
+  Future<void> placeCall(String rideId, {String peerName = ''}) =>
+      _placeOutgoing(
         CallState(phase: CallPhase.placing, rideId: rideId, peerName: peerName),
         () => _repo.start(rideId),
         inProgress: 'A call with your driver is already in progress',
@@ -208,6 +208,64 @@ class CallController extends Notifier<CallState> {
         );
         await _join(value, answered: true);
     }
+  }
+
+  /// A call ringing this phone while the app is open (Android). It goes
+  /// straight onto Hoppin's own call screen with Answer and Decline, and the
+  /// phone rings, the moment the push arrives: no system notification to wait
+  /// for. In the background or when closed, the native call screen rings
+  /// instead (see call_push.dart).
+  void showIncoming(Map<String, dynamic> data) {
+    final id = data['call_id'] as String?;
+    if (id == null || id.isEmpty) return;
+    if (state.isActive) return; // on another call: this one rings out
+    final role = switch (data['caller_role']) {
+      'support' => 'support',
+      'driver' => 'driver',
+      _ => 'rider',
+    };
+    final name = (data['caller_name'] as String?)?.trim() ?? '';
+    _viaCallKit = false;
+    _begin(
+      CallState(
+        phase: CallPhase.incoming,
+        callId: id,
+        rideId: data['ride_id'] as String?,
+        peerName: role == 'support'
+            ? supportName
+            : (name.isNotEmpty
+                  ? name
+                  : (role == 'driver' ? 'Your driver' : 'Your rider')),
+        peerRole: role,
+      ),
+    );
+    unawaited(CallTones.ring());
+    // The backend stops it sooner with a call_cancelled / call_missed push.
+    _ringTimer = Timer(_ringFallback, () {
+      if (state.phase == CallPhase.incoming) {
+        unawaited(CallTones.stop());
+        _finish('Missed call');
+      }
+    });
+  }
+
+  /// Answer pressed on Hoppin's own incoming-call screen.
+  Future<void> answerShown() async {
+    final id = state.callId;
+    if (state.phase != CallPhase.incoming || id == null) return;
+    _ringTimer?.cancel();
+    await CallTones.stop();
+    await acceptIncoming(id, peerName: state.peerName);
+  }
+
+  /// Decline pressed on Hoppin's own incoming-call screen.
+  Future<void> declineShown() async {
+    final id = state.callId;
+    if (state.phase != CallPhase.incoming || id == null) return;
+    _ringTimer?.cancel();
+    unawaited(CallTones.stop());
+    _finish('Call declined');
+    await _repo.decline(id);
   }
 
   /// Turns down [callId]; the driver is told at once rather than left to
@@ -421,7 +479,8 @@ class CallController extends Notifier<CallState> {
       'You can call your driver once they have accepted the ride.',
     'NO_DRIVER_ASSIGNED' => 'No driver yet — you can call once one accepts.',
     'FORBIDDEN' => 'This call is not available.',
-    'SUPPORT_CALL_NOT_ALLOWED' => 'Calling support is not available for this account.',
+    'SUPPORT_CALL_NOT_ALLOWED' =>
+      'Calling support is not available for this account.',
     _ => message.isNotEmpty ? message : "Couldn't place the call",
   };
 }
