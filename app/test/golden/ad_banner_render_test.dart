@@ -9,18 +9,21 @@ import 'package:hoppin_rider/features/ads/presentation/ad_banner.dart';
 import 'package:hoppin_rider/shared/nav/app_router.dart';
 
 void main() {
-  test('every admin tap action opens a real rider screen', () {
+  // Every rider key in the server's catalog (migration 159, app_tap_actions)
+  // must open a real screen here; 'url' opens the browser instead.
+  test('every catalog tap action opens a real rider screen', () {
+    const catalog = ['book', 'schedule', 'promotions', 'trips', 'payments', 'transactions',
+      'saved_places', 'safety', 'support', 'notifications', 'profile', 'settings'];
+    for (final key in catalog) {
+      expect(adActionRoute(key), isNotNull, reason: '$key has no screen in the rider app');
+    }
     expect(adActionRoute('promotions'), AppRoutes.promotional);
-    expect(adActionRoute('trips'), AppRoutes.rideHistory);
-    expect(adActionRoute('payments'), AppRoutes.paymentMethods);
-    expect(adActionRoute('support'), AppRoutes.helpSupport);
-    expect(adActionRoute('notifications'), AppRoutes.notifications);
-    expect(adActionRoute(''), isNull);
+    expect(adActionRoute('url'), isNull, reason: 'links open in the browser');
     expect(adActionRoute('earnings'), isNull, reason: 'a driver-only action is not tappable here');
   });
 
   testWidgets('ad banner', (tester) async {
-    tester.view.physicalSize = const Size(430, 260);
+    tester.view.physicalSize = const Size(430, 200);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(ProviderScope(
@@ -30,6 +33,7 @@ void main() {
               Ad(id: 'a2', title: 'New Rider Welcome', body: 'Your first ride is on us.', imageUrl: '', action: ''),
             ]),
         adsRepositoryProvider.overrideWithValue(_NoopAds()),
+        dismissedAdsProvider.overrideWith((ref) => _NoDismissed()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -45,6 +49,12 @@ void main() {
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('shots/ad_banner.png'));
     await tester.pumpWidget(const SizedBox());
   });
+}
+
+class _NoDismissed extends StateNotifier<Set<String>> implements DismissedAds {
+  _NoDismissed() : super(const {});
+  @override
+  Future<void> dismiss(Iterable<String> ids) async => state = {...state, ...ids};
 }
 
 class _NoopAds implements AdsRepository {

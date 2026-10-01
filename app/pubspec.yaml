@@ -39,6 +39,7 @@ dependencies:
   # Streamed only between a driver accepting and the trip starting.
   geolocator: ^13.0.2
   livekit_client: ^2.12.0
+  url_launcher: ^6.3.2
   flutter_callkit_incoming: ^3.1.5
 
 dev_dependencies:

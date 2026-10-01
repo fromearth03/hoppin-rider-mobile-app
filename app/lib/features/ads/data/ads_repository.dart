@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/device/device_id.dart' show secureStorageProvider;
 import '../../../core/result.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// One banner ad from `GET /ads`. The server already filters to ads that are
 /// active, inside their dates, for riders, and still within their budget.
@@ -13,10 +15,13 @@ class Ad {
   /// Public image URL, or empty for a text-only banner.
   final String imageUrl;
 
-  /// What tapping does, by name: promotions, trips, payments, support,
-  /// notifications. Empty means the banner is not tappable. A name this
+  /// What tapping does: a key from the server's tap-action catalog
+  /// (app_tap_actions). Empty means the banner is not tappable. A key this
   /// build does not know is treated as empty, never as a dead tap.
   final String action;
+
+  /// The https link, for the `url` action. Empty otherwise.
+  final String tapUrl;
 
   const Ad({
     required this.id,
@@ -24,6 +29,7 @@ class Ad {
     required this.body,
     required this.imageUrl,
     required this.action,
+    this.tapUrl = '',
   });
 
   static Ad? tryParse(Map<String, dynamic> j) {
@@ -36,6 +42,7 @@ class Ad {
       body: (j['body'] as String? ?? '').trim(),
       imageUrl: (j['image_url'] as String? ?? '').trim(),
       action: (j['target_url'] as String? ?? '').trim(),
+      tapUrl: (j['tap_url'] as String? ?? '').trim(),
     );
   }
 }
@@ -83,3 +90,34 @@ final activeAdsProvider = FutureProvider.autoDispose<List<Ad>>((ref) async {
     Err() => const [],
   };
 });
+
+/// Ads the rider closed on Home. Kept on the phone: the banner stays hidden
+/// until an ad they have not dismissed is published.
+class DismissedAds extends StateNotifier<Set<String>> {
+  DismissedAds(this._storage) : super(const {}) {
+    _load();
+  }
+
+  final FlutterSecureStorage _storage;
+  static const _key = 'hoppin_dismissed_ads';
+
+  Future<void> _load() async {
+    try {
+      final raw = await _storage.read(key: _key);
+      if (raw != null && raw.isNotEmpty) state = raw.split(',').toSet();
+    } catch (_) {
+      // A broken store only means the banner shows again.
+    }
+  }
+
+  Future<void> dismiss(Iterable<String> ids) async {
+    state = {...state, ...ids};
+    try {
+      await _storage.write(key: _key, value: state.join(','));
+    } catch (_) {}
+  }
+}
+
+final dismissedAdsProvider = StateNotifierProvider<DismissedAds, Set<String>>(
+  (ref) => DismissedAds(ref.watch(secureStorageProvider)),
+);

@@ -77,10 +77,10 @@ class AppDrawer extends ConsumerWidget {
                   ),
                   _Item(
                     icon: Icons.campaign_outlined,
-                    label: 'Promotional',
+                    label: 'Ads & promotions',
                     onTap: () {
                       Navigator.of(context).pop();
-                      context.push(AppRoutes.promotional);
+                      context.push(AppRoutes.offers);
                     },
                   ),
                   _Item(

@@ -20,6 +20,7 @@ import '../../features/history/presentation/ride_history_screen.dart';
 import '../../features/history/presentation/trip_details_screen.dart';
 import '../../features/notifications/presentation/notifications_screen.dart';
 import '../../features/notifications/presentation/promotional_screen.dart';
+import '../../features/ads/presentation/offers_screen.dart';
 import '../../features/payments/presentation/payment_methods_screen.dart';
 import '../../features/payments/presentation/ride_complete_screen.dart';
 import '../../features/payments/presentation/transactions_screen.dart';
@@ -44,6 +45,7 @@ class AppRoutes {
   static const rideComplete = '/ride-complete';
   static const notifications = '/notifications';
   static const promotional = '/promotional';
+  static const offers = '/offers';
   static const settings = '/settings';
   static const helpSupport = '/help-support';
   static const deleteAccount = '/delete-account';
@@ -245,6 +247,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.promotional,
         builder: (_, __) => const PromotionalScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.offers,
+        builder: (_, __) => const OffersScreen(),
       ),
       GoRoute(
         path: AppRoutes.rideComplete,

@@ -137,6 +137,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
           ),
+          // The newest ads, floating beside the menu button (nothing when
+          // there are none or the rider closed them).
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 12,
+            left: 76,
+            right: 16,
+            child: PointerInterceptor(child: const AdBanner()),
+          ),
           Align(
             alignment: Alignment.bottomCenter,
             child: Column(
@@ -217,8 +225,6 @@ class _BookingSheet extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Banner ads from the admin panel (nothing when there are none).
-          const AdBanner(),
           const _ModeRow(),
           const SizedBox(height: 12),
           const _SearchField(),
