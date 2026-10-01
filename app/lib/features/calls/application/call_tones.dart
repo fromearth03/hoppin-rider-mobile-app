@@ -21,6 +21,9 @@ class CallTones {
   /// or answered in the app.
   static Future<void> speaker(String? callId, bool on) =>
       _invoke('speaker', {'callId': callId, 'on': on});
+
+  /// Screen off at the ear while a call is connected (ignored on speaker).
+  static Future<void> proximity(bool on) => _invoke('proximity', {'on': on});
   static Future<void> stop() => _invoke('stop');
 
   static Future<void> _invoke(String method, [Map<String, Object?>? args]) async {

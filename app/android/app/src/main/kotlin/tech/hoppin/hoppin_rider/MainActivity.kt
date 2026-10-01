@@ -10,6 +10,7 @@ import android.media.Ringtone
 import android.media.RingtoneManager
 import android.media.ToneGenerator
 import android.os.Build
+import android.os.PowerManager
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -40,6 +41,11 @@ class MainActivity : FlutterFragmentActivity() {
                     "ringback" -> { ringback(); result.success(null) }
                     "busy" -> { busy(); result.success(null) }
                     "ring" -> { ring(); result.success(null) }
+                    "proximity" -> {
+                        proximityWanted = call.argument<Boolean>("on") ?: false
+                        setProximity(proximityWanted && !speakerWanted)
+                        result.success(null)
+                    }
                     "speaker" -> {
                         setSpeaker(call.argument<String>("callId"), call.argument<Boolean>("on") ?: false)
                         result.success(null)
@@ -112,38 +118,66 @@ class MainActivity : FlutterFragmentActivity() {
         }
     }
 
-    // Loudspeaker on or off for the live call. A call answered from the
-    // phone's call notification is handed to Android's Telecom as a
-    // self-managed call, and from then on Telecom owns the audio route: the
-    // AudioManager calls LiveKit makes are overridden, so the Speaker button
-    // did nothing. Such a call has to be asked through its Connection.
-    // Otherwise (a call placed or answered inside the app) the route is set
-    // on the AudioManager directly.
+    // Loudspeaker on or off for the live call.
+    //
+    // Applied three ways because phones disagree on which one counts: the
+    // Telecom Connection (calls answered from the call notification), the
+    // modern communication device (Android 12+), and the legacy speakerphone
+    // flag (still the one that works on some OEM builds). The call library
+    // (LiveKit) re-applies ITS route a moment after the button press and was
+    // putting the earpiece back, so the choice is re-asserted after it.
+    private var speakerWanted = false
+
     private fun setSpeaker(callId: String?, on: Boolean) {
+        speakerWanted = on
+        applyRoute(callId, on)
+        for (delay in longArrayOf(300L, 1000L)) {
+            handler.postDelayed({ if (speakerWanted == on) applyRoute(callId, on) }, delay)
+        }
+        // At the ear the screen goes off; on speaker it stays on.
+        setProximity(!on && proximityWanted)
+    }
+
+    private fun applyRoute(callId: String?, on: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && callId != null) {
-            val conn = CallkitConnection.find(callId)
-            if (conn != null) {
+            CallkitConnection.find(callId)?.let {
                 @Suppress("DEPRECATION")
-                conn.setAudioRoute(if (on) CallAudioState.ROUTE_SPEAKER else CallAudioState.ROUTE_WIRED_OR_EARPIECE)
-                return
+                it.setAudioRoute(if (on) CallAudioState.ROUTE_SPEAKER else CallAudioState.ROUTE_WIRED_OR_EARPIECE)
             }
         }
         val audio = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         try {
+            if (audio.mode != AudioManager.MODE_IN_COMMUNICATION) audio.mode = AudioManager.MODE_IN_COMMUNICATION
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                if (on) {
-                    audio.availableCommunicationDevices
-                        .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
-                        ?.let { audio.setCommunicationDevice(it) }
-                } else {
-                    audio.clearCommunicationDevice()
-                }
-            } else {
-                @Suppress("DEPRECATION")
-                audio.isSpeakerphoneOn = on
+                val want = if (on) AudioDeviceInfo.TYPE_BUILTIN_SPEAKER else AudioDeviceInfo.TYPE_BUILTIN_EARPIECE
+                audio.availableCommunicationDevices.firstOrNull { it.type == want }
+                    ?.let { audio.setCommunicationDevice(it) }
             }
+            @Suppress("DEPRECATION")
+            audio.isSpeakerphoneOn = on
         } catch (e: RuntimeException) {
             // Routing refused: the call carries on where it is.
+        }
+    }
+
+    // The proximity sensor during a call: with the phone at the ear the screen
+    // turns off (so a cheek cannot press buttons), and comes back when it
+    // moves away. Held only while a call is connected and not on speaker.
+    private var proximityWanted = false
+    private var proximityLock: PowerManager.WakeLock? = null
+
+    private fun setProximity(on: Boolean) {
+        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+        if (on) {
+            if (proximityLock?.isHeld == true) return
+            if (!pm.isWakeLockLevelSupported(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK)) return
+            proximityLock = pm.newWakeLock(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK, "hoppin:call").apply {
+                setReferenceCounted(false)
+                acquire(4 * 60 * 60 * 1000L) // released at the end of the call; capped as a backstop
+            }
+        } else {
+            proximityLock?.let { if (it.isHeld) it.release(PowerManager.RELEASE_FLAG_WAIT_FOR_NO_PROXIMITY) }
+            proximityLock = null
         }
     }
 
@@ -177,6 +211,7 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     override fun onDestroy() {
+        setProximity(false)
         stopTones()
         super.onDestroy()
     }

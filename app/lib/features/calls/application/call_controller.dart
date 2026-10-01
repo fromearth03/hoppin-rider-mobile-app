@@ -386,6 +386,8 @@ class CallController extends Notifier<CallState> {
       phase: CallPhase.connected,
       connectedAt: DateTime.now(),
     );
+    // Screen off at the ear, like a phone call (native ignores it on speaker).
+    unawaited(CallTones.proximity(true));
     final id = state.callId;
     if (_viaCallKit && id != null) {
       unawaited(FlutterCallkitIncoming.setCallConnected(id));
@@ -447,6 +449,7 @@ class CallController extends Notifier<CallState> {
   }
 
   void _finish(String reason) {
+    unawaited(CallTones.proximity(false));
     _ringTimer?.cancel();
     _poll?.cancel();
     state = state.copyWith(phase: CallPhase.ended, endReason: reason);
@@ -472,6 +475,7 @@ class CallController extends Notifier<CallState> {
   }
 
   void _teardown() {
+    unawaited(CallTones.proximity(false));
     unawaited(CallTones.stop());
     _ringTimer?.cancel();
     _poll?.cancel();
