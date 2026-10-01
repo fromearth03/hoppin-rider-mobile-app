@@ -285,7 +285,16 @@ class CallController extends Notifier<CallState> {
 
   Future<void> toggleSpeaker() async {
     final on = !state.speaker;
-    await AudioManager.instance.setSpeakerOutputPreferred(on);
+    // LiveKit's own preference (forced, so a paired watch or car does not
+    // win over the loudspeaker), then the actual route. On Android the
+    // second step is what moves the sound: a call answered from the call
+    // notification belongs to Android's Telecom, which ignored the first.
+    try {
+      await AudioManager.instance.setSpeakerOutputPreferred(on, force: on);
+    } catch (e) {
+      debugPrint('calls: speaker preference refused: $e');
+    }
+    await CallTones.speaker(state.callId, on);
     state = state.copyWith(speaker: on);
   }
 

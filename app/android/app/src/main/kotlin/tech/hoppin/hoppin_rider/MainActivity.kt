@@ -2,6 +2,9 @@ package tech.hoppin.hoppin_rider
 
 import android.content.Context
 import android.media.AudioAttributes
+import android.media.AudioDeviceInfo
+import android.telecom.CallAudioState
+import com.hiennv.flutter_callkit_incoming.CallkitConnection
 import android.media.AudioManager
 import android.media.Ringtone
 import android.media.RingtoneManager
@@ -37,6 +40,10 @@ class MainActivity : FlutterFragmentActivity() {
                     "ringback" -> { ringback(); result.success(null) }
                     "busy" -> { busy(); result.success(null) }
                     "ring" -> { ring(); result.success(null) }
+                    "speaker" -> {
+                        setSpeaker(call.argument<String>("callId"), call.argument<Boolean>("on") ?: false)
+                        result.success(null)
+                    }
                     "stop" -> { stopTones(); result.success(null) }
                     else -> result.notImplemented()
                 }
@@ -102,6 +109,41 @@ class MainActivity : FlutterFragmentActivity() {
                 @Suppress("DEPRECATION")
                 it.vibrate(pattern, 0)
             }
+        }
+    }
+
+    // Loudspeaker on or off for the live call. A call answered from the
+    // phone's call notification is handed to Android's Telecom as a
+    // self-managed call, and from then on Telecom owns the audio route: the
+    // AudioManager calls LiveKit makes are overridden, so the Speaker button
+    // did nothing. Such a call has to be asked through its Connection.
+    // Otherwise (a call placed or answered inside the app) the route is set
+    // on the AudioManager directly.
+    private fun setSpeaker(callId: String?, on: Boolean) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && callId != null) {
+            val conn = CallkitConnection.find(callId)
+            if (conn != null) {
+                @Suppress("DEPRECATION")
+                conn.setAudioRoute(if (on) CallAudioState.ROUTE_SPEAKER else CallAudioState.ROUTE_WIRED_OR_EARPIECE)
+                return
+            }
+        }
+        val audio = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (on) {
+                    audio.availableCommunicationDevices
+                        .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+                        ?.let { audio.setCommunicationDevice(it) }
+                } else {
+                    audio.clearCommunicationDevice()
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                audio.isSpeakerphoneOn = on
+            }
+        } catch (e: RuntimeException) {
+            // Routing refused: the call carries on where it is.
         }
     }
 
