@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:go_router/go_router.dart';
 
+import 'core/device/device_checkin.dart';
 import 'core/net/network_status.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/application/auth_controller.dart';
@@ -25,9 +26,18 @@ class HoppinApp extends ConsumerStatefulWidget {
 }
 
 class _HoppinAppState extends ConsumerState<HoppinApp> {
+  AppLifecycleListener? _lifecycle;
+
   @override
   void initState() {
     super.initState();
+    // Back in the foreground: refresh the device check-in (throttled inside
+    // to every 15 min) so the panel's last-seen time and IP stay current.
+    _lifecycle = AppLifecycleListener(onResume: () {
+      if (ref.read(authControllerProvider).status == AuthStatus.signedIn) {
+        ref.read(deviceCheckinProvider).report();
+      }
+    });
     // Resolve the startup state exactly once, after the first frame so the
     // provider container is ready.
     //
@@ -39,6 +49,12 @@ class _HoppinAppState extends ConsumerState<HoppinApp> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(authControllerProvider.notifier).bootstrap();
     });
+  }
+
+  @override
+  void dispose() {
+    _lifecycle?.dispose();
+    super.dispose();
   }
 
   @override

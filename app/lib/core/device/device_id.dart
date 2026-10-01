@@ -32,17 +32,38 @@ class DeviceIdProvider {
   /// a blocked device walk straight past the gate. iOS clears
   /// `identifierForVendor` when the last app from a vendor is uninstalled, so
   /// the stored copy is what keeps it stable across a reinstall.
+  ///
+  /// Never throws. Secure storage can fail on Android for good: a reinstall
+  /// that restores app data from a backup brings back values encrypted with a
+  /// key the new install does not have, and every read then throws. That
+  /// silently dropped the device header from every request (the blacklist
+  /// gate is fail-open without it) and the fingerprint check-in never ran.
+  /// So a broken store is cleared and the platform id used regardless.
   Future<String> resolve() async {
     if (_cached != null) return _cached!;
 
-    final stored = await _storage.read(key: _key);
-    if (stored != null && stored.isNotEmpty) {
-      _cached = stored;
-      return stored;
+    try {
+      final stored = await _storage.read(key: _key);
+      if (stored != null && stored.isNotEmpty) {
+        _cached = stored;
+        return stored;
+      }
+    } catch (_) {
+      try {
+        await _storage.delete(key: _key);
+      } catch (_) {
+        try {
+          await _storage.deleteAll();
+        } catch (_) {}
+      }
     }
 
     final id = await _platformId();
-    await _storage.write(key: _key, value: id);
+    try {
+      await _storage.write(key: _key, value: id);
+    } catch (_) {
+      // Kept in memory for this run; the platform id is stable anyway.
+    }
     _cached = id;
     return id;
   }
