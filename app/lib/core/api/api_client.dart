@@ -9,6 +9,7 @@ import '../device/device_id.dart';
 import '../net/network_status.dart';
 import '../result.dart';
 import 'api_exception.dart';
+import 'account_block.dart';
 
 /// Every call to the ride service goes through here. Returns [Result] rather
 /// than throwing, so callers handle failure where it happens.
@@ -28,12 +29,17 @@ class ApiClient {
   /// there at all. Optional so tests and tooling need no wiring.
   final void Function({required bool reachedServer})? onReachability;
 
+  /// Called when the server says this rider or phone is blocked (see
+  /// accountBlockCodes), so the app can put up its block screen.
+  final void Function(ApiException e)? onBlocked;
+
   ApiClient(
     this._dio,
     this._tokens,
     this._device, {
     String? baseUrl,
     this.onReachability,
+    this.onBlocked,
   }) {
     _dio.options.baseUrl = baseUrl ?? _defaultBaseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 15);
@@ -123,7 +129,9 @@ class ApiClient {
           status,
         ));
       }
-      return Err<T>(parseError(response));
+      final err = parseError(response);
+      if (accountBlockCodes.contains(err.code)) onBlocked?.call(err);
+      return Err<T>(err);
     } on DioException catch (e) {
       // Timeouts and connection failures are transient. INTERNAL is the honest
       // classification for "no network" — it is the one code we mark retryable
@@ -223,6 +231,7 @@ final apiClientProvider = Provider<ApiClient>((ref) {
     ref.watch(tokenStoreProvider),
     ref.watch(deviceIdProvider),
     onReachability: status.report,
+    onBlocked: (e) => ref.read(accountBlockProvider.notifier).state = e,
   );
   // The probe that decides when we are back. `/app-status` is public, tiny and
   // needs no token, so it works even when the session has expired.

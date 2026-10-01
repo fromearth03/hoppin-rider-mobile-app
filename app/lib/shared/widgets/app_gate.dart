@@ -5,6 +5,8 @@ import '../../core/app_status.dart';
 import '../../core/theme/colors.dart';
 import '../../features/trip/data/ride_context_repository.dart';
 import 'hoppin_logo.dart';
+import '../../core/api/account_block.dart';
+import '../../features/auth/application/auth_controller.dart';
 
 /// Blocks the entire app while the operator has the platform down, or while
 /// this build is below the required floor.
@@ -25,7 +27,52 @@ class AppGate extends ConsumerWidget {
     // valueOrNull, NOT value: AsyncValue.value RETHROWS on an error, so a
     // failed status check would have taken the whole app down from the widget
     // that exists to keep the app usable.
-    final status = ref.watch(appStatusProvider).valueOrNull ?? AppStatus.unknown;
+    final status =
+        ref.watch(appStatusProvider).valueOrNull ?? AppStatus.unknown;
+
+    // Blocked by Hoppin: the server refuses every request from this rider or
+    // this phone, so nothing behind this screen would work. Above maintenance
+    // and above a live ride for the same reason.
+    final block = ref.watch(accountBlockProvider);
+    if (block != null) {
+      final (icon, title, body) = switch (block.code) {
+        'DEVICE_BLACKLISTED' => (
+          Icons.phonelink_lock,
+          'This phone has been blocked',
+          'Hoppin has blocked this device, so it cannot be used to book or '
+              'take rides. If you think this is a mistake, contact Hoppin '
+              'support from another device.',
+        ),
+        'ACCOUNT_BANNED' => (
+          Icons.block,
+          'Your account has been closed',
+          'This Hoppin account can no longer be used. If you think this is '
+              'a mistake, contact Hoppin support.',
+        ),
+        _ => (
+          Icons.pause_circle_outline,
+          'Your account is suspended',
+          'You cannot book rides while your account is suspended. Contact '
+              'Hoppin support to find out more.',
+        ),
+      };
+      return _Blocked(
+        icon: icon,
+        title: title,
+        body: body,
+        actionLabel: 'Sign out',
+        onAction: () async {
+          await ref.read(authControllerProvider.notifier).signOut();
+          ref.read(accountBlockProvider.notifier).state = null;
+        },
+        secondaryLabel: 'Try again',
+        // The next request re-raises the block if it still stands.
+        onSecondary: () {
+          ref.read(accountBlockProvider.notifier).state = null;
+          ref.invalidate(appStatusProvider);
+        },
+      );
+    }
 
     if (status.maintenanceMode) {
       // A rider must not be yanked to the maintenance screen mid-ride. Only block
@@ -46,7 +93,8 @@ class AppGate extends ConsumerWidget {
       return _Blocked(
         icon: Icons.construction_outlined,
         title: 'Hoppin is down for maintenance',
-        body: status.maintenanceMessage ??
+        body:
+            status.maintenanceMessage ??
             "We're making some improvements and will be back shortly. "
                 'Thanks for your patience.',
         actionLabel: 'Try again',
@@ -64,7 +112,8 @@ class AppGate extends ConsumerWidget {
         // No "open the store" button: url_launcher is not a dependency (see
         // help_support_screen.dart), and a button that does nothing is worse
         // than telling the rider plainly where to go.
-        body: 'This version of Hoppin is no longer supported. '
+        body:
+            'This version of Hoppin is no longer supported. '
             'Update it from your app store to keep booking rides.',
         actionLabel: 'I have updated',
         onAction: () => ref.invalidate(appStatusProvider),
@@ -81,6 +130,8 @@ class _Blocked extends StatelessWidget {
   final String body;
   final String actionLabel;
   final VoidCallback onAction;
+  final String? secondaryLabel;
+  final VoidCallback? onSecondary;
 
   const _Blocked({
     required this.icon,
@@ -88,6 +139,8 @@ class _Blocked extends StatelessWidget {
     required this.body,
     required this.actionLabel,
     required this.onAction,
+    this.secondaryLabel,
+    this.onSecondary,
   });
 
   @override
@@ -110,15 +163,17 @@ class _Blocked extends StatelessWidget {
                 Text(
                   title,
                   textAlign: TextAlign.center,
-                  style: theme.textTheme.titleLarge
-                      ?.copyWith(color: AppColors.navy),
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: AppColors.navy,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   body,
                   textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium
-                      ?.copyWith(color: AppColors.lightTextSecondary),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppColors.lightTextSecondary,
+                  ),
                 ),
                 const SizedBox(height: 32),
                 SizedBox(
@@ -128,6 +183,13 @@ class _Blocked extends StatelessWidget {
                     child: Text(actionLabel),
                   ),
                 ),
+                if (secondaryLabel != null && onSecondary != null) ...[
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: onSecondary,
+                    child: Text(secondaryLabel!),
+                  ),
+                ],
               ],
             ),
           ),

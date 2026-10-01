@@ -17,6 +17,7 @@ import 'rebook.dart';
 import 'route_entry_screen.dart' show RoutePoint, RoutePrefill;
 import 'widgets/rider_map.dart';
 import '../../../core/location/location_permission.dart';
+import '../../ads/presentation/ad_banner.dart';
 
 /// The categories the rider can book, cheapest first.
 ///
@@ -216,6 +217,8 @@ class _BookingSheet extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Banner ads from the admin panel (nothing when there are none).
+          const AdBanner(),
           const _ModeRow(),
           const SizedBox(height: 12),
           const _SearchField(),
