@@ -124,15 +124,35 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
       _error = null;
     });
 
-    final result = await ref.read(supportTicketsRepositoryProvider).open(
+    final repo = ref.read(supportTicketsRepositoryProvider);
+    final complaintRideId = complaint ? _ride?.id : null;
+    final result = await repo.openForId(
           subject: subject.isEmpty ? 'Support request' : subject,
           category: complaint ? 'complaint' : 'support',
           typeCode: complaint ? _typeCode : null,
           body: description,
-          rideId: complaint ? _ride?.id : null,
+          rideId: complaintRideId,
           tags: complaint ? _tags.toList() : const [],
         );
     if (!mounted) return;
+
+    // A complaint about a trip: let the server settle it on the spot if it can
+    // (goodwill credit for a late driver or poor service). Best-effort: the
+    // complaint is already filed, so a failure here changes nothing.
+    String? resolution;
+    if (result case Ok(:final value)) {
+      if (complaintRideId != null && complaintRideId.isNotEmpty) {
+        final auto = await repo.autoResolve(
+          issueType: '${categoryLabel ?? ''} ${_typeCode ?? ''}'.trim(),
+          rideId: complaintRideId,
+          ticketId: value,
+        );
+        if (auto case Ok(value: final r)) {
+          if (r.resolved) resolution = r.message;
+        }
+        if (!mounted) return;
+      }
+    }
 
     switch (result) {
       case Ok():
@@ -147,9 +167,10 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
         ref.invalidate(_ticketsProvider);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(complaint
-                  ? 'Complaint filed. The team will look into it and reply.'
-                  : 'Ticket opened. A representative will respond in 24 hours.')),
+              content: Text(resolution ??
+                  (complaint
+                      ? 'Complaint filed. The team will look into it and reply.'
+                      : 'Ticket opened. A representative will respond in 24 hours.'))),
         );
       case Err(:final error):
         setState(() {

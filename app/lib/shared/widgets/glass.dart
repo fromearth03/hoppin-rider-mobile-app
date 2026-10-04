@@ -63,8 +63,33 @@ class Glass extends StatelessWidget {
     BoxShadow(color: Color(0x1F181C39), blurRadius: 28, offset: Offset(0, -6)),
   ];
 
+  /// One switch for every blur in the app. Turn it off and each [Glass] becomes
+  /// the same surface painted nearly solid: the fallback for a phone too slow
+  /// to blur a moving map, without touching a single screen.
+  static bool blurEnabled = true;
+
   @override
   Widget build(BuildContext context) {
+    // High-contrast accessibility setting: no translucency at all.
+    final solid = !blurEnabled || MediaQuery.highContrastOf(context);
+    if (solid) {
+      final pane = ClipRRect(
+        borderRadius: borderRadius,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: tint.withValues(alpha: 0.97),
+            borderRadius: borderRadius,
+          ),
+          child: child,
+        ),
+      );
+      if (shadow == null) return pane;
+      return DecoratedBox(
+        decoration:
+            BoxDecoration(borderRadius: borderRadius, boxShadow: shadow),
+        child: pane,
+      );
+    }
     final pane = ClipRRect(
       borderRadius: borderRadius,
       child: BackdropFilter(

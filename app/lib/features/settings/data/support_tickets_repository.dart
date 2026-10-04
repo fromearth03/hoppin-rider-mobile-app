@@ -149,6 +149,35 @@ class ComplaintType {
 /// `POST/GET /me/support-tickets` + `GET /complaint-types` — the rider
 /// ticket surface (`selfservice_handler.go`). `subject` is the one required
 /// field; everything else is optional on the wire.
+/// The outcome of `POST /me/issues/auto-resolve`.
+class IssueResolution {
+  /// True when the server settled it on the spot (credit added).
+  final bool resolved;
+  final int creditPence;
+
+  /// The server's rider-facing sentence, shown verbatim.
+  final String? message;
+
+  const IssueResolution({
+    required this.resolved,
+    required this.creditPence,
+    required this.message,
+  });
+
+  factory IssueResolution.fromJson(Map<String, dynamic> json) =>
+      IssueResolution(
+        resolved: json['resolved'] == true,
+        creditPence: switch (json['credit_pence']) {
+          final num n => n.toInt(),
+          _ => 0,
+        },
+        message: switch (json['message']) {
+          final String m when m.trim().isNotEmpty => m,
+          _ => null,
+        },
+      );
+}
+
 class SupportTicketsRepository {
   final ApiClient _api;
   const SupportTicketsRepository(this._api);
@@ -175,6 +204,63 @@ class SupportTicketsRepository {
               ComplaintTag.tryFromJson(Map<String, dynamic>.from(row)))
           .whereType<ComplaintTag>()
           .toList(growable: false)),
+      Err(:final error) => Err(error),
+    };
+  }
+
+  /// What the automatic resolution engine decided about a complaint
+  /// (`POST /me/issues/auto-resolve`).
+  ///
+  /// For a late driver or a poor-service complaint on one of the rider's own
+  /// completed trips the server adds goodwill credit there and then, and
+  /// [message] says so ("We've added £3.00 credit to your account."). Anything
+  /// about money goes to a person instead. The engine and the credit existed
+  /// server-side, but the app never called it, so every complaint waited for a
+  /// human even when the answer was automatic.
+  Future<Result<IssueResolution>> autoResolve({
+    required String issueType,
+    required String rideId,
+    String? ticketId,
+  }) async {
+    final result = await _api.post<Map<String, dynamic>>(
+      '/me/issues/auto-resolve',
+      body: {
+        'issue_type': issueType,
+        'ride_id': rideId,
+        if (ticketId != null && ticketId.isNotEmpty) 'ticket_id': ticketId,
+      },
+    );
+    return switch (result) {
+      Ok(:final value) => Ok(IssueResolution.fromJson(value)),
+      Err(:final error) => Err(error),
+    };
+  }
+
+  /// [open], returning the new ticket's id (null if the server sent none).
+  Future<Result<String?>> openForId({
+    required String subject,
+    String? typeCode,
+    String? body,
+    String? rideId,
+    List<String> tags = const [],
+    String? category,
+  }) async {
+    final result = await _api.post<Map<String, dynamic>>(
+      '/me/support-tickets',
+      body: {
+        'subject': subject,
+        if (category != null && category.isNotEmpty) 'category': category,
+        if (typeCode != null && typeCode.isNotEmpty) 'type_code': typeCode,
+        if (body != null && body.trim().isNotEmpty) 'body': body.trim(),
+        if (rideId != null && rideId.isNotEmpty) 'ride_id': rideId,
+        if (tags.isNotEmpty) 'tags': tags,
+      },
+    );
+    return switch (result) {
+      Ok(:final value) => Ok(switch (value['id']) {
+          final String id when id.isNotEmpty => id,
+          _ => null,
+        }),
       Err(:final error) => Err(error),
     };
   }
