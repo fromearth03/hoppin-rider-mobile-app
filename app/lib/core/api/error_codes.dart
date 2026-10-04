@@ -67,6 +67,13 @@ class RiderErrorCopy {
         'We could not verify this device. Try again in a moment.',
     'DELETION_BLOCKED': 'Your account cannot be deleted yet.',
     'PHONE_TAKEN': 'That phone number is already in use.',
+    'DOB_LOCKED':
+        'Your date of birth is already set. Contact support to correct it.',
+    'NAME_LOCKED':
+        'Your name was verified with your documents. Contact support to change it.',
+    'FARE_EXPIRED': 'That price has expired. Check the fare again.',
+    'FARE_NOT_FOUND': 'That price is no longer available. Check the fare again.',
+    'RATE_LIMITED': 'Too many attempts. Wait a moment and try again.',
     'USER_NOT_FOUND': 'We could not find your profile.',
 
     // Global

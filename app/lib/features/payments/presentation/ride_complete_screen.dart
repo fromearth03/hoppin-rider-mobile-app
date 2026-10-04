@@ -16,6 +16,7 @@ import '../../trip/data/ride_context_repository.dart';
 import '../data/receipts_repository.dart';
 import 'widgets/receipt_row.dart';
 import 'widgets/route_preview.dart';
+import '../../../shared/widgets/glass.dart';
 
 /// Fetches the receipt for one ride. Keyed by ride id so a rider who somehow
 /// lands on two different completed rides never sees a cached mix-up.
@@ -369,10 +370,7 @@ class _Card extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-      ),
+      decoration: GlassCard.decoration(),
       child: child,
     );
   }

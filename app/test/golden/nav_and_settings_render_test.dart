@@ -13,6 +13,7 @@ import 'package:hoppin_rider/features/settings/data/preferences_repository.dart'
 import 'package:hoppin_rider/features/settings/presentation/settings_screen.dart';
 import 'package:hoppin_rider/shared/nav/app_drawer.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:hoppin_rider/shared/widgets/glass.dart';
 
 class _MockAuthController extends Mock implements AuthController {}
 
@@ -77,7 +78,7 @@ void main() {
           debugShowCheckedModeBanner: false,
           theme:
               brightness == Brightness.light ? AppTheme.light : AppTheme.dark,
-          home: screen,
+          home: AmbientPage(child: screen),
         ),
       ),
     );

@@ -9,6 +9,7 @@ import '../../features/auth/data/profile_repository.dart';
 import '../widgets/profile_avatar.dart';
 import 'app_router.dart';
 import 'logout_confirm.dart';
+import '../widgets/glass.dart';
 
 /// The navigation drawer — `Side Nav Bar.png`.
 ///
@@ -34,6 +35,11 @@ class AppDrawer extends ConsumerWidget {
     // and panned the map. No-op on native.
     return PointerInterceptor(
         child: Drawer(
+      // Frosted panel: the map stays faintly visible behind the menu instead
+      // of being covered by a white slab. Solid enough to read every row.
+      backgroundColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
       // The design's panel stops short of the right edge and rounds that
       // corner.
       shape: const RoundedRectangleBorder(
@@ -42,7 +48,14 @@ class AppDrawer extends ConsumerWidget {
           bottomRight: Radius.circular(28),
         ),
       ),
-      child: SafeArea(
+      child: Glass(
+        borderRadius: const BorderRadius.only(
+          topRight: Radius.circular(28),
+          bottomRight: Radius.circular(28),
+        ),
+        opacity: 0.86,
+        blur: 22,
+        child: SafeArea(
         child: Column(
           children: [
             _Header(profile: profile),
@@ -142,7 +155,7 @@ class AppDrawer extends ConsumerWidget {
             const SizedBox(height: 8),
           ],
         ),
-      ),
+      )),
     ));
   }
 }

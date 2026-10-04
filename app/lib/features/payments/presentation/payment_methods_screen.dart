@@ -5,6 +5,7 @@ import 'package:flutter_stripe/flutter_stripe.dart' as stripe_sdk;
 
 import 'package:intl/intl.dart';
 
+import '../../../core/api/api_client.dart';
 import '../../../core/api/error_codes.dart';
 import '../../../core/config.dart';
 import '../../../core/result.dart';
@@ -31,6 +32,23 @@ final _recentPaymentsProvider =
     // Decoration on this screen; an error renders as an empty section, never
     // as a failure that hides the rider's cards.
     Err() => const <TripHistoryItem>[],
+  };
+});
+
+/// The rider's Hoppin credit in pence (`GET /me/credit-balance`): goodwill
+/// credit from a resolved issue or late-driver compensation. The server spends
+/// it automatically on the next fare, but nothing in the app ever showed it,
+/// so a rider told "we've added £3 credit" had no way to see it existed.
+/// Zero or a failed read renders nothing: this is information, not a gate.
+final _creditPenceProvider = FutureProvider.autoDispose<int>((ref) async {
+  final result =
+      await ref.watch(apiClientProvider).get<dynamic>('/me/credit-balance');
+  return switch (result) {
+    Ok(:final value) => switch ((value is Map ? value : const {})['credit_pence']) {
+        final num n => n.toInt(),
+        _ => 0,
+      },
+    Err() => 0,
   };
 });
 
@@ -266,6 +284,7 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              _CreditBanner(pence: ref.watch(_creditPenceProvider).valueOrNull ?? 0),
               Expanded(child: _buildBody(theme)),
               const SizedBox(height: 12),
               ElevatedButton.icon(
@@ -417,6 +436,57 @@ class _RecentPaymentRow extends StatelessWidget {
             style: theme.textTheme.titleMedium
                 ?.copyWith(fontSize: 13.5, color: AppColors.negative),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Hoppin credit £3.00" — shown only when the rider actually has some.
+class _CreditBanner extends StatelessWidget {
+  final int pence;
+  const _CreditBanner({required this.pence});
+
+  @override
+  Widget build(BuildContext context) {
+    if (pence <= 0) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    final amount =
+        NumberFormat.currency(locale: 'en_GB', symbol: '£').format(pence / 100);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.primary, AppColors.navy],
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.account_balance_wallet_outlined,
+              color: Colors.white, size: 26),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Hoppin credit',
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(color: Colors.white.withValues(alpha: 0.8))),
+                const SizedBox(height: 2),
+                Text('Used automatically on your next ride',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.65),
+                        fontSize: 12)),
+              ],
+            ),
+          ),
+          Text(amount,
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(color: Colors.white, fontSize: 20)),
         ],
       ),
     );

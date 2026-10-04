@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/colors.dart';
+import '../../../../shared/widgets/glass.dart';
 
 /// A rounded white/surface card grouping related settings rows, matching
 /// `Setting.png`.
@@ -13,10 +14,10 @@ class SettingsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-      ),
+      // Glass card: translucent over the screen's ambient backdrop, with the
+      // glass hairline and a soft shadow. Same shape and spacing as the frame.
+      decoration: GlassCard.decoration(),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         // Stretch, not the default centre: a card header is a bare padded
         // Text, and centring it floats the title mid-card — the frames all

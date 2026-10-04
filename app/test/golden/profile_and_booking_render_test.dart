@@ -14,6 +14,7 @@ import 'package:hoppin_rider/features/profile/application/personal_information_c
 import 'package:hoppin_rider/features/profile/domain/personal_information_state.dart';
 import 'package:hoppin_rider/features/profile/presentation/personal_information_screen.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:hoppin_rider/shared/widgets/glass.dart';
 
 class _MockPersonalInfoController extends Mock
     implements PersonalInformationController {}
@@ -81,7 +82,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: brightness == Brightness.light ? AppTheme.light : AppTheme.dark,
-      home: screen,
+      home: AmbientPage(child: screen),
     ));
     await tester.pumpAndSettle();
 

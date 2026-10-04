@@ -19,6 +19,7 @@ import 'package:hoppin_rider/features/payments/presentation/ride_complete_screen
 import 'package:hoppin_rider/features/scheduling/presentation/schedule_ride_screen.dart';
 import 'package:hoppin_rider/shared/nav/app_drawer.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:hoppin_rider/shared/widgets/glass.dart';
 
 class _MockAuthController extends Mock implements AuthController {}
 
@@ -104,7 +105,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      home: screen,
+      home: AmbientPage(child: screen),
     ));
     await tester.pumpAndSettle();
 

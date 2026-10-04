@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/colors.dart';
 import '../../data/payment_methods_repository.dart';
+import '../../../../shared/widgets/glass.dart';
 
 /// One saved card row: brand icon, masked number, expiry, default badge and
 /// actions.
@@ -46,11 +47,13 @@ class PaymentCardTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: border),
-      ),
+      decoration: isDark
+          ? BoxDecoration(
+              color: surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: border),
+            )
+          : GlassCard.decoration(),
       child: Row(
         children: [
           Icon(_brandIcon, color: AppColors.navy),

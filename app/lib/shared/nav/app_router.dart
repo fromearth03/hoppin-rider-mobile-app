@@ -33,6 +33,7 @@ import '../../features/settings/presentation/support_ticket_screen.dart';
 import '../../features/trip/presentation/live_trip_screen.dart';
 import '../../features/chat/presentation/chat_screen.dart';
 import '../../features/safety/presentation/safety_screen.dart';
+import '../widgets/glass.dart';
 
 class AppRoutes {
   AppRoutes._();
@@ -137,7 +138,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final status = ref.read(authControllerProvider).status;
       return redirectFor(status, state.matchedLocation);
     },
-    routes: [
+    routes: _onAmbient([
       GoRoute(
         path: AppRoutes.login,
         builder: (_, __) => const LoginScreen(),
@@ -288,6 +289,31 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           driverName: state.uri.queryParameters['driver'] ?? 'Driver',
         ),
       ),
-    ],
+    ]),
   );
 });
+
+/// Puts every screen on the app's [AmbientBackground], with a transparent
+/// Scaffold and app bar so it shows through.
+///
+/// Done here, once, rather than in each of the forty screens: a new route gets
+/// the backdrop by being in the list. Each page carries its OWN opaque
+/// backdrop, so one page fully covers the next during a transition (a single
+/// shared backdrop behind transparent pages would show two screens' text
+/// overlapping while they cross). Map screens simply paint over it.
+List<RouteBase> _onAmbient(List<GoRoute> routes) => [
+      for (final r in routes)
+        GoRoute(
+          path: r.path,
+          name: r.name,
+          redirect: r.redirect,
+          parentNavigatorKey: r.parentNavigatorKey,
+          routes: r.routes,
+          pageBuilder: r.pageBuilder,
+          builder: r.builder == null
+              ? null
+              : (context, state) =>
+                  AmbientPage(child: r.builder!(context, state)),
+        ),
+    ];
+

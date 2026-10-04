@@ -12,6 +12,7 @@ import 'package:hoppin_rider/features/history/presentation/ride_history_screen.d
 import 'package:hoppin_rider/features/history/presentation/trip_details_screen.dart';
 import 'package:hoppin_rider/features/scheduling/presentation/schedule_ride_screen.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:hoppin_rider/shared/widgets/glass.dart';
 
 class _MockApi extends Mock implements ApiClient {}
 
@@ -63,7 +64,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: brightness == Brightness.light ? AppTheme.light : AppTheme.dark,
-      home: screen,
+      home: AmbientPage(child: screen),
     ));
     await tester.pumpAndSettle();
 

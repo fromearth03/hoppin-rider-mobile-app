@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
+
+import '../../../core/result.dart';
 
 import '../../../shared/nav/app_router.dart';
 import '../../../shared/nav/logout_confirm.dart';
 import '../../auth/application/auth_controller.dart';
 import '../application/preferences_controller.dart';
+import '../data/data_export_repository.dart';
 import 'widgets/settings_card.dart';
 import 'widgets/settings_header.dart';
 import 'widgets/settings_rows.dart';
@@ -57,6 +61,38 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  bool _exporting = false;
+
+  /// Downloads the rider's data and hands it to the system share sheet, so
+  /// they can save it to Files or send it to themselves. The file never
+  /// touches app storage beyond the share handoff.
+  Future<void> _downloadMyData() async {
+    if (_exporting) return;
+    setState(() => _exporting = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final result = await ref.read(dataExportRepositoryProvider).download();
+    if (!mounted) return;
+    setState(() => _exporting = false);
+    switch (result) {
+      case Ok(:final value):
+        final day = DateTime.now().toIso8601String().substring(0, 10);
+        await SharePlus.instance.share(ShareParams(
+          files: [
+            XFile.fromData(value,
+                name: 'hoppin-my-data-$day.json', mimeType: 'application/json'),
+          ],
+          fileNameOverrides: ['hoppin-my-data-$day.json'],
+          subject: 'My Hoppin data',
+        ));
+      case Err():
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(const SnackBar(
+              content: Text(
+                  'We could not prepare your data just now. Try again in a moment.')));
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -138,6 +174,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 icon: Icons.translate_outlined,
                 label: 'Language',
                 comingSoon: true,
+              ),
+            ]),
+            const SizedBox(height: 20),
+            // Privacy. A copy of everything Hoppin holds on the rider: the
+            // counterpart of Delete Account below (UK GDPR right of access).
+            SettingsCard(children: [
+              SettingsActionRow(
+                icon: Icons.download_outlined,
+                label: _exporting ? 'Preparing your data…' : 'Download my data',
+                onTap: _exporting ? null : _downloadMyData,
               ),
             ]),
             const SizedBox(height: 20),

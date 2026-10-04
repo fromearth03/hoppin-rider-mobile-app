@@ -18,6 +18,7 @@ import 'route_entry_screen.dart' show RoutePoint, RoutePrefill;
 import 'widgets/rider_map.dart';
 import '../../../core/location/location_permission.dart';
 import '../../ads/presentation/ad_banner.dart';
+import '../../../shared/widgets/glass.dart';
 
 /// The categories the rider can book, cheapest first.
 ///
@@ -182,16 +183,23 @@ class MapCircleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      shape: const CircleBorder(),
-      elevation: 2,
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Icon(icon, size: 22, color: AppColors.navy),
+    // Frosted, not painted: the map shows softly through the button. Same
+    // size, icon and position as the frame's white circle.
+    return Glass(
+      borderRadius: BorderRadius.circular(40),
+      blur: 14,
+      opacity: 0.72,
+      child: Material(
+        type: MaterialType.transparency,
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Icon(icon, size: 22, color: AppColors.navy),
+          ),
         ),
       ),
     );
@@ -205,22 +213,23 @@ class _BookingSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        color: Color(0xFFF7F7FA),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        boxShadow: [
-          BoxShadow(
-              color: Color(0x1F000000), blurRadius: 18, offset: Offset(0, -4)),
-        ],
-      ),
+    // The frame's sheet, as frosted glass: the map carries on under its top
+    // edge instead of stopping at a painted panel.
+    return Glass(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      tint: const Color(0xFFF7F7FA),
+      opacity: 0.84,
+      blur: 20,
+      shadow: Glass.sheetShadow,
+      child: Padding(
       padding: EdgeInsets.fromLTRB(
         16,
         16,
         16,
         MediaQuery.of(context).padding.bottom + 16,
       ),
+      child: SizedBox(
+      width: double.infinity,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -233,6 +242,8 @@ class _BookingSheet extends StatelessWidget {
           const _FrequentTripRow(),
           _SavedList(saved: saved),
         ],
+      ),
+      ),
       ),
     );
   }

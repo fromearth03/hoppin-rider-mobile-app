@@ -242,6 +242,9 @@ void main() {
       ),
     );
 
+    // The Privacy card above pushed this row below the 600px test surface.
+    await tester.ensureVisible(find.text('Delete Account'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Delete Account'));
     await tester.pumpAndSettle();
 

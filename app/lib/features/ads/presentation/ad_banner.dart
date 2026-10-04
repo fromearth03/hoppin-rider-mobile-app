@@ -8,6 +8,7 @@ import '../../../core/theme/colors.dart';
 import '../../../shared/nav/app_router.dart';
 import '../data/ads_repository.dart';
 import 'ad_actions.dart';
+import '../../../shared/widgets/glass.dart';
 
 export 'ad_actions.dart' show adActionRoute;
 
@@ -83,10 +84,13 @@ class _AdBannerState extends ConsumerState<AdBanner> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Material(
-          color: Colors.white,
-          elevation: 3,
-          shadowColor: Colors.black26,
+        // Frosted over the map, like the buttons beside it.
+        Glass(
+          borderRadius: BorderRadius.circular(14),
+          blur: 16,
+          opacity: 0.80,
+          child: Material(
+          type: MaterialType.transparency,
           borderRadius: BorderRadius.circular(14),
           clipBehavior: Clip.antiAlias,
           child: SizedBox(
@@ -140,13 +144,16 @@ class _AdBannerState extends ConsumerState<AdBanner> {
               ],
             ),
           ),
-        ),
+        )),
         const SizedBox(height: 6),
-        Material(
-          color: Colors.white,
-          elevation: 2,
-          shadowColor: Colors.black26,
+        Glass(
           borderRadius: BorderRadius.circular(20),
+          blur: 14,
+          opacity: 0.78,
+          child: Material(
+          type: MaterialType.transparency,
+          borderRadius: BorderRadius.circular(20),
+          clipBehavior: Clip.antiAlias,
           child: InkWell(
             borderRadius: BorderRadius.circular(20),
             onTap: () => context.push(AppRoutes.offers),
@@ -173,7 +180,7 @@ class _AdBannerState extends ConsumerState<AdBanner> {
               ),
             ),
           ),
-        ),
+        )),
       ],
     );
   }

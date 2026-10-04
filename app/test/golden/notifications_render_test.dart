@@ -14,6 +14,7 @@ import 'package:hoppin_rider/features/notifications/domain/promotion_item.dart';
 import 'package:hoppin_rider/features/notifications/presentation/notifications_screen.dart';
 import 'package:hoppin_rider/features/notifications/presentation/promotional_screen.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:hoppin_rider/shared/widgets/glass.dart';
 
 class _MockNotificationsSource extends Mock implements NotificationsSource {}
 
@@ -43,7 +44,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: brightness == Brightness.light ? AppTheme.light : AppTheme.dark,
-      home: screen,
+      home: AmbientPage(child: screen),
     ));
     await tester.pumpAndSettle();
 

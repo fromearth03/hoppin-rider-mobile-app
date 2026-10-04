@@ -23,6 +23,7 @@ import 'package:hoppin_rider/features/chat/presentation/chat_screen.dart';
 import 'package:hoppin_rider/features/trip/data/live_trip_source.dart';
 import 'package:hoppin_rider/features/trip/presentation/live_trip_screen.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:hoppin_rider/shared/widgets/glass.dart';
 
 class _MockFareRepository extends Mock implements FareRepository {}
 
@@ -83,7 +84,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: brightness == Brightness.light ? AppTheme.light : AppTheme.dark,
-      home: screen,
+      home: AmbientPage(child: screen),
     ));
     await tester.pumpAndSettle();
 

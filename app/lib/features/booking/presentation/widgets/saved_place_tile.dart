@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/colors.dart';
 import '../../data/saved_locations_repository.dart';
+import '../../../../shared/widgets/glass.dart';
 
 /// One saved place row: pin, label, rename and remove actions.
 ///
@@ -34,11 +35,13 @@ class SavedPlaceTile extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: border),
-      ),
+      decoration: isDark
+          ? BoxDecoration(
+              color: surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: border),
+            )
+          : GlassCard.decoration(),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),

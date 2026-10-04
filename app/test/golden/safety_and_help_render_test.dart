@@ -11,6 +11,7 @@ import 'package:hoppin_rider/features/safety/data/safety_repository.dart';
 import 'package:hoppin_rider/features/safety/presentation/safety_screen.dart';
 import 'package:hoppin_rider/features/settings/presentation/help_support_screen.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:hoppin_rider/shared/widgets/glass.dart';
 
 class _MockApi extends Mock implements ApiClient {}
 
@@ -35,7 +36,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: brightness == Brightness.light ? AppTheme.light : AppTheme.dark,
-      home: screen,
+      home: AmbientPage(child: screen),
     ));
     await tester.pumpAndSettle();
 

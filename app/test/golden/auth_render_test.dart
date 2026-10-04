@@ -11,6 +11,7 @@ import 'package:hoppin_rider/features/auth/presentation/forgot_password_screen.d
 import 'package:hoppin_rider/features/auth/presentation/login_screen.dart';
 import 'package:hoppin_rider/features/auth/presentation/signup_screen.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:hoppin_rider/shared/widgets/glass.dart';
 
 class _MockController extends Mock implements AuthController {}
 
@@ -64,7 +65,7 @@ void main() {
           debugShowCheckedModeBanner: false,
           theme:
               brightness == Brightness.light ? AppTheme.light : AppTheme.dark,
-          home: screen,
+          home: AmbientPage(child: screen),
         ),
       ),
     );

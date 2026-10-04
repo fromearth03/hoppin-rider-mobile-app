@@ -22,9 +22,14 @@
          camera permission it declares — so strip them rather than ship them. -->
     <uses-permission android:name="android.permission.CAMERA" tools:node="remove" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" tools:node="remove" />
+    <!-- allowBackup off: the app holds a signed-in session and trip history.
+         Android's cloud/adb backup would copy the app's data off the phone; a
+         restored copy on another device is not something a payments app wants. -->
     <application
         android:label="Hoppin"
         android:name="${applicationName}"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
         android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"

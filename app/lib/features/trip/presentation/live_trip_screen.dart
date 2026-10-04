@@ -24,6 +24,7 @@ import 'widgets/trip_route_header.dart';
 import 'widgets/trip_status_banner.dart';
 import 'widgets/turn_banner.dart';
 import '../../calls/application/call_controller.dart';
+import '../../../shared/widgets/glass.dart';
 
 /// Streams [LiveTripInfo] for one ride from [LiveTripSource].
 ///
@@ -737,16 +738,22 @@ class _CircleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Theme.of(context).colorScheme.surface,
-      shape: const CircleBorder(),
-      elevation: 2,
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Icon(icon, size: 20, color: color ?? AppColors.primary),
+    // Frosted like the Home screen's map buttons: one material over the map.
+    return Glass(
+      borderRadius: BorderRadius.circular(40),
+      blur: 14,
+      opacity: 0.74,
+      child: Material(
+        type: MaterialType.transparency,
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Icon(icon, size: 20, color: color ?? AppColors.primary),
+          ),
         ),
       ),
     );

@@ -12,6 +12,7 @@ import 'package:hoppin_rider/features/payments/data/receipts_repository.dart';
 import 'package:hoppin_rider/features/payments/presentation/payment_methods_screen.dart';
 import 'package:hoppin_rider/features/payments/presentation/ride_complete_screen.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:hoppin_rider/shared/widgets/glass.dart';
 
 class _MockPaymentRepo extends Mock implements PaymentMethodsRepository {}
 
@@ -32,7 +33,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: brightness == Brightness.light ? AppTheme.light : AppTheme.dark,
-      home: screen,
+      home: AmbientPage(child: screen),
     ));
     await tester.pumpAndSettle();
 

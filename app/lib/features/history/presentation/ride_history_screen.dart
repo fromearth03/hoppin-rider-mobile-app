@@ -14,6 +14,7 @@ import '../../booking/presentation/rebook.dart';
 import '../../booking/presentation/home_screen.dart' show rebookFrequentTrip;
 import '../data/trip_history_repository.dart';
 import '../../../shared/widgets/skeleton.dart';
+import '../../../shared/widgets/glass.dart';
 
 /// First day of the month the list is filtered to; null = all time.
 /// Defaults to the current month, as the frame's "This Month" card shows.
@@ -217,9 +218,8 @@ class _MonthFilterCard extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
       child: Material(
-        color: Colors.white,
+        color: Colors.white.withValues(alpha: 0.82),
         borderRadius: BorderRadius.circular(12),
-        elevation: 1,
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: () => _pick(context, ref, month),
@@ -380,9 +380,15 @@ class _TripCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Material(
-      color: theme.colorScheme.surface,
+    // Glass card (see shared/widgets/glass.dart): the decoration sits outside
+    // the Material so the ink ripple still clips to the rounded shape.
+    return DecoratedBox(
+      decoration: GlassCard.decoration(
+          borderRadius: BorderRadius.circular(14)),
+      child: Material(
+      type: MaterialType.transparency,
       borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: () => context.push('${AppRoutes.tripDetails}?ride=${trip.id}'),
@@ -463,7 +469,7 @@ class _TripCard extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ));
   }
 }
 
