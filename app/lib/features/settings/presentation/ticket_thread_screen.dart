@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -37,8 +39,25 @@ class _TicketThreadScreenState extends ConsumerState<TicketThreadScreen> {
   final _reply = TextEditingController();
   bool _sending = false;
 
+  /// Live thread: re-read the ticket every few seconds while it is open, so a
+  /// reply from the support team appears on its own. It used to be read once;
+  /// the rider had to leave the screen and come back to see an answer. The
+  /// refresh is silent (the list keeps showing the last copy while it loads)
+  /// and never touches the reply box.
+  Timer? _poll;
+
+  @override
+  void initState() {
+    super.initState();
+    _poll = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!mounted || _sending) return;
+      ref.invalidate(_ticketDetailProvider(widget.ticketId));
+    });
+  }
+
   @override
   void dispose() {
+    _poll?.cancel();
     _reply.dispose();
     super.dispose();
   }
