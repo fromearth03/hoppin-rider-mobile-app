@@ -158,7 +158,7 @@ class _TicketThreadScreenState extends ConsumerState<TicketThreadScreen> {
                     ),
                     const SizedBox(width: 8),
                     Material(
-                      color: AppColors.navy,
+                      color: AppColors.fill,
                       shape: const CircleBorder(),
                       child: InkWell(
                         customBorder: const CircleBorder(),
@@ -205,7 +205,7 @@ class _TicketHeader extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -213,7 +213,7 @@ class _TicketHeader extends StatelessWidget {
         children: [
           Text(ticket.subject,
               style: theme.textTheme.titleMedium
-                  ?.copyWith(fontSize: 16, color: AppColors.navy)),
+                  ?.copyWith(fontSize: 16, color: AppColors.ink)),
           if (ticket.body != null) ...[
             const SizedBox(height: 6),
             Text(ticket.body!, style: theme.textTheme.bodyMedium),
@@ -243,12 +243,12 @@ class _TicketHeader extends StatelessWidget {
                   .push('${AppRoutes.tripDetails}?ride=${ticket.rideId}'),
               child: Row(
                 children: [
-                  const Icon(Icons.directions_car,
-                      size: 16, color: AppColors.navy),
+                  Icon(Icons.directions_car,
+                      size: 16, color: AppColors.ink),
                   const SizedBox(width: 6),
                   Text('View the ride this is about',
                       style: theme.textTheme.bodyMedium?.copyWith(
-                          color: AppColors.navy,
+                          color: AppColors.ink,
                           decoration: TextDecoration.underline)),
                 ],
               ),
@@ -299,7 +299,7 @@ class _Bubble extends StatelessWidget {
         constraints: BoxConstraints(
             maxWidth: MediaQuery.of(context).size.width * 0.75),
         decoration: BoxDecoration(
-          color: mine ? AppColors.navy : Colors.white,
+          color: mine ? AppColors.fill : AppColors.surface,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(14),
             topRight: const Radius.circular(14),
@@ -321,7 +321,7 @@ class _Bubble extends StatelessWidget {
               message.body,
               style: TextStyle(
                 fontSize: 14,
-                color: mine ? Colors.white : AppColors.lightTextPrimary,
+                color: mine ? Colors.white : AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: 3),
@@ -334,7 +334,7 @@ class _Bubble extends StatelessWidget {
                         .format(message.createdAt!.toLocal()),
                     style: TextStyle(
                       fontSize: 10,
-                      color: mine ? Colors.white70 : AppColors.lightTextSecondary,
+                      color: mine ? Colors.white70 : AppColors.textSecondary,
                     ),
                   ),
                 // Own messages: a second tick once staff actually read it.

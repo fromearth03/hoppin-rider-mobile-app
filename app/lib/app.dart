@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'core/device/device_checkin.dart';
 import 'core/net/network_status.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_controller.dart';
 import 'features/auth/application/auth_controller.dart';
 import 'shared/nav/app_router.dart';
 import 'features/auth/domain/auth_state.dart';
@@ -62,6 +63,7 @@ class _HoppinAppState extends ConsumerState<HoppinApp> {
     // Created at start-up so a call can ring whatever screen is showing.
     ref.watch(callCoordinatorProvider);
     final router = ref.watch(appRouterProvider);
+    final brightness = ref.watch(themeControllerProvider);
     return MaterialApp.router(
       title: 'Hoppin Rider',
       debugShowCheckedModeBanner: false,
@@ -70,12 +72,12 @@ class _HoppinAppState extends ConsumerState<HoppinApp> {
       // bottom sheet impossible to collapse in a browser. Accept every
       // pointer kind for drags, everywhere.
       scrollBehavior: const _AllPointersScrollBehavior(),
-      // LIGHT ONLY — Ismail's product decision (2026-09-01): the design
-      // pack is light-only and the derived dark theme kept surfacing
-      // unreviewed. No darkTheme, no themeMode: the OS setting cannot
-      // switch this app. If dark frames ever ship, the preferences
-      // endpoint already whitelists a `theme` key to persist a choice.
-      theme: AppTheme.light,
+      // Light by default; the Dark mode switch in Settings turns on the dark
+      // theme (owner's decision, 2026-10-05, replacing light-only). One
+      // `theme`, no `darkTheme` / `themeMode`: the phone's own setting does
+      // not switch this app, the rider does. Building the theme also points
+      // AppColors' adaptive tokens at the mode (see colors.dart).
+      theme: AppTheme.of(brightness),
       routerConfig: router,
       // The design is a 430px phone screen. In a wide browser window the
       // app used to stretch edge to edge — sheets became slabs and the map
@@ -101,7 +103,15 @@ class _HoppinAppState extends ConsumerState<HoppinApp> {
                 child: AppGate(
                   child: _OfflineShell(
                     router: router,
-                    child: child ?? const SizedBox.shrink(),
+                    // Keyed on the mode: AppColors' adaptive tokens are not
+                    // inherited, so a widget holding one is not told when
+                    // the mode flips. A new key rebuilds every screen from
+                    // scratch with the new colours; the router keeps its
+                    // place, so the rider stays where they were.
+                    child: KeyedSubtree(
+                      key: ValueKey(brightness),
+                      child: child ?? const SizedBox.shrink(),
+                    ),
                   ),
                 ),
               );

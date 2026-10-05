@@ -33,9 +33,8 @@ class AuthController extends StateNotifier<AuthSnapshot> {
   bool _awaitingOAuth = false;
   StreamSubscription? _authSub;
 
-  AuthController(this._auth, this._profiles, {Future<void> Function()? onSignedIn})
-      : _onSignedIn = onSignedIn,
-        super(const AuthSnapshot()) {
+  AuthController(this._auth, this._profiles, {this._onSignedIn})
+      : super(const AuthSnapshot()) {
     // Sign in with Google returns through a deep link, so the session appears on
     // the auth stream rather than from a call we await. Pick it up here.
     _authSub = _auth.authStateChanges.listen((s) {

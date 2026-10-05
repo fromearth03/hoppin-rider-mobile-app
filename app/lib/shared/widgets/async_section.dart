@@ -78,8 +78,8 @@ class _Failed extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.cloud_off_rounded,
-              size: 34, color: AppColors.lightTextDisabled),
+          Icon(Icons.cloud_off_rounded,
+              size: 34, color: AppColors.textDisabled),
           const SizedBox(height: 12),
           Text(
             message,

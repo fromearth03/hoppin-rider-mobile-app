@@ -176,7 +176,10 @@ class _DriverInfoCardState extends ConsumerState<DriverInfoCard> {
           ElevatedButton(
             onPressed: widget.onCancel,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryDark,
+              // The deep indigo sinks into a dark sheet; dark mode uses
+              // the raised fill every other button has.
+              backgroundColor:
+                  AppColors.isDark ? AppColors.fill : AppColors.primaryDark,
               foregroundColor: Colors.white,
               minimumSize: const Size.fromHeight(52),
               shape: RoundedRectangleBorder(
@@ -245,10 +248,10 @@ class _DefaultCardChip extends ConsumerWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+            color: isDark ? AppColors.darkSurface : AppColors.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-                color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                color: isDark ? AppColors.darkBorder : AppColors.border),
           ),
           child: Row(
             children: [
@@ -320,7 +323,7 @@ class _AssignedDriverRow extends StatelessWidget {
       children: [
         CircleAvatar(
           radius: 22,
-          backgroundColor: AppColors.buttonPrimary.withValues(alpha: 0.25),
+          backgroundColor: AppColors.fill.withValues(alpha: 0.25),
           child: Text(
             driver.name.isNotEmpty ? driver.name[0].toUpperCase() : '?',
             style: theme.textTheme.titleMedium,
@@ -354,7 +357,7 @@ class _AssignedDriverRow extends StatelessWidget {
         // endpoint. Chat and SOS are the two real controls.
         IconButton(
           onPressed: onChat,
-          icon: const Icon(Icons.chat_bubble, color: AppColors.primary),
+          icon: Icon(Icons.chat_bubble, color: AppColors.brand),
         ),
         IconButton(
           onPressed: onSafety,

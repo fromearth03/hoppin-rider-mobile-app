@@ -28,8 +28,9 @@ class Glass extends StatelessWidget {
   /// into mud; go lower for small chips.
   final double blur;
 
-  /// The surface colour before translucency is applied.
-  final Color tint;
+  /// The surface colour before translucency is applied. Null means the
+  /// mode's own surface: white glass in light, dark glass in dark.
+  final Color? tint;
 
   /// How solid the surface is. Text sits on this, so it stays high: glass that
   /// costs legibility is decoration at the rider's expense.
@@ -46,7 +47,7 @@ class Glass extends StatelessWidget {
     required this.child,
     this.borderRadius = const BorderRadius.all(Radius.circular(20)),
     this.blur = 18,
-    this.tint = Colors.white,
+    this.tint,
     this.opacity = 0.78,
     this.highlight = true,
     this.shadow = Glass.softShadow,
@@ -70,6 +71,7 @@ class Glass extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tint = this.tint ?? AppColors.surface;
     // High-contrast accessibility setting: no translucency at all.
     final solid = !blurEnabled || MediaQuery.highContrastOf(context);
     if (solid) {
@@ -106,8 +108,12 @@ class Glass extends StatelessWidget {
               ],
             ),
             borderRadius: borderRadius,
+            // The bright edge is what light catches on glass; on dark glass
+            // it is only a glint.
             border: highlight
-                ? Border.all(color: Colors.white.withValues(alpha: 0.65))
+                ? Border.all(
+                    color: Colors.white
+                        .withValues(alpha: AppColors.isDark ? 0.10 : 0.65))
                 : null,
           ),
           child: child,
@@ -148,12 +154,15 @@ class GlassCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Colors.white.withValues(alpha: (opacity + 0.12).clamp(0.0, 1.0)),
-            Colors.white.withValues(alpha: opacity),
+            AppColors.surface
+                .withValues(alpha: (opacity + 0.12).clamp(0.0, 1.0)),
+            AppColors.surface.withValues(alpha: opacity),
           ],
         ),
         borderRadius: borderRadius,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.9)),
+        border: Border.all(
+            color: Colors.white
+                .withValues(alpha: AppColors.isDark ? 0.07 : 0.9)),
         boxShadow: const [
           BoxShadow(
               color: Color(0x0F181C39), blurRadius: 18, offset: Offset(0, 6)),
@@ -183,7 +192,7 @@ class AmbientBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: const BoxDecoration(color: AppColors.lightBackground),
+      decoration: BoxDecoration(color: AppColors.background),
       child: Stack(
         fit: StackFit.expand,
         children: [

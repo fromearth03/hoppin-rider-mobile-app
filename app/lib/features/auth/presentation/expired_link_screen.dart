@@ -33,8 +33,8 @@ class ExpiredLinkScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Icon(Icons.error_outline,
-              size: 72, color: AppColors.buttonPrimary),
+          Icon(Icons.error_outline,
+              size: 72, color: AppColors.ink),
           const SizedBox(height: 24),
           Text(
             "We couldn't complete your password reset right now. Please "

@@ -25,7 +25,7 @@ class OffersScreen extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           children: [
             Material(
-              color: AppColors.navy,
+              color: AppColors.fill,
               borderRadius: BorderRadius.circular(14),
               child: ListTile(
                 shape: RoundedRectangleBorder(
@@ -92,7 +92,7 @@ class _OfferCard extends ConsumerWidget {
     WidgetsBinding.instance.addPostFrameCallback((_) => recordAdSeen(ref, ad));
     final tappable = adIsTappable(ad);
     return Material(
-      color: Colors.white,
+      color: AppColors.surface,
       elevation: 1,
       borderRadius: BorderRadius.circular(14),
       clipBehavior: Clip.antiAlias,
@@ -108,7 +108,7 @@ class _OfferCard extends ConsumerWidget {
                   ad.imageUrl,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) =>
-                      Container(color: AppColors.navy.withValues(alpha: 0.08)),
+                      Container(color: AppColors.fill.withValues(alpha: 0.08)),
                 ),
               ),
             Padding(
@@ -122,7 +122,7 @@ class _OfferCard extends ConsumerWidget {
                         Text(
                           ad.title,
                           style: theme.textTheme.titleMedium?.copyWith(
-                            color: AppColors.navy,
+                            color: AppColors.ink,
                           ),
                         ),
                         if (ad.body.isNotEmpty) ...[
@@ -135,7 +135,7 @@ class _OfferCard extends ConsumerWidget {
                   if (tappable)
                     Icon(
                       Icons.chevron_right,
-                      color: AppColors.navy.withValues(alpha: 0.6),
+                      color: AppColors.ink.withValues(alpha: 0.6),
                     ),
                 ],
               ),

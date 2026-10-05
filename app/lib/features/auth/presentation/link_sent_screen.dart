@@ -34,8 +34,8 @@ class LinkSentScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Icon(Icons.mark_email_read_outlined,
-              size: 72, color: AppColors.buttonPrimary),
+          Icon(Icons.mark_email_read_outlined,
+              size: 72, color: AppColors.ink),
           const SizedBox(height: 24),
           Text(
             hasEmail

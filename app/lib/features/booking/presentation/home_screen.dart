@@ -198,7 +198,7 @@ class MapCircleButton extends StatelessWidget {
           customBorder: const CircleBorder(),
           child: Padding(
             padding: const EdgeInsets.all(12),
-            child: Icon(icon, size: 22, color: AppColors.navy),
+            child: Icon(icon, size: 22, color: AppColors.ink),
           ),
         ),
       ),
@@ -217,10 +217,10 @@ class _BookingSheet extends StatelessWidget {
     // read as washed out; glass stays on the small controls that float over it.
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(
-        color: Color(0xFFF7F7FA),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        boxShadow: [
+      decoration: BoxDecoration(
+        color: AppColors.sheet,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        boxShadow: const [
           BoxShadow(
               color: Color(0x1F000000), blurRadius: 18, offset: Offset(0, -4)),
         ],
@@ -263,7 +263,7 @@ class _ModeRow extends StatelessWidget {
     final theme = Theme.of(context);
 
     final rideTypeCard = Material(
-      color: Colors.white,
+      color: AppColors.surface,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: () => context.push(AppRoutes.route),
@@ -272,7 +272,7 @@ class _ModeRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.navy, width: 1.4),
+            border: Border.all(color: AppColors.ink, width: 1.4),
           ),
           child: Row(
             children: [
@@ -286,7 +286,7 @@ class _ModeRow extends StatelessWidget {
                     children: [
                       Text('Ride Type',
                           style: theme.textTheme.titleMedium?.copyWith(
-                              fontSize: 14.5, color: AppColors.navy)),
+                              fontSize: 14.5, color: AppColors.ink)),
                       Text('Pick the vehicle that fits your trip',
                           style: theme.textTheme.bodyMedium
                               ?.copyWith(fontSize: 10.5),
@@ -310,7 +310,7 @@ class _ModeRow extends StatelessWidget {
         Expanded(child: rideTypeCard),
         const SizedBox(width: 10),
         Material(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(12),
           elevation: 1,
           child: InkWell(
@@ -335,7 +335,7 @@ class _SearchField extends StatelessWidget {
     // Material + InkWell rather than Container: the whole bar is the way
     // into route entry, and a tap target should ripple.
     return Material(
-      color: Colors.white,
+      color: AppColors.surface,
       borderRadius: BorderRadius.circular(12),
       elevation: 1,
       child: InkWell(
@@ -392,7 +392,7 @@ class _FrequentTripRow extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
             child: Row(
               children: [
-                const Icon(Icons.replay, size: 20, color: AppColors.primary),
+                Icon(Icons.replay, size: 20, color: AppColors.brand),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -408,15 +408,15 @@ class _FrequentTripRow extends ConsumerWidget {
                       Text(
                         'From ${trip.fromLabel} · ${trip.tripCount} trips',
                         style: theme.textTheme.bodySmall?.copyWith(
-                            fontSize: 12, color: AppColors.lightTextSecondary),
+                            fontSize: 12, color: AppColors.textSecondary),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right,
-                    size: 20, color: AppColors.lightTextSecondary),
+                Icon(Icons.chevron_right,
+                    size: 20, color: AppColors.textSecondary),
               ],
             ),
           ),
@@ -465,8 +465,8 @@ class _SavedList extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 11),
               child: Row(
                 children: [
-                  const Icon(Icons.location_on_outlined,
-                      size: 20, color: AppColors.lightTextSecondary),
+                  Icon(Icons.location_on_outlined,
+                      size: 20, color: AppColors.textSecondary),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(

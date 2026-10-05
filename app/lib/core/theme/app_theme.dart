@@ -7,6 +7,11 @@ import 'colors.dart';
 class AppTheme {
   AppTheme._();
 
+  /// Building a theme also points [AppColors]' adaptive tokens at its mode, so
+  /// asking for a theme is all it takes to put the whole app in that mode.
+  static ThemeData of(Brightness brightness) =>
+      brightness == Brightness.dark ? dark : light;
+
   static ThemeData get light => _build(
         brightness: Brightness.light,
         background: AppColors.lightBackground,
@@ -33,10 +38,16 @@ class AppTheme {
     required Color textPrimary,
     required Color textSecondary,
   }) {
+    AppColors.mode = brightness;
+    final dark = brightness == Brightness.dark;
     final scheme = ColorScheme(
       brightness: brightness,
-      primary: AppColors.primary,
-      onPrimary: Colors.white,
+      // Text buttons, focus rings and progress bars are drawn in `primary`.
+      // The brand indigo is too deep to see on a dark page, so dark mode
+      // hands them the light violet instead; fills that must stay indigo use
+      // AppColors.primary directly.
+      primary: dark ? AppColors.brand : AppColors.primary,
+      onPrimary: dark ? const Color(0xFF1B1140) : Colors.white,
       secondary: AppColors.accent,
       onSecondary: Colors.white,
       error: AppColors.negative,
@@ -86,7 +97,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+          borderSide: BorderSide(color: AppColors.brand, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -96,9 +107,9 @@ class AppTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size.fromHeight(56),
-          backgroundColor: AppColors.buttonPrimary,
+          backgroundColor: AppColors.fill,
           foregroundColor: Colors.white,
-          disabledBackgroundColor: AppColors.buttonPrimary.withValues(
+          disabledBackgroundColor: AppColors.fill.withValues(
             alpha: 0.55,
           ),
           disabledForegroundColor: Colors.white,

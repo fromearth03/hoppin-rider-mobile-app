@@ -580,22 +580,22 @@ class _Field extends StatelessWidget {
           hintText: hint,
           isDense: true,
           filled: true,
-          fillColor: Colors.white,
+          fillColor: AppColors.surface,
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: Color(0xFFE8E8EC)),
+            borderSide: BorderSide(color: AppColors.pick(const Color(0xFFE8E8EC), AppColors.darkBorder)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: AppColors.navy, width: 1.2),
+            borderSide: BorderSide(color: AppColors.ink, width: 1.2),
           ),
           prefixIcon: Icon(icon,
               size: 20,
               color: icon == Icons.location_on
-                  ? AppColors.navy
-                  : AppColors.lightTextSecondary),
+                  ? AppColors.ink
+                  : AppColors.textSecondary),
           suffixIcon: switch ((onAdd, onRemove)) {
             (final add?, _) => IconButton(
                 onPressed: add,
@@ -629,7 +629,7 @@ class _Chip extends StatelessWidget {
     // Selected chip fills the design's navy; the unselected one is a plain
     // white pill — exactly as the frame draws Suggestion/Saved.
     return Material(
-      color: selected ? AppColors.navy : Colors.white,
+      color: selected ? AppColors.fill : AppColors.surface,
       borderRadius: BorderRadius.circular(20),
       elevation: selected ? 0 : 1,
       child: InkWell(
@@ -641,7 +641,7 @@ class _Chip extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 13,
-              color: selected ? Colors.white : AppColors.navy,
+              color: selected ? Colors.white : AppColors.ink,
               fontWeight: FontWeight.w600,
             ),
           ),

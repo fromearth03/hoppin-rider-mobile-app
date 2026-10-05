@@ -230,7 +230,7 @@ class _PersonalInformationScreenState
                     right: 0,
                     bottom: 0,
                     child: Material(
-                      color: AppColors.navy,
+                      color: AppColors.fill,
                       shape: const CircleBorder(),
                       elevation: 2,
                       child: InkWell(

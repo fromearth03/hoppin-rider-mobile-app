@@ -150,8 +150,8 @@ class _FrequentTrips extends ConsumerWidget {
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
                     child: Row(
                       children: [
-                        const Icon(Icons.replay,
-                            size: 20, color: AppColors.primary),
+                        Icon(Icons.replay,
+                            size: 20, color: AppColors.brand),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -168,16 +168,16 @@ class _FrequentTrips extends ConsumerWidget {
                                 '${trip.tripCount} trips',
                                 style: theme.textTheme.bodySmall?.copyWith(
                                     fontSize: 12,
-                                    color: AppColors.lightTextSecondary),
+                                    color: AppColors.textSecondary),
                               ),
                             ],
                           ),
                         ),
                         Text('Rebook',
                             style: theme.textTheme.bodyMedium?.copyWith(
-                                fontSize: 13, color: AppColors.primary)),
-                        const Icon(Icons.chevron_right,
-                            size: 20, color: AppColors.lightTextSecondary),
+                                fontSize: 13, color: AppColors.brand)),
+                        Icon(Icons.chevron_right,
+                            size: 20, color: AppColors.textSecondary),
                       ],
                     ),
                   ),
@@ -218,7 +218,7 @@ class _MonthFilterCard extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
       child: Material(
-        color: Colors.white.withValues(alpha: 0.82),
+        color: AppColors.surface.withValues(alpha: 0.82),
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
@@ -238,15 +238,15 @@ class _MonthFilterCard extends ConsumerWidget {
                     children: [
                       Text(title,
                           style: theme.textTheme.titleMedium?.copyWith(
-                              fontSize: 15, color: AppColors.navy)),
+                              fontSize: 15, color: AppColors.ink)),
                       Text(range,
                           style: theme.textTheme.bodyMedium
                               ?.copyWith(fontSize: 11.5)),
                     ],
                   ),
                 ),
-                const Icon(Icons.keyboard_arrow_down,
-                    color: AppColors.lightTextSecondary),
+                Icon(Icons.keyboard_arrow_down,
+                    color: AppColors.textSecondary),
               ],
             ),
           ),
@@ -275,7 +275,7 @@ class _MonthFilterCard extends ConsumerWidget {
             ListTile(
               title: const Text('All time'),
               trailing: current == null
-                  ? const Icon(Icons.check, color: AppColors.navy)
+                  ? Icon(Icons.check, color: AppColors.ink)
                   : null,
               onTap: () => Navigator.of(ctx).pop('all'),
             ),
@@ -289,7 +289,7 @@ class _MonthFilterCard extends ConsumerWidget {
                 trailing: current != null &&
                         current.year == m.year &&
                         current.month == m.month
-                    ? const Icon(Icons.check, color: AppColors.navy)
+                    ? Icon(Icons.check, color: AppColors.ink)
                     : null,
                 onTap: () => Navigator.of(ctx).pop(m),
               ),
@@ -452,7 +452,7 @@ class _TripCard extends StatelessWidget {
                       icon: const Icon(Icons.replay, size: 16),
                       label: const Text('Rebook'),
                       style: TextButton.styleFrom(
-                        foregroundColor: AppColors.primary,
+                        foregroundColor: AppColors.brand,
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                         minimumSize: const Size(0, 32),
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,

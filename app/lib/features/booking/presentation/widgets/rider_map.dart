@@ -520,7 +520,7 @@ class _OsmMapState extends State<_OsmMap> {
             final id when id.startsWith('stop') =>
               _circlePin(id.substring(4), AppColors.accent),
             _ =>
-              const Icon(Icons.location_pin, size: 32, color: AppColors.navy),
+              Icon(Icons.location_pin, size: 32, color: AppColors.ink),
           },
         ),
     ];

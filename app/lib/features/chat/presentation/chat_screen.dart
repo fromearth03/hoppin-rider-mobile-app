@@ -357,7 +357,9 @@ class _DayPill extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: AppColors.lightTextPrimary,
+          color: AppColors.isDark
+              ? AppColors.subtle
+              : AppColors.lightTextPrimary,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
@@ -418,7 +420,9 @@ class _Composer extends StatelessWidget {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: AppColors.lightTextPrimary,
+                  color: AppColors.isDark
+              ? AppColors.subtle
+              : AppColors.lightTextPrimary,
                   borderRadius: BorderRadius.circular(28),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -428,15 +432,15 @@ class _Composer extends StatelessWidget {
                   onSubmitted: (_) => onSend(),
                   style: const TextStyle(color: Colors.white, fontSize: 15),
                   cursorColor: Colors.white,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'Enter your message',
                     hintStyle:
-                        TextStyle(color: Color(0xFFA0A0B0), fontSize: 15),
+                        TextStyle(color: AppColors.textDisabled, fontSize: 15),
                     filled: false,
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
                     focusedBorder: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(vertical: 16),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                 ),
               ),

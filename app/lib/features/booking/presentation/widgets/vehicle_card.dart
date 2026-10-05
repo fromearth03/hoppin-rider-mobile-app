@@ -36,7 +36,7 @@ class VehicleCard extends StatelessWidget {
       button: true,
       label: category.name,
       child: Material(
-        color: selected ? const Color(0xFFE4E4E9) : theme.colorScheme.surface,
+        color: selected ? AppColors.pick(const Color(0xFFE4E4E9), AppColors.darkBorder) : theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(14),
         child: InkWell(
           onTap: onTap,
@@ -57,7 +57,7 @@ class VehicleCard extends StatelessWidget {
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.navy,
+                          color: AppColors.ink,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -121,8 +121,8 @@ class _Artwork extends StatelessWidget {
         fit: BoxFit.contain,
         // If the bundled asset ever fails to decode, fall back to a glyph
         // rather than a broken-image box.
-        errorBuilder: (_, __, ___) => const Icon(Icons.directions_car,
-            size: 34, color: AppColors.navy),
+        errorBuilder: (_, __, ___) => Icon(Icons.directions_car,
+            size: 34, color: AppColors.ink),
       ),
     );
   }

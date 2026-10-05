@@ -52,7 +52,7 @@ class FareCategoryCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(_iconFor(category.name), size: 34, color: AppColors.primary),
+                  Icon(_iconFor(category.name), size: 34, color: AppColors.brand),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
@@ -74,12 +74,12 @@ class FareCategoryCard extends StatelessWidget {
                     ),
                   ),
                   if (selected)
-                    const Padding(
-                      padding: EdgeInsets.only(left: 6),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 6),
                       child: Icon(
                         Icons.check_circle,
                         size: 20,
-                        color: AppColors.primary,
+                        color: AppColors.brand,
                       ),
                     ),
                 ],

@@ -5,6 +5,7 @@ import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
+import 'core/theme/theme_controller.dart';
 import 'core/config.dart';
 import 'core/push/push_registrar.dart';
 import 'core/push/call_push.dart';
@@ -43,7 +44,13 @@ Future<void> main() async {
     await Stripe.instance.applySettings();
   }
 
-  runApp(const ProviderScope(child: HoppinApp()));
+  // The saved light / dark choice, read before the first frame so the app
+  // does not open light and then flip.
+  final brightness = await loadSavedBrightness();
+  runApp(ProviderScope(
+    overrides: [initialBrightnessProvider.overrideWithValue(brightness)],
+    child: const HoppinApp(),
+  ));
 }
 
 class _ConfigError extends StatelessWidget {

@@ -198,7 +198,7 @@ class _Header extends StatelessWidget {
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: AppColors.lightTextSecondary),
+          Icon(Icons.chevron_right, color: AppColors.textSecondary),
         ],
       ),
     );

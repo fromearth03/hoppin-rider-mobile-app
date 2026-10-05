@@ -207,14 +207,14 @@ class _ContactsSection extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           child: Row(
             children: [
-              Icon(icon, size: 20, color: color ?? AppColors.navy),
+              Icon(icon, size: 20, color: color ?? AppColors.ink),
               const SizedBox(width: 12),
               Text(label, style: theme.textTheme.bodyMedium),
               const Spacer(),
               SelectableText(value,
                   style: theme.textTheme.bodyLarge?.copyWith(
                       fontSize: 14,
-                      color: color ?? AppColors.navy,
+                      color: color ?? AppColors.ink,
                       fontWeight: FontWeight.w600)),
             ],
           ),
@@ -254,7 +254,7 @@ class _FaqMessage extends StatelessWidget {
           style: Theme.of(context)
               .textTheme
               .bodyMedium
-              ?.copyWith(color: AppColors.lightTextSecondary),
+              ?.copyWith(color: AppColors.textSecondary),
         ),
       );
 }
@@ -301,7 +301,7 @@ class _FaqTileState extends State<_FaqTile> {
                   // Sampled from the frame: the chevrons sit lighter than
                   // body text.
                   color: theme.brightness == Brightness.light
-                      ? const Color(0xFFAEB0BA)
+                      ? AppColors.pick(const Color(0xFFAEB0BA), AppColors.darkTextDisabled)
                       : theme.textTheme.bodyMedium?.color,
                 ),
               ],
@@ -361,7 +361,7 @@ class _ContactCard extends StatelessWidget {
     final card = Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkBackground : AppColors.lightBackground,
+        color: isDark ? AppColors.darkBackground : AppColors.background,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(

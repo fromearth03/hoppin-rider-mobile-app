@@ -114,8 +114,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             label: const Text('Continue with Google'),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size.fromHeight(52),
-              foregroundColor: const Color(0xFF181C39),
-              side: const BorderSide(color: Color(0xFFE5E7EB)),
+              foregroundColor: AppColors.ink,
+              side: BorderSide(color: AppColors.pick(const Color(0xFFE5E7EB), AppColors.darkBorder)),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),

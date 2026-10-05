@@ -8,6 +8,7 @@ import '../../../core/result.dart';
 import '../../../shared/nav/app_router.dart';
 import '../../../shared/nav/logout_confirm.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../../core/theme/theme_controller.dart';
 import '../application/preferences_controller.dart';
 import '../data/data_export_repository.dart';
 import 'widgets/settings_card.dart';
@@ -153,10 +154,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 value: false,
                 comingSoon: true,
               ),
-              // The frame draws an Appearance row, but the app is light-only
-              // by product decision (2026-09-01) — a picker with nothing to
-              // switch would be the exact lying control this app refuses to
-              // ship, so the row is gone rather than inert.
+              // The frame's Appearance row. Device-local, so it works before
+              // the preferences have loaded and on a signed-out phone too.
+              SettingsToggleRow(
+                icon: Icons.dark_mode_outlined,
+                label: 'Dark mode',
+                value: ref.watch(themeControllerProvider) == Brightness.dark,
+                onChanged: ref.read(themeControllerProvider.notifier).setDark,
+              ),
             ]),
             const SizedBox(height: 20),
             const SettingsCard(children: [

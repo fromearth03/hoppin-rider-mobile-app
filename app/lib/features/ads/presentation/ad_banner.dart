@@ -112,7 +112,7 @@ class _AdBannerState extends ConsumerState<AdBanner> {
                     iconSize: 18,
                     icon: Icon(
                       Icons.close,
-                      color: AppColors.navy.withValues(alpha: 0.6),
+                      color: AppColors.ink.withValues(alpha: 0.6),
                     ),
                     // Hides these ads until a new one is published.
                     onPressed: () => ref
@@ -133,8 +133,8 @@ class _AdBannerState extends ConsumerState<AdBanner> {
                             height: 5,
                             decoration: BoxDecoration(
                               color: i == _index
-                                  ? AppColors.navy
-                                  : AppColors.navy.withValues(alpha: 0.2),
+                                  ? AppColors.fill
+                                  : AppColors.fill.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(3),
                             ),
                           ),
@@ -157,23 +157,23 @@ class _AdBannerState extends ConsumerState<AdBanner> {
           child: InkWell(
             borderRadius: BorderRadius.circular(20),
             onTap: () => context.push(AppRoutes.offers),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
                     Icons.local_offer_outlined,
                     size: 15,
-                    color: AppColors.navy,
+                    color: AppColors.ink,
                   ),
-                  SizedBox(width: 5),
+                  const SizedBox(width: 5),
                   Text(
                     'Ads & promotions',
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.navy,
+                      color: AppColors.ink,
                     ),
                   ),
                 ],
@@ -206,7 +206,7 @@ class _AdTile extends ConsumerWidget {
                 ad.imageUrl,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) =>
-                    Container(color: AppColors.navy.withValues(alpha: 0.08)),
+                    Container(color: AppColors.fill.withValues(alpha: 0.08)),
               ),
             ),
           Expanded(
@@ -222,7 +222,7 @@ class _AdTile extends ConsumerWidget {
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontSize: 14,
-                      color: AppColors.navy,
+                      color: AppColors.ink,
                     ),
                   ),
                   if (ad.body.isNotEmpty)

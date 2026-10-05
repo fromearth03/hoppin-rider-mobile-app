@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hoppin_rider/core/theme/app_theme.dart';
+import 'package:hoppin_rider/core/theme/theme_controller.dart';
 import 'package:hoppin_rider/features/auth/application/auth_controller.dart';
 import 'package:hoppin_rider/features/auth/domain/auth_state.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +11,7 @@ import 'package:hoppin_rider/core/result.dart';
 import 'package:hoppin_rider/features/settings/data/preferences_repository.dart';
 import 'package:hoppin_rider/features/settings/presentation/delete_account_screen.dart';
 import 'package:hoppin_rider/features/settings/presentation/settings_screen.dart';
+import 'package:hoppin_rider/features/settings/presentation/widgets/settings_rows.dart';
 import 'package:hoppin_rider/shared/nav/app_router.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -260,19 +262,29 @@ void main() {
     expect(find.text('Soon'), findsWidgets);
   });
 
-  testWidgets(
-      'no Appearance picker exists — the app is light-only by product '
-      'decision', (tester) async {
+  testWidgets('the Dark mode switch starts off and turns the dark theme on',
+      (tester) async {
     await tester.pumpWidget(_harness(controller));
+    final container = ProviderScope.containerOf(
+        tester.element(find.byType(SettingsScreen)));
+    expect(container.read(themeControllerProvider), Brightness.light);
 
-    expect(find.text('Apperance'), findsNothing);
-    expect(find.text('Appearance'), findsNothing);
+    final toggle = find.descendant(
+        of: find.widgetWithText(SettingsToggleRow, 'Dark mode'),
+        matching: find.byType(Switch));
+    await tester.ensureVisible(toggle);
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+
+    expect(container.read(themeControllerProvider), Brightness.dark);
   });
 
   testWidgets('Logout confirms first, and Cancel does not sign out',
       (tester) async {
     await tester.pumpWidget(_harness(controller));
 
+    await tester.ensureVisible(find.text('Logout'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Logout'));
     await tester.pumpAndSettle();
 
@@ -289,6 +301,8 @@ void main() {
   testWidgets('confirming the Logout dialog calls signOut', (tester) async {
     await tester.pumpWidget(_harness(controller));
 
+    await tester.ensureVisible(find.text('Logout'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Logout'));
     await tester.pumpAndSettle();
 

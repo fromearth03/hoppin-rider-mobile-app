@@ -46,7 +46,7 @@ class CallSupportButton extends ConsumerWidget {
               icon: icon,
               label: label,
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.navy,
+                backgroundColor: AppColors.fill,
                 shape: shape,
               ),
             )

@@ -30,7 +30,7 @@ class SettingsToggleRow extends StatelessWidget {
     final disabled = onChanged == null;
     final textColor = disabled
         ? (theme.brightness == Brightness.light
-            ? AppColors.lightTextDisabled
+            ? AppColors.textDisabled
             : AppColors.darkTextDisabled)
         : theme.textTheme.bodyLarge?.color;
 
@@ -89,7 +89,7 @@ class SettingsNavRow extends StatelessWidget {
     final disabled = onTap == null;
     final textColor = disabled
         ? (theme.brightness == Brightness.light
-            ? AppColors.lightTextDisabled
+            ? AppColors.textDisabled
             : AppColors.darkTextDisabled)
         : theme.textTheme.bodyLarge?.color;
 
@@ -142,7 +142,7 @@ class SettingsActionRow extends StatelessWidget {
     final disabled = onTap == null;
     final Color? textColor = disabled
         ? (theme.brightness == Brightness.light
-            ? AppColors.lightTextDisabled
+            ? AppColors.textDisabled
             : AppColors.darkTextDisabled)
         : destructive
             ? AppColors.negative
@@ -174,10 +174,10 @@ class _SoonBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final bg = theme.brightness == Brightness.light
-        ? AppColors.lightBorder
+        ? AppColors.border
         : AppColors.darkBorder;
     final fg = theme.brightness == Brightness.light
-        ? AppColors.lightTextSecondary
+        ? AppColors.textSecondary
         : AppColors.darkTextSecondary;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

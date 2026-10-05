@@ -206,7 +206,7 @@ class _FilterTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final trackColor = isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final trackColor = isDark ? AppColors.darkSurface : AppColors.surface;
 
     return Container(
       padding: const EdgeInsets.all(4),
@@ -214,7 +214,7 @@ class _FilterTabs extends StatelessWidget {
         color: trackColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-            color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+            color: isDark ? AppColors.darkBorder : AppColors.border),
       ),
       child: Row(
         children: [

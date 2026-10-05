@@ -293,7 +293,7 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
                 label: const Text('Add Payment Methods'),
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size.fromHeight(56),
-                  backgroundColor: AppColors.navy,
+                  backgroundColor: AppColors.fill,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(28)),
@@ -373,11 +373,11 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
             const SizedBox(height: 10),
             Text('Recent Payments',
                 style: theme.textTheme.titleMedium
-                    ?.copyWith(fontSize: 15, color: AppColors.navy)),
+                    ?.copyWith(fontSize: 15, color: AppColors.ink)),
             const SizedBox(height: 8),
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Column(
@@ -420,7 +420,7 @@ class _RecentPaymentRow extends StatelessWidget {
                 Text(
                   trip.dropoffLabel ?? trip.pickupLabel ?? 'Ride',
                   style: theme.textTheme.bodyLarge
-                      ?.copyWith(fontSize: 14, color: AppColors.navy),
+                      ?.copyWith(fontSize: 14, color: AppColors.ink),
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),

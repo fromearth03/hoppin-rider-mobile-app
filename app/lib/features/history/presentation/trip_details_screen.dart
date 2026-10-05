@@ -315,7 +315,9 @@ class _SummaryStat extends StatelessWidget {
         CircleAvatar(
           radius: 16,
           backgroundColor: theme.colorScheme.surface,
-          child: Icon(icon, size: 18),
+          // An explicit colour: the avatar's own default is white-on-white
+          // in light mode, which left these three icons invisible.
+          child: Icon(icon, size: 18, color: AppColors.brand),
         ),
         const SizedBox(height: 6),
         Text(label, style: theme.textTheme.bodyMedium),

@@ -34,7 +34,7 @@ class ProfileAvatar extends ConsumerWidget {
     final display = name?.trim();
     return CircleAvatar(
       radius: radius,
-      backgroundColor: AppColors.navy,
+      backgroundColor: AppColors.fill,
       backgroundImage: bytes != null ? MemoryImage(bytes) : null,
       child: bytes == null
           ? Text(

@@ -15,20 +15,20 @@ class StartupSplash extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const ColoredBox(
-      color: Colors.white,
+    return ColoredBox(
+      color: AppColors.surface,
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            HoppinLogo(height: 42),
-            SizedBox(height: 28),
+            const HoppinLogo(height: 42),
+            const SizedBox(height: 28),
             SizedBox(
               width: 22,
               height: 22,
               child: CircularProgressIndicator(
                 strokeWidth: 2.4,
-                valueColor: AlwaysStoppedAnimation(AppColors.primary),
+                valueColor: AlwaysStoppedAnimation(AppColors.brand),
               ),
             ),
           ],

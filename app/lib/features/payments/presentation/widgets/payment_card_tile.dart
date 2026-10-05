@@ -41,8 +41,8 @@ class PaymentCardTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
-    final surface = isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final border = isDark ? AppColors.darkBorder : AppColors.border;
+    final surface = isDark ? AppColors.darkSurface : AppColors.surface;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -56,7 +56,7 @@ class PaymentCardTile extends StatelessWidget {
           : GlassCard.decoration(),
       child: Row(
         children: [
-          Icon(_brandIcon, color: AppColors.navy),
+          Icon(_brandIcon, color: AppColors.ink),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -65,7 +65,7 @@ class PaymentCardTile extends StatelessWidget {
                 Text(
                   _brandName,
                   style: theme.textTheme.titleMedium
-                      ?.copyWith(fontSize: 15, color: AppColors.navy),
+                      ?.copyWith(fontSize: 15, color: AppColors.ink),
                   // Without this the card details wrap one character per
                   // line on a squeezed row.
                   maxLines: 1,
@@ -97,15 +97,15 @@ class PaymentCardTile extends StatelessWidget {
           else
             IconButton(
               onPressed: onMakeDefault,
-              icon: const Icon(Icons.verified,
-                  size: 24, color: AppColors.lightTextDisabled),
+              icon: Icon(Icons.verified,
+                  size: 24, color: AppColors.textDisabled),
               tooltip: 'Make default',
               visualDensity: VisualDensity.compact,
             ),
           IconButton(
             onPressed: onRemove,
             icon: const Icon(Icons.delete_outline, size: 20),
-            color: AppColors.lightTextSecondary,
+            color: AppColors.textSecondary,
             tooltip: 'Remove card',
             visualDensity: VisualDensity.compact,
           ),

@@ -85,9 +85,9 @@ class AppGate extends ConsumerWidget {
       if (active.isLoading) {
         // Briefly confirming whether a live ride exists; don't flash the wrong
         // screen. Resolves in a moment to either the trip or the block below.
-        return const Scaffold(
-          backgroundColor: Colors.white,
-          body: Center(child: CircularProgressIndicator()),
+        return Scaffold(
+          backgroundColor: AppColors.surface,
+          body: const Center(child: CircularProgressIndicator()),
         );
       }
       return _Blocked(
@@ -148,7 +148,7 @@ class _Blocked extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -158,13 +158,13 @@ class _Blocked extends StatelessWidget {
               children: [
                 const HoppinLogo(height: 34),
                 const SizedBox(height: 40),
-                Icon(icon, size: 56, color: AppColors.primary),
+                Icon(icon, size: 56, color: AppColors.brand),
                 const SizedBox(height: 24),
                 Text(
                   title,
                   textAlign: TextAlign.center,
                   style: theme.textTheme.titleLarge?.copyWith(
-                    color: AppColors.navy,
+                    color: AppColors.ink,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -172,7 +172,7 @@ class _Blocked extends StatelessWidget {
                   body,
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppColors.lightTextSecondary,
+                    color: AppColors.textSecondary,
                   ),
                 ),
                 const SizedBox(height: 32),

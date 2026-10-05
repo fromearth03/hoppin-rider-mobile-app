@@ -45,12 +45,12 @@ class _OfflineScreenState extends ConsumerState<OfflineScreen> {
                 Container(
                   height: 96,
                   width: 96,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF1F1F5),
+                  decoration: BoxDecoration(
+                    color: AppColors.subtle,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.wifi_off_rounded,
-                      size: 42, color: AppColors.lightTextSecondary),
+                  child: Icon(Icons.wifi_off_rounded,
+                      size: 42, color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 24),
                 Text("You're offline",

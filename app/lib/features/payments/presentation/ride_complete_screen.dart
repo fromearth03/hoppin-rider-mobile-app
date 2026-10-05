@@ -348,7 +348,7 @@ class _RatingCardState extends ConsumerState<_RatingCard> {
                     size: 32,
                     color: i <= _score
                         ? AppColors.warning
-                        : AppColors.lightTextDisabled,
+                        : AppColors.textDisabled,
                   ),
                 ),
             ],

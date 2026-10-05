@@ -124,16 +124,16 @@ class _Hint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
         elevation: 3,
-        child: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
             children: [
-              Icon(Icons.touch_app_outlined, size: 20, color: AppColors.navy),
-              SizedBox(width: 10),
-              Expanded(
+              Icon(Icons.touch_app_outlined, size: 20, color: AppColors.ink),
+              const SizedBox(width: 10),
+              const Expanded(
                 child: Text('Tap anywhere on the map to drop a pin',
                     style: TextStyle(fontSize: 14)),
               ),
@@ -153,7 +153,7 @@ class _Confirm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: AppColors.surface,
       borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       elevation: 12,
       child: SafeArea(
@@ -167,8 +167,8 @@ class _Confirm extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.place_outlined,
-                      size: 20, color: AppColors.navy),
+                  Icon(Icons.place_outlined,
+                      size: 20, color: AppColors.ink),
                   const SizedBox(width: 10),
                   Expanded(
                     child: resolving
@@ -179,8 +179,8 @@ class _Confirm extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 15,
                               color: address == null
-                                  ? AppColors.lightTextSecondary
-                                  : AppColors.lightTextPrimary,
+                                  ? AppColors.textSecondary
+                                  : AppColors.textPrimary,
                             ),
                           ),
                   ),

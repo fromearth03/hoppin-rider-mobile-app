@@ -122,8 +122,8 @@ class _Sent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Icon(Icons.mark_email_read_outlined,
-            size: 56, color: AppColors.buttonPrimary),
+        Icon(Icons.mark_email_read_outlined,
+            size: 56, color: AppColors.ink),
         const SizedBox(height: 16),
         Text(
           'Check your email',

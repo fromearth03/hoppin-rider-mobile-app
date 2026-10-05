@@ -28,8 +28,8 @@ Future<bool> confirmLogout(BuildContext context) async {
                 alignment: Alignment.topRight,
                 child: IconButton(
                   onPressed: () => Navigator.of(ctx).pop(false),
-                  icon: const Icon(Icons.close,
-                      size: 22, color: Color(0xFF8E909E)),
+                  icon: Icon(Icons.close,
+                      size: 22, color: AppColors.pick(const Color(0xFF8E909E), AppColors.darkTextSecondary)),
                 ),
               ),
               Image.asset(
@@ -56,7 +56,7 @@ Future<bool> confirmLogout(BuildContext context) async {
                     child: FilledButton(
                       onPressed: () => Navigator.of(ctx).pop(false),
                       style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFFEFEFF1),
+                        backgroundColor: AppColors.pick(const Color(0xFFEFEFF1), const Color(0xFF2A2A35)),
                         foregroundColor: theme.textTheme.bodyLarge?.color,
                       ),
                       child: const Text('Cancel'),
@@ -67,7 +67,7 @@ Future<bool> confirmLogout(BuildContext context) async {
                     child: FilledButton(
                       onPressed: () => Navigator.of(ctx).pop(true),
                       style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.buttonPrimary,
+                        backgroundColor: AppColors.fill,
                         foregroundColor: Colors.white,
                       ),
                       child: const Text('Logout'),

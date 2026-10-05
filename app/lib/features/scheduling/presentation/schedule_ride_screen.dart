@@ -197,7 +197,7 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
             // button that does nothing reads as broken.
             child: Builder(
               builder: (context) => Material(
-                color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                color: isDark ? AppColors.darkSurface : AppColors.surface,
                 shape: const CircleBorder(),
                 elevation: 2,
                 child: InkWell(
@@ -209,7 +209,7 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
                         size: 22,
                         color: isDark
                             ? AppColors.darkTextPrimary
-                            : AppColors.lightTextPrimary),
+                            : AppColors.textPrimary),
                   ),
                 ),
               ),
@@ -223,14 +223,14 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
             right: 16,
             child: CircleAvatar(
               backgroundColor:
-                  isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                  isDark ? AppColors.darkSurface : AppColors.surface,
               child: IconButton(
                 onPressed: () => Navigator.of(context).maybePop(),
                 icon: Icon(Icons.close,
                     size: 20,
                     color: isDark
                         ? AppColors.darkTextPrimary
-                        : AppColors.lightTextPrimary),
+                        : AppColors.textPrimary),
                 tooltip: 'Close',
               ),
             ),
@@ -252,7 +252,7 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
                 decoration: BoxDecoration(
                   color: isDark
                       ? AppColors.darkBackground
-                      : AppColors.lightBackground,
+                      : AppColors.background,
                   borderRadius:
                       const BorderRadius.vertical(top: Radius.circular(24)),
                 ),
@@ -269,7 +269,7 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
                         decoration: BoxDecoration(
                           color: isDark
                               ? AppColors.darkBorder
-                              : AppColors.lightBorder,
+                              : AppColors.border,
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -446,9 +446,9 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+            color: isDark ? AppColors.darkSurface : AppColors.surface,
             border: Border.all(
-                color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                color: isDark ? AppColors.darkBorder : AppColors.border),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
@@ -467,9 +467,9 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+        color: isDark ? AppColors.darkSurface : AppColors.surface,
         border: Border.all(
-            color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+            color: isDark ? AppColors.darkBorder : AppColors.border),
         borderRadius: BorderRadius.circular(16),
       ),
       child: policy.when(
@@ -537,11 +537,11 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
                 margin: const EdgeInsets.only(bottom: 10),
                 decoration: BoxDecoration(
                   color:
-                      isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                      isDark ? AppColors.darkSurface : AppColors.surface,
                   border: Border.all(
                       color: isDark
                           ? AppColors.darkBorder
-                          : AppColors.lightBorder),
+                          : AppColors.border),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
@@ -610,7 +610,7 @@ class _HeaderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
+    final border = isDark ? AppColors.darkBorder : AppColors.border;
     // The frame's header: the orange car in a white rounded square, beside a
     // navy-bordered card carrying the calendar icon + title/subtitle.
     return Row(
@@ -618,7 +618,7 @@ class _HeaderCard extends StatelessWidget {
         // The orange car is the way BACK to a normal (now) booking — the
         // calendar card beside it is this screen's own mode.
         Material(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(14),
           child: InkWell(
             onTap: () => context.go(AppRoutes.home),
@@ -641,8 +641,8 @@ class _HeaderCard extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: AppColors.navy, width: 1.2),
+              color: AppColors.surface,
+              border: Border.all(color: AppColors.ink, width: 1.2),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Row(
@@ -657,7 +657,7 @@ class _HeaderCard extends StatelessWidget {
                     children: [
                       Text('Schedule Ride',
                           style: theme.textTheme.titleMedium?.copyWith(
-                              fontSize: 15, color: AppColors.navy),
+                              fontSize: 15, color: AppColors.ink),
                           overflow: TextOverflow.ellipsis),
                       Text('Book your ride in advance',
                           style: theme.textTheme.bodyMedium
@@ -690,7 +690,7 @@ class _RouteBar extends StatelessWidget {
     final chosen = route;
 
     return Material(
-      color: Colors.white,
+      color: AppColors.surface,
       borderRadius: BorderRadius.circular(12),
       elevation: 1,
       child: InkWell(
@@ -704,7 +704,7 @@ class _RouteBar extends StatelessWidget {
                 chosen == null ? Icons.search : Icons.route_outlined,
                 color: chosen == null
                     ? theme.textTheme.bodyMedium?.color
-                    : AppColors.navy,
+                    : AppColors.ink,
                 size: 22,
               ),
               const SizedBox(width: 10),
@@ -720,7 +720,7 @@ class _RouteBar extends StatelessWidget {
                         children: [
                           Text(chosen.pickup.label,
                               style: theme.textTheme.bodyLarge?.copyWith(
-                                  fontSize: 13.5, color: AppColors.navy),
+                                  fontSize: 13.5, color: AppColors.ink),
                               overflow: TextOverflow.ellipsis),
                           Text(
                             '→ ${chosen.dropoff.label}'
@@ -732,8 +732,8 @@ class _RouteBar extends StatelessWidget {
                         ],
                       ),
               ),
-              const Icon(Icons.edit_outlined,
-                  size: 18, color: AppColors.lightTextSecondary),
+              Icon(Icons.edit_outlined,
+                  size: 18, color: AppColors.textSecondary),
             ],
           ),
         ),
@@ -760,11 +760,11 @@ class _FieldTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
-    final surface = isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final border = isDark ? AppColors.darkBorder : AppColors.border;
+    final surface = isDark ? AppColors.darkSurface : AppColors.surface;
     final textColor = isPlaceholder
-        ? (isDark ? AppColors.darkTextDisabled : AppColors.lightTextDisabled)
-        : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary);
+        ? (isDark ? AppColors.darkTextDisabled : AppColors.textDisabled)
+        : (isDark ? AppColors.darkTextPrimary : AppColors.textPrimary);
 
     return InkWell(
       onTap: onTap,
@@ -786,7 +786,7 @@ class _FieldTile extends StatelessWidget {
                 size: 18,
                 color: isDark
                     ? AppColors.darkTextSecondary
-                    : AppColors.lightTextSecondary),
+                    : AppColors.textSecondary),
           ],
         ),
       ),

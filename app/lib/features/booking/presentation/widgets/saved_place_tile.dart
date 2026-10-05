@@ -30,8 +30,8 @@ class SavedPlaceTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
-    final surface = isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final border = isDark ? AppColors.darkBorder : AppColors.border;
+    final surface = isDark ? AppColors.darkSurface : AppColors.surface;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

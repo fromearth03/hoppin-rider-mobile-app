@@ -32,7 +32,7 @@ class SettingsCard extends StatelessWidget {
                 indent: 20,
                 endIndent: 20,
                 color: theme.brightness == Brightness.light
-                    ? AppColors.lightBorder
+                    ? AppColors.border
                     : AppColors.darkBorder,
               ),
           ],

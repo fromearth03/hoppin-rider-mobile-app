@@ -58,7 +58,7 @@ class _StatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final (label, color) = switch (status) {
       PromotionStatus.active => ('Active', AppColors.positive),
-      PromotionStatus.availed => ('Availed', AppColors.primary),
+      PromotionStatus.availed => ('Availed', AppColors.brand),
       PromotionStatus.expired => ('Expire', AppColors.negative),
     };
 

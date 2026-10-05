@@ -76,7 +76,7 @@ class _PaymentMethodSheetState extends ConsumerState<_PaymentMethodSheet> {
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkBackground : AppColors.lightBackground,
+        color: isDark ? AppColors.darkBackground : AppColors.background,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding: EdgeInsets.only(
@@ -174,11 +174,11 @@ class _MethodRow extends StatelessWidget {
             height: 40,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+              color: isDark ? AppColors.darkSurface : AppColors.surface,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
                   color:
-                      isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                      isDark ? AppColors.darkBorder : AppColors.border),
             ),
             child: Icon(icon, size: 20, color: titleColor),
           ),

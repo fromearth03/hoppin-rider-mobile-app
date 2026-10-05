@@ -23,7 +23,8 @@ class CollapsibleSheet extends StatelessWidget {
   final double initialSize;
   final double minSize;
   final double maxSize;
-  final Color color;
+  /// The sheet's surface. Null means the frames' sheet grey for the mode.
+  final Color? color;
 
   const CollapsibleSheet({
     super.key,
@@ -33,7 +34,7 @@ class CollapsibleSheet extends StatelessWidget {
     this.initialSize = 0.62,
     this.minSize = 0.14,
     this.maxSize = 0.92,
-    this.color = const Color(0xFFF7F7FA),
+    this.color,
   });
 
   @override
@@ -52,7 +53,7 @@ class CollapsibleSheet extends StatelessWidget {
       // shield under the sheet; everywhere else it is a no-op passthrough.
       builder: (context, scrollController) =>
           PointerInterceptor(child: Material(
-        color: color,
+        color: color ?? AppColors.sheet,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         clipBehavior: Clip.antiAlias,
         elevation: 12,
@@ -69,7 +70,7 @@ class CollapsibleSheet extends StatelessWidget {
                   width: 44,
                   height: 4.5,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFC9C9D2),
+                    color: AppColors.pick(const Color(0xFFC9C9D2), AppColors.darkBorder),
                     borderRadius: BorderRadius.circular(3),
                   ),
                 ),
@@ -84,22 +85,22 @@ class CollapsibleSheet extends StatelessWidget {
                     Text(
                       title!,
                       style: theme.textTheme.titleMedium
-                          ?.copyWith(fontSize: 16.5, color: AppColors.navy),
+                          ?.copyWith(fontSize: 16.5, color: AppColors.ink),
                     ),
                     if (onClose != null)
                       Align(
                         alignment: Alignment.centerRight,
                         child: Material(
-                          color: const Color(0xFFE3E3E8),
+                          color: AppColors.border,
                           shape: const CircleBorder(),
                           child: InkWell(
                             onTap: onClose,
                             customBorder: const CircleBorder(),
-                            child: const Padding(
-                              padding: EdgeInsets.all(6),
+                            child: Padding(
+                              padding: const EdgeInsets.all(6),
                               child: Icon(Icons.close,
                                   size: 16,
-                                  color: AppColors.lightTextSecondary),
+                                  color: AppColors.textSecondary),
                             ),
                           ),
                         ),

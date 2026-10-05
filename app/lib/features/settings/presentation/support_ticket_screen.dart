@@ -204,8 +204,8 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
                 children: [
                   for (final t in trips)
                     ListTile(
-                      leading: const Icon(Icons.directions_car,
-                          color: AppColors.navy),
+                      leading: Icon(Icons.directions_car,
+                          color: AppColors.ink),
                       title: Text(
                         t.dropoffLabel ?? t.pickupLabel ?? 'Ride',
                         overflow: TextOverflow.ellipsis,
@@ -234,10 +234,10 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
             icon: const Icon(Icons.arrow_back),
             onPressed: () => Navigator.of(context).maybePop(),
           ),
-          bottom: const TabBar(
-            labelColor: AppColors.navy,
-            indicatorColor: AppColors.navy,
-            tabs: [
+          bottom: TabBar(
+            labelColor: AppColors.ink,
+            indicatorColor: AppColors.ink,
+            tabs: const [
               Tab(text: 'Support'),
               Tab(text: 'Complaints'),
             ],
@@ -333,9 +333,9 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
                                       style:
                                           const TextStyle(fontSize: 12.5)),
                                   selected: _tags.contains(t.name),
-                                  selectedColor: AppColors.navy
+                                  selectedColor: AppColors.fill
                                       .withValues(alpha: 0.12),
-                                  checkmarkColor: AppColors.navy,
+                                  checkmarkColor: AppColors.ink,
                                   onSelected: (on) => setState(() => on
                                       ? _tags.add(t.name)
                                       : _tags.remove(t.name)),
@@ -441,7 +441,7 @@ class _RidePickerField extends StatelessWidget {
     final chosen = ride;
 
     return Material(
-      color: const Color(0xFFF4F4F7),
+      color: AppColors.pick(const Color(0xFFF4F4F7), const Color(0xFF2A2A35)),
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
@@ -450,8 +450,8 @@ class _RidePickerField extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           child: Row(
             children: [
-              const Icon(Icons.directions_car,
-                  size: 20, color: AppColors.navy),
+              Icon(Icons.directions_car,
+                  size: 20, color: AppColors.ink),
               const SizedBox(width: 10),
               Expanded(
                 child: chosen == null
@@ -473,8 +473,8 @@ class _RidePickerField extends StatelessWidget {
                   tooltip: 'Remove the attached ride',
                 )
               else
-                const Icon(Icons.keyboard_arrow_down,
-                    color: AppColors.lightTextSecondary),
+                Icon(Icons.keyboard_arrow_down,
+                    color: AppColors.textSecondary),
             ],
           ),
         ),
@@ -550,8 +550,8 @@ class _TicketRow extends StatelessWidget {
                         style:
                             theme.textTheme.bodyMedium?.copyWith(color: fg)),
                   ),
-                  const Icon(Icons.chevron_right,
-                      size: 18, color: AppColors.lightTextSecondary),
+                  Icon(Icons.chevron_right,
+                      size: 18, color: AppColors.textSecondary),
                 ]),
               ],
             ),

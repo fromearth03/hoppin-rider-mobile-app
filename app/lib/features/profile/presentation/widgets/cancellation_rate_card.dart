@@ -25,18 +25,18 @@ class CancellationRateCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final pct = stats.ratePct!;
     final over = stats.overThreshold;
-    final tone = over ? AppColors.negative : AppColors.navy;
+    final tone = over ? AppColors.negative : AppColors.ink;
 
     return Container(
       margin: const EdgeInsets.only(top: 20),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
             color: over
                 ? AppColors.negative.withValues(alpha: 0.35)
-                : AppColors.lightBorder),
+                : AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -69,7 +69,7 @@ class CancellationRateCard extends ConsumerWidget {
               child: LinearProgressIndicator(
                 value: stats.progress,
                 minHeight: 6,
-                backgroundColor: AppColors.lightBorder,
+                backgroundColor: AppColors.border,
                 valueColor: AlwaysStoppedAnimation(tone),
               ),
             ),
@@ -83,7 +83,7 @@ class CancellationRateCard extends ConsumerWidget {
                   fontSize: 12.5,
                   color: over
                       ? AppColors.negative
-                      : AppColors.lightTextSecondary),
+                      : AppColors.textSecondary),
             ),
           ],
         ],

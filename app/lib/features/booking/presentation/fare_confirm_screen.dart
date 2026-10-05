@@ -330,7 +330,7 @@ class _Sheet extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Material(
-      color: const Color(0xFFF7F7FA),
+      color: AppColors.sheet,
       borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       clipBehavior: Clip.antiAlias,
       elevation: 12,
@@ -352,7 +352,7 @@ class _Sheet extends ConsumerWidget {
               height: 4,
               margin: const EdgeInsets.only(bottom: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFFD5D5DC),
+                color: AppColors.pick(const Color(0xFFD5D5DC), AppColors.darkBorder),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -366,23 +366,23 @@ class _Sheet extends ConsumerWidget {
                   'Ride Details',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontSize: 16.5,
-                    color: AppColors.navy,
+                    color: AppColors.ink,
                   ),
                 ),
                 Align(
                   alignment: Alignment.centerRight,
                   child: Material(
-                    color: const Color(0xFFE3E3E8),
+                    color: AppColors.border,
                     shape: const CircleBorder(),
                     child: InkWell(
                       onTap: () => Navigator.of(context).maybePop(),
                       customBorder: const CircleBorder(),
-                      child: const Padding(
-                        padding: EdgeInsets.all(6),
+                      child: Padding(
+                        padding: const EdgeInsets.all(6),
                         child: Icon(
                           Icons.close,
                           size: 16,
-                          color: AppColors.lightTextSecondary,
+                          color: AppColors.textSecondary,
                         ),
                       ),
                     ),
@@ -426,7 +426,7 @@ class _Sheet extends ConsumerWidget {
                   'Fare Estimate',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontSize: 15,
-                    color: AppColors.navy,
+                    color: AppColors.ink,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -451,7 +451,7 @@ class _Sheet extends ConsumerWidget {
                   'Cancellation Policy',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontSize: 15,
-                    color: AppColors.navy,
+                    color: AppColors.ink,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -559,7 +559,7 @@ class _PromoFieldState extends ConsumerState<_PromoField> {
         Text(
           'Promo code',
           style: theme.textTheme.titleMedium
-              ?.copyWith(fontSize: 15, color: AppColors.navy),
+              ?.copyWith(fontSize: 15, color: AppColors.ink),
         ),
         const SizedBox(height: 6),
         Row(
@@ -608,7 +608,7 @@ class _PromoFieldState extends ConsumerState<_PromoField> {
               // Not "you saved £X" — this check has not seen the fare.
               'Code accepted. The discount is applied to your fare when you book.',
               style: theme.textTheme.bodySmall
-                  ?.copyWith(color: const Color(0xFF0B7A52)),
+                  ?.copyWith(color: AppColors.onPositiveSoft),
             ),
           ),
       ],
@@ -630,7 +630,7 @@ class _DriverNoteField extends StatelessWidget {
         Text(
           'Note for your driver',
           style: theme.textTheme.titleMedium
-              ?.copyWith(fontSize: 15, color: AppColors.navy),
+              ?.copyWith(fontSize: 15, color: AppColors.ink),
         ),
         const SizedBox(height: 6),
         TextField(
@@ -652,16 +652,16 @@ class _DriverNoteField extends StatelessWidget {
             hintText: 'Optional — e.g. second gate past the barrier',
             hintStyle: const TextStyle(fontSize: 13),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: AppColors.surface,
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE3E3E8)),
+              borderSide: BorderSide(color: AppColors.border),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE3E3E8)),
+              borderSide: BorderSide(color: AppColors.border),
             ),
           ),
         ),
@@ -731,7 +731,7 @@ class _FareCard extends StatelessWidget {
                   'Total',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontSize: 15,
-                    color: AppColors.navy,
+                    color: AppColors.ink,
                   ),
                 ),
                 // The API's grand total, never a client-side re-sum.
@@ -739,7 +739,7 @@ class _FareCard extends StatelessWidget {
                   est.totalPence.format(currency: est.currency),
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontSize: 15,
-                    color: AppColors.navy,
+                    color: AppColors.ink,
                   ),
                 ),
               ],
@@ -760,14 +760,14 @@ class _FareCard extends StatelessWidget {
                   'Total',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontSize: 15,
-                    color: AppColors.navy,
+                    color: AppColors.ink,
                   ),
                 ),
                 Text(
                   est.totalPence.format(currency: est.currency),
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontSize: 15,
-                    color: AppColors.navy,
+                    color: AppColors.ink,
                   ),
                 ),
               ],
@@ -780,7 +780,7 @@ class _FareCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
         boxShadow: const [
           BoxShadow(
@@ -815,7 +815,7 @@ class _PaymentRow extends ConsumerWidget {
     final card = ref.watch(_defaultCardProvider).valueOrNull;
 
     return Material(
-      color: Colors.white,
+      color: AppColors.surface,
       borderRadius: BorderRadius.circular(12),
       elevation: 1,
       child: InkWell(
@@ -828,7 +828,7 @@ class _PaymentRow extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
           child: Row(
             children: [
-              const Icon(Icons.credit_card, size: 22, color: AppColors.navy),
+              Icon(Icons.credit_card, size: 22, color: AppColors.ink),
               const SizedBox(width: 12),
               Expanded(
                 child: card == null
@@ -846,7 +846,7 @@ class _PaymentRow extends ConsumerWidget {
                             _brandName(card.brand),
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontSize: 14,
-                              color: AppColors.navy,
+                              color: AppColors.ink,
                             ),
                           ),
                           Text(

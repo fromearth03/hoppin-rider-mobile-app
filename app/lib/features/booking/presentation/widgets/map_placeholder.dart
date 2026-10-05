@@ -27,7 +27,7 @@ class MapPlaceholder extends StatelessWidget {
       decoration: BoxDecoration(
         // A flat, neutral ground rather than fake streets. Drawing invented
         // roads would be worse than drawing none.
-        color: isDark ? AppColors.darkSurface : const Color(0xFFE8EAED),
+        color: isDark ? AppColors.darkSurface : AppColors.pick(const Color(0xFFE8EAED), const Color(0xFF2A2A35)),
       ),
       child: Stack(
         fit: StackFit.expand,
@@ -42,7 +42,7 @@ class MapPlaceholder extends StatelessWidget {
                   size: 40,
                   color: (isDark
                           ? AppColors.darkTextSecondary
-                          : AppColors.lightTextSecondary)
+                          : AppColors.textSecondary)
                       .withValues(alpha: 0.5),
                 ),
                 const SizedBox(height: 8),
@@ -51,7 +51,7 @@ class MapPlaceholder extends StatelessWidget {
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: isDark
                         ? AppColors.darkTextSecondary
-                        : AppColors.lightTextSecondary,
+                        : AppColors.textSecondary,
                   ),
                 ),
               ],

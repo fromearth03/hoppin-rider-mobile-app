@@ -68,7 +68,7 @@ class AuthScaffold extends StatelessWidget {
                     },
                     icon: const Icon(Icons.arrow_back, color: Colors.white),
                     style: IconButton.styleFrom(
-                      backgroundColor: Colors.white.withValues(alpha: 0.15),
+                      backgroundColor: AppColors.surface.withValues(alpha: 0.15),
                     ),
                   ),
                 const SizedBox(height: 48),

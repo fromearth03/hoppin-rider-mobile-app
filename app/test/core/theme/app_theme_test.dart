@@ -12,10 +12,33 @@ void main() {
           isNot(AppTheme.dark.scaffoldBackgroundColor));
     });
 
-    test('primary is the Hoppin indigo in both modes', () {
+    test('the brand fill is the Hoppin indigo in both modes', () {
       expect(AppColors.primary, const Color(0xFF2E0B78));
       expect(AppTheme.light.colorScheme.primary, AppColors.primary);
-      expect(AppTheme.dark.colorScheme.primary, AppColors.primary);
+    });
+
+    test('dark mode draws text buttons and focus rings in a readable violet',
+        () {
+      // The indigo itself is too deep to read on a dark page.
+      final onDark = AppTheme.dark.colorScheme.primary;
+      expect(onDark, isNot(AppColors.primary));
+      expect(onDark.computeLuminance(),
+          greaterThan(AppColors.primary.computeLuminance() * 4));
+    });
+
+    test('building a theme points the adaptive tokens at its mode', () {
+      AppTheme.dark;
+      expect(AppColors.isDark, isTrue);
+      expect(AppColors.surface, AppColors.darkSurface);
+      expect(AppColors.ink, AppColors.darkTextPrimary);
+      AppTheme.light;
+      expect(AppColors.isDark, isFalse);
+      expect(AppColors.surface, AppColors.lightSurface);
+      expect(AppColors.ink, AppColors.navy);
+      expect(AppColors.fill, AppColors.navy);
+      // a one-off shade keeps the frame's exact light value
+      expect(AppColors.pick(const Color(0xFFE7E7EC), AppColors.darkBorder),
+          const Color(0xFFE7E7EC));
     });
 
     test('accent orange drives the primary action colour', () {

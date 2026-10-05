@@ -98,7 +98,7 @@ class _AddCardSheetState extends State<AddCardSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
+    final border = isDark ? AppColors.darkBorder : AppColors.border;
 
     return Padding(
       padding: EdgeInsets.only(

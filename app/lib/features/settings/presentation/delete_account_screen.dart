@@ -156,7 +156,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                                 disabledBackgroundColor:
                                     theme.brightness == Brightness.dark
                                         ? AppColors.darkBorder
-                                        : AppColors.lightBorder,
+                                        : AppColors.border,
                                 disabledForegroundColor: muted,
                               ),
                               child: const Text('Deactivate'),
@@ -277,7 +277,7 @@ Future<bool> _confirmDeletion(BuildContext context) async {
                   onPressed: () => Navigator.of(ctx).pop(false),
                   style: FilledButton.styleFrom(
                     backgroundColor:
-                        isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                        isDark ? AppColors.darkBorder : AppColors.border,
                     foregroundColor: theme.textTheme.bodyLarge?.color,
                   ),
                   child: const Text('Cancel'),

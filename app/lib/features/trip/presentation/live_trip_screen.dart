@@ -204,7 +204,7 @@ class _LiveTripBody extends ConsumerWidget {
               child: SafeArea(
                 minimum: const EdgeInsets.all(16),
                 child: Material(
-                  color: Colors.white,
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(16),
                   elevation: 8,
                   child: Padding(
@@ -217,7 +217,7 @@ class _LiveTripBody extends ConsumerWidget {
                           'This ride was cancelled',
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontSize: 17, color: AppColors.navy),
+                              ?.copyWith(fontSize: 17, color: AppColors.ink),
                         ),
                         const SizedBox(height: 6),
                         Text(
@@ -584,7 +584,7 @@ class _CancelReasonSheetState extends State<_CancelReasonSheet> {
               textAlign: TextAlign.center,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontSize: 17,
-                color: AppColors.navy,
+                color: AppColors.ink,
               ),
             ),
             const SizedBox(height: 8),
@@ -594,13 +594,13 @@ class _CancelReasonSheetState extends State<_CancelReasonSheet> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 color: widget.quote.free
-                    ? const Color(0xFFEFF7F1)
-                    : const Color(0xFFFDF6E6),
+                    ? AppColors.positiveSoft
+                    : AppColors.warningSoft,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: widget.quote.free
-                      ? const Color(0xFFB7DFC6)
-                      : const Color(0xFFF0C36D),
+                      ? AppColors.positiveSoftBorder
+                      : AppColors.warningSoftBorder,
                 ),
               ),
               child: Row(
@@ -611,8 +611,8 @@ class _CancelReasonSheetState extends State<_CancelReasonSheet> {
                         : Icons.info_outline,
                     size: 18,
                     color: widget.quote.free
-                        ? const Color(0xFF0B7A52)
-                        : const Color(0xFF8A6D1F),
+                        ? AppColors.onPositiveSoft
+                        : AppColors.onWarningSoft,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -622,8 +622,8 @@ class _CancelReasonSheetState extends State<_CancelReasonSheet> {
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: widget.quote.free
-                            ? const Color(0xFF0B7A52)
-                            : const Color(0xFF8A6D1F),
+                            ? AppColors.onPositiveSoft
+                            : AppColors.onWarningSoft,
                       ),
                     ),
                   ),
@@ -646,7 +646,7 @@ class _CancelReasonSheetState extends State<_CancelReasonSheet> {
                 onChanged: (v) => setState(() => _selected = v),
                 dense: true,
                 contentPadding: EdgeInsets.zero,
-                activeColor: AppColors.navy,
+                activeColor: AppColors.fill,
                 title: Text(r.label, style: const TextStyle(fontSize: 14)),
                 subtitle: _feeHint(r) == null
                     ? null
@@ -666,7 +666,7 @@ class _CancelReasonSheetState extends State<_CancelReasonSheet> {
               onChanged: (v) => setState(() => _selected = v),
               dense: true,
               contentPadding: EdgeInsets.zero,
-              activeColor: AppColors.navy,
+              activeColor: AppColors.fill,
               title: const Text(
                 'Prefer not to say',
                 style: TextStyle(fontSize: 14),
@@ -752,7 +752,7 @@ class _CircleButton extends StatelessWidget {
           customBorder: const CircleBorder(),
           child: Padding(
             padding: const EdgeInsets.all(10),
-            child: Icon(icon, size: 20, color: color ?? AppColors.primary),
+            child: Icon(icon, size: 20, color: color ?? AppColors.brand),
           ),
         ),
       ),
@@ -797,7 +797,7 @@ class _DriverHereCardState extends ConsumerState<_DriverHereCard> {
   Widget build(BuildContext context) {
     if (_sent) return const SizedBox.shrink();
     return Material(
-      color: AppColors.navy,
+      color: AppColors.fill,
       borderRadius: BorderRadius.circular(16),
       elevation: 6,
       child: Padding(
@@ -825,8 +825,8 @@ class _DriverHereCardState extends ConsumerState<_DriverHereCard> {
             FilledButton(
               onPressed: _sending ? null : _tell,
               style: FilledButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: AppColors.navy,
+                backgroundColor: AppColors.surface,
+                foregroundColor: AppColors.ink,
                 minimumSize: const Size(0, 40),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
               ),
@@ -853,7 +853,7 @@ class _RiderNoteChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white.withValues(alpha: 0.94),
+      color: AppColors.surface.withValues(alpha: 0.94),
       borderRadius: BorderRadius.circular(12),
       elevation: 2,
       child: Padding(
@@ -861,8 +861,8 @@ class _RiderNoteChip extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.sticky_note_2_outlined,
-                size: 16, color: AppColors.navy),
+            Icon(Icons.sticky_note_2_outlined,
+                size: 16, color: AppColors.ink),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
