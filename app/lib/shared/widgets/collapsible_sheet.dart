@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 import '../../core/theme/colors.dart';
-import 'glass.dart';
 
 /// The one bottom sheet every map-backed screen uses.
 ///
@@ -52,17 +51,11 @@ class CollapsibleSheet extends StatelessWidget {
       // dragging the sheet also panned the map. This puts an invisible DOM
       // shield under the sheet; everywhere else it is a no-op passthrough.
       builder: (context, scrollController) =>
-          // Frosted glass: the map stays faintly visible through the sheet, so
-          // sheet and map read as one scene instead of a panel pasted on top.
-          // Solid enough (0.86) that every label keeps its contrast.
-          PointerInterceptor(child: Glass(
+          PointerInterceptor(child: Material(
+        color: color,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        tint: color,
-        opacity: 0.86,
-        blur: 20,
-        shadow: Glass.sheetShadow,
-        child: Material(
-        type: MaterialType.transparency,
+        clipBehavior: Clip.antiAlias,
+        elevation: 12,
         child: ListView(
           controller: scrollController,
           padding: EdgeInsets.fromLTRB(
@@ -117,7 +110,7 @@ class CollapsibleSheet extends StatelessWidget {
             ...children,
           ],
         ),
-      ))),
+      )),
     );
   }
 }

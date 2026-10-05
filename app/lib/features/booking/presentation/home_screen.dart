@@ -213,23 +213,24 @@ class _BookingSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // The frame's sheet, as frosted glass: the map carries on under its top
-    // edge instead of stopping at a painted panel.
-    return Glass(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      tint: const Color(0xFFF7F7FA),
-      opacity: 0.84,
-      blur: 20,
-      shadow: Glass.sheetShadow,
-      child: Padding(
+    // Solid, as in the frames. A see-through sheet over the map was tried and
+    // read as washed out; glass stays on the small controls that float over it.
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: Color(0xFFF7F7FA),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        boxShadow: [
+          BoxShadow(
+              color: Color(0x1F000000), blurRadius: 18, offset: Offset(0, -4)),
+        ],
+      ),
       padding: EdgeInsets.fromLTRB(
         16,
         16,
         16,
         MediaQuery.of(context).padding.bottom + 16,
       ),
-      child: SizedBox(
-      width: double.infinity,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -242,8 +243,6 @@ class _BookingSheet extends StatelessWidget {
           const _FrequentTripRow(),
           _SavedList(saved: saved),
         ],
-      ),
-      ),
       ),
     );
   }
