@@ -510,7 +510,7 @@ class _TicketRow extends StatelessWidget {
           AppColors.warning.withValues(alpha: 0.14),
           AppColors.warning,
           Icons.schedule,
-          'Your ticket is in under process',
+          'Our team is looking into this',
         ),
     };
 
