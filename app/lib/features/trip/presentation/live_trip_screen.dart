@@ -375,6 +375,13 @@ class _TripMapState extends ConsumerState<_TripMap> {
   int _builtWpCount = -1;
   Set<gmaps.Marker> _wpMarkers = const {};
 
+  // The driver's position arrives as a server push while the stream is up;
+  // the 3 s poll only runs when it is not (web, a dropped connection, before
+  // the first connect), so a lost stream never freezes the marker.
+  StreamSubscription<geo.LatLng>? _driverStream;
+  bool _streamLive = false;
+  DateTime _streamRetryAt = DateTime.fromMillisecondsSinceEpoch(0);
+
   @override
   void initState() {
     super.initState();
@@ -387,7 +394,32 @@ class _TripMapState extends ConsumerState<_TripMap> {
   @override
   void dispose() {
     _driverPoll?.cancel();
+    _driverStream?.cancel();
     super.dispose();
+  }
+
+  void _openDriverStream(String id) {
+    if (_driverStream != null || DateTime.now().isBefore(_streamRetryAt)) return;
+    void dropped() {
+      _driverStream = null;
+      _streamLive = false;
+      // back off before reconnecting; the poll covers the gap
+      _streamRetryAt = DateTime.now().add(const Duration(seconds: 10));
+    }
+
+    _driverStream = ref
+        .read(rideContextRepositoryProvider)
+        .driverPositionStream(id)
+        .listen(
+      (pos) {
+        _streamLive = true;
+        if (!mounted) return;
+        setState(() => _driverPos = gmaps.LatLng(pos.lat, pos.lng));
+      },
+      onError: (_) => dropped(),
+      onDone: dropped,
+      cancelOnError: true,
+    );
   }
 
   Future<void> _pollDriver() async {
@@ -401,9 +433,14 @@ class _TripMapState extends ConsumerState<_TripMap> {
         status == LiveTripStatus.matching ||
         status == LiveTripStatus.completed ||
         status == LiveTripStatus.cancelled) {
+      _driverStream?.cancel();
+      _driverStream = null;
+      _streamLive = false;
       if (_driverPos != null && mounted) setState(() => _driverPos = null);
       return;
     }
+    _openDriverStream(id);
+    if (_streamLive) return; // the push is delivering; no need to ask
     final pos = await ref
         .read(rideContextRepositoryProvider)
         .driverPosition(id);

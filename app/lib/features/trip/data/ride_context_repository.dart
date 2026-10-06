@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
@@ -51,6 +54,27 @@ class RideContextRepository {
         ),
       _ => null,
     };
+  }
+
+  /// `GET /rides/:id/driver-location/stream` — the driver's position pushed
+  /// by the server as the driver moves (server-sent events), instead of
+  /// asking for it every few seconds. Yields each fix; ends or errors when the
+  /// connection drops. Web has no streaming HTTP here, so it yields nothing
+  /// there and the caller keeps polling.
+  Stream<LatLng> driverPositionStream(String rideId) async* {
+    if (rideId.isEmpty || kIsWeb) return;
+    await for (final data
+        in _api.sse('/rides/$rideId/driver-location/stream')) {
+      try {
+        final v = jsonDecode(data);
+        if (v is Map && v['lat'] is num && v['lng'] is num) {
+          yield LatLng(
+              (v['lat'] as num).toDouble(), (v['lng'] as num).toDouble());
+        }
+      } catch (_) {
+        // a malformed event is skipped, not fatal
+      }
+    }
   }
 
   /// `GET /me/active-ride` — the rider's current non-terminal ride id, or

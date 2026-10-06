@@ -59,6 +59,42 @@ class ApiClient {
   Future<Result<T>> get<T>(String path, {Map<String, dynamic>? query}) =>
       _send<T>(() => _dio.get(path, queryParameters: query));
 
+  /// Opens a server-sent-events stream and yields each event's `data:` body.
+  /// Same auth headers as every call. The stream ends (or errors) when the
+  /// connection drops; the caller decides whether to reconnect. Not used on
+  /// web, where the browser HTTP adapter buffers the whole response.
+  Stream<String> sse(String path) async* {
+    final res = await _dio.get<ResponseBody>(
+      path,
+      options: Options(
+        responseType: ResponseType.stream,
+        // The server sends a keep-alive comment every 25 s.
+        receiveTimeout: const Duration(seconds: 70),
+        headers: {'Accept': 'text/event-stream'},
+      ),
+    );
+    final body = res.data;
+    if (res.statusCode != 200 || body == null) {
+      throw ApiException('STREAM_REFUSED', 'stream refused', res.statusCode ?? 0);
+    }
+    var buffer = '';
+    await for (final chunk
+        in body.stream.cast<List<int>>().transform(utf8.decoder)) {
+      buffer += chunk;
+      int end;
+      while ((end = buffer.indexOf('\n\n')) >= 0) {
+        final event = buffer.substring(0, end);
+        buffer = buffer.substring(end + 2);
+        final data = event
+            .split('\n')
+            .where((l) => l.startsWith('data:'))
+            .map((l) => l.substring(5).trimLeft())
+            .join('\n');
+        if (data.isNotEmpty) yield data;
+      }
+    }
+  }
+
   Future<Result<T>> post<T>(
     String path, {
     Object? body,
