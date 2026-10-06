@@ -406,6 +406,7 @@ class _RiderMapState extends ConsumerState<RiderMap> {
           },
           onTap: widget.onTap,
           padding: widget.padding,
+          style: AppColors.isDark ? _googleDarkStyle : null,
           // The booking sheet owns the bottom of the screen; keep Google's
           // zoom chrome out from underneath it.
           zoomControlsEnabled: false,
@@ -542,6 +543,7 @@ class _OsmMapState extends State<_OsmMap> {
         fmap.TileLayer(
           urlTemplate: _tileUrl,
           userAgentPackageName: 'tech.hoppin.hoppin_rider',
+          tileBuilder: AppColors.isDark ? _darkTile : null,
         ),
         if (widget.polylines.isNotEmpty)
           fmap.PolylineLayer(
@@ -567,3 +569,39 @@ class _OsmMapState extends State<_OsmMap> {
     );
   }
 }
+
+/// Dark basemap for the OSM tiles: brightness inverted (light streets become
+/// dark), hue turned half a circle so parks stay green and water blue, and the
+/// range compressed so the darkest tone is not pure black. Markers and routes
+/// are separate layers and keep their colours.
+const _darkTileMatrix = <double>[
+  0.4477, -1.1154, -0.1123, 0, 219.3,
+  -0.3323, -0.3354, -0.1123, 0, 219.3,
+  -0.3323, -1.1154, 0.6677, 0, 219.3,
+  0, 0, 0, 1, 0,
+];
+
+Widget _darkTile(BuildContext context, Widget tile, fmap.TileImage _) =>
+    ColorFiltered(
+      colorFilter: const ColorFilter.matrix(_darkTileMatrix),
+      child: tile,
+    );
+
+/// Google's dark ("night") map style, muted to match the app's dark surfaces.
+const _googleDarkStyle = '''
+[
+  {"elementType": "geometry", "stylers": [{"color": "#1d1c26"}]},
+  {"elementType": "labels.text.fill", "stylers": [{"color": "#a8a8b8"}]},
+  {"elementType": "labels.text.stroke", "stylers": [{"color": "#121218"}]},
+  {"featureType": "administrative", "elementType": "geometry", "stylers": [{"color": "#32323e"}]},
+  {"featureType": "poi", "elementType": "labels.text.fill", "stylers": [{"color": "#8a8a9a"}]},
+  {"featureType": "poi.park", "elementType": "geometry", "stylers": [{"color": "#1b2a22"}]},
+  {"featureType": "road", "elementType": "geometry", "stylers": [{"color": "#2c2b38"}]},
+  {"featureType": "road", "elementType": "geometry.stroke", "stylers": [{"color": "#1a1922"}]},
+  {"featureType": "road.highway", "elementType": "geometry", "stylers": [{"color": "#3d3a52"}]},
+  {"featureType": "road.highway", "elementType": "labels.text.fill", "stylers": [{"color": "#c8c6d8"}]},
+  {"featureType": "transit", "elementType": "geometry", "stylers": [{"color": "#26252f"}]},
+  {"featureType": "water", "elementType": "geometry", "stylers": [{"color": "#0f1a2a"}]},
+  {"featureType": "water", "elementType": "labels.text.fill", "stylers": [{"color": "#5b6b84"}]}
+]
+''';
