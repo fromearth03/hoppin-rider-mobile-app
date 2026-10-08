@@ -1,0 +1,33 @@
+name: verify-rider-feature
+on:
+  push:
+    branches: [feat/batch-1-auth]
+  workflow_dispatch:
+concurrency:
+  group: verify-rider-feature
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: self-hosted
+    timeout-minutes: 30
+    steps:
+      - name: Validate the feature branch on the server
+        run: |
+          set -euo pipefail
+          REPO=/home/c2o_ubuntu/hoppin-apps/hoppin-rider-mobile-app
+          git -C "$REPO" fetch origin "$GITHUB_SHA"
+          WORK=$(mktemp -d "$RUNNER_TEMP/rider-feature.XXXXXX")
+          trap 'git -C "$REPO" worktree remove --force "$WORK" || true' EXIT
+          git -C "$REPO" worktree add --detach "$WORK" "$GITHUB_SHA"
+          export PATH=/home/c2o_ubuntu/toolchain/flutter/bin:$PATH
+          export CI=true
+          # Shares the deployment lock to keep server builds sequential. This
+          # checkout never replaces the main branch or the live web directory.
+          export WORK
+          flock /tmp/hoppin-deploy.lock bash -c '
+            set -euo pipefail
+            cd "$WORK/app"
+            flutter pub get
+            flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings
+            flutter test --no-pub --concurrency=2 test/core/api test/features/auth/application test/features/notifications test/features/settings/application
+          '
