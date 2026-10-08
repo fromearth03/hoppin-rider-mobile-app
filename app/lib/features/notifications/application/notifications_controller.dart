@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/result.dart';
+import '../../../core/auth/account_generation.dart';
 import '../data/notifications_source.dart';
 import '../domain/notification_item.dart';
 
@@ -62,7 +63,9 @@ class NotificationsController extends StateNotifier<NotificationsSnapshot> {
 
   Future<void> load() async {
     state = state.copyWith(isLoading: true, clearError: true);
-    switch (await _source.list()) {
+    final result = await _source.list();
+    if (!mounted) return;
+    switch (result) {
       case Ok(:final value):
         state = state.copyWith(items: value, isLoading: false);
       case Err(:final error):
@@ -84,7 +87,9 @@ class NotificationsController extends StateNotifier<NotificationsSnapshot> {
     final current = state.items.where((n) => n.id == id).firstOrNull;
     if (current == null || current.isRead) return;
 
-    switch (await _source.markRead(id)) {
+    final result = await _source.markRead(id);
+    if (!mounted) return;
+    switch (result) {
       case Ok():
         state = state.copyWith(items: [
           for (final n in state.items)
@@ -96,7 +101,9 @@ class NotificationsController extends StateNotifier<NotificationsSnapshot> {
   }
 
   Future<void> markAllRead() async {
-    switch (await _source.markAllRead()) {
+    final result = await _source.markAllRead();
+    if (!mounted) return;
+    switch (result) {
       case Ok():
         state = state.copyWith(
           items: [for (final n in state.items) n.copyWith(isRead: true)],
@@ -136,7 +143,10 @@ class NotificationsController extends StateNotifier<NotificationsSnapshot> {
     final removed = <String>{};
     String? failure;
     for (final id in ids) {
-      switch (await _source.dismiss(id)) {
+      if (!mounted) return;
+      final result = await _source.dismiss(id);
+    if (!mounted) return;
+    switch (result) {
         case Ok():
           removed.add(id);
         case Err(:final error):
@@ -159,5 +169,8 @@ class NotificationsController extends StateNotifier<NotificationsSnapshot> {
 
 final notificationsControllerProvider =
     StateNotifierProvider<NotificationsController, NotificationsSnapshot>(
-  (ref) => NotificationsController(ref.watch(notificationsSourceProvider)),
+  (ref) {
+ ref.watch(accountGenerationProvider);
+ return NotificationsController(ref.watch(notificationsSourceProvider));
+ },
 );

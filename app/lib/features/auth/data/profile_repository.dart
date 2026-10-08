@@ -21,9 +21,8 @@ class RiderProfile {
   /// `YYYY-MM-DD`, or null when never set.
   ///
   /// Null is not a benign "not filled in yet" — the backend's booking guard
-  /// treats a null DOB as ALLOWED, so a rider with no date of birth can book
-  /// without ever passing the age check. That is why [needsDateOfBirth] exists
-  /// and why the app must force collection rather than defer it.
+  /// rejects a null DOB for booking. [needsDateOfBirth] lets the app collect it
+  /// before the rider reaches a booking failure.
   final String? dateOfBirth;
 
   /// Null until at least one driver has rated this rider. Never defaulted:

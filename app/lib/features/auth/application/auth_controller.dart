@@ -6,6 +6,7 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/device/device_checkin.dart';
 import '../../../core/push/push_registrar.dart';
 import '../../../core/result.dart';
+import '../../../core/auth/account_generation.dart';
 import '../data/auth_repository.dart';
 import '../data/profile_repository.dart';
 import '../domain/auth_state.dart';
@@ -16,7 +17,7 @@ import '../domain/dob_validator.dart';
 /// Sign-up is two writes: Supabase creates the auth user, then
 /// `PATCH /me/profile` stores the date of birth, because `signUp` has no DOB
 /// field. If the second fails the account still exists with a null DOB — which
-/// the booking guard treats as ALLOWED — so the app must not simply continue.
+/// the booking guard rejects — so the app must not simply continue.
 /// It parks in [AuthStatus.profileIncomplete] and retries.
 class AuthController extends StateNotifier<AuthSnapshot> {
   final AuthRepository _auth;
@@ -26,18 +27,28 @@ class AuthController extends StateNotifier<AuthSnapshot> {
   /// carries the device fingerprint check-in. Injected so tests need no
   /// network.
   final Future<void> Function()? _onSignedIn;
+ final void Function()? _onSignedOut;
 
   // True between launching Google sign-in and the session arriving via the auth
   // stream, so we only react to that stream for the OAuth flow (the password
   // flow loads the profile itself).
   bool _awaitingOAuth = false;
   StreamSubscription? _authSub;
+  String? _lastUserId;
 
-  AuthController(this._auth, this._profiles, {this._onSignedIn})
-      : super(const AuthSnapshot()) {
+  AuthController(this._auth, this._profiles, {Future<void> Function()? onSignedIn, void Function()? onSignedOut})
+      : _onSignedIn = onSignedIn, _onSignedOut = onSignedOut, super(const AuthSnapshot()) {
+    _lastUserId = _auth.currentSession?.user.id;
     // Sign in with Google returns through a deep link, so the session appears on
     // the auth stream rather than from a call we await. Pick it up here.
     _authSub = _auth.authStateChanges.listen((s) {
+      final userId = s.session?.user.id;
+      if (userId != _lastUserId) {
+        _lastUserId = userId;
+        // Also clear account caches for SDK-driven expiry or account changes.
+        // Token refresh for the same user does not clear them.
+        _onSignedOut?.call();
+      }
       if (_awaitingOAuth && s.session != null) {
         _awaitingOAuth = false;
         _loadProfile();
@@ -74,8 +85,7 @@ class AuthController extends StateNotifier<AuthSnapshot> {
   /// It also closes the null-DOB hole. The spec requires the app to retry the
   /// date-of-birth write on launch whenever the profile has none — a rider who
   /// dismissed recovery once would otherwise be silently booking-eligible
-  /// forever, because the backend's booking guard treats a null DOB as
-  /// allowed. `_loadProfile` parks them in `profileIncomplete` instead.
+  /// forever, because the backend's booking guard rejects a null DOB. `_loadProfile` parks them in `profileIncomplete` instead.
   Future<void> bootstrap() async {
     if (_auth.currentSession == null) {
       state = const AuthSnapshot(status: AuthStatus.signedOut);
@@ -156,6 +166,7 @@ class AuthController extends StateNotifier<AuthSnapshot> {
   }
 
   Future<void> signOut() async {
+    _onSignedOut?.call();
     await _auth.signOut();
     state = const AuthSnapshot(status: AuthStatus.signedOut);
   }
@@ -204,7 +215,7 @@ class AuthController extends StateNotifier<AuthSnapshot> {
       // was guarding against.
       //
       // The guard it replaces still matters: the backend's booking check
-      // treats a null DOB as ALLOWED, so the age gate has to be enforced
+      // rejects a null DOB for booking, so the age gate has to be enforced
       // here. It is enforced where it bites — at booking — via
       // [RiderProfile.needsDateOfBirth], not at sign-in.
       Ok(:final value) => AuthSnapshot(
@@ -259,7 +270,9 @@ final authControllerProvider =
     // sign-in — or a test harness that has neither. The push registration
     // is what routes notifications to THIS device (it retires the
     // account's other tokens server-side).
+    onSignedOut: () => ref.read(accountGenerationProvider.notifier).state++,
     onSignedIn: () async {
+      ref.read(accountGenerationProvider.notifier).state++;
       try {
         await ref.read(deviceCheckinProvider).report();
       } catch (_) {}

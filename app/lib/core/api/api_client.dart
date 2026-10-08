@@ -53,7 +53,7 @@ class ApiClient {
     // second ApiClient over the same Dio used to leave BOTH interceptors in the
     // chain, each independently reading the token on every request.
     _dio.interceptors.removeWhere((i) => i is _HoppinHeaders);
-    _dio.interceptors.add(_HoppinHeaders(_tokens, _device));
+    _dio.interceptors.add(_HoppinHeaders(_tokens, _device, Uri.parse(_dio.options.baseUrl)));
   }
 
   Future<Result<T>> get<T>(String path, {Map<String, dynamic>? query}) =>
@@ -142,7 +142,7 @@ class ApiClient {
     try {
       final response = await _dio.get<List<int>>(
         url,
-        options: Options(responseType: ResponseType.bytes),
+        options: Options(responseType: ResponseType.bytes, followRedirects: false),
       );
       final status = response.statusCode ?? 500;
       final data = response.data;
@@ -230,7 +230,8 @@ class _HoppinHeaders extends Interceptor {
   final TokenStore _tokens;
   final DeviceIdProvider _device;
 
-  _HoppinHeaders(this._tokens, this._device);
+  final Uri _apiOrigin;
+ _HoppinHeaders(this._tokens, this._device, this._apiOrigin);
 
   /// How long the headers may take before the request goes without them.
   ///
@@ -249,6 +250,15 @@ class _HoppinHeaders extends Interceptor {
   @override
   void onRequest(
       RequestOptions options, RequestInterceptorHandler handler) async {
+    final target = options.uri;
+    if (target.scheme != _apiOrigin.scheme || target.host != _apiOrigin.host ||
+        target.port != _apiOrigin.port || target.userInfo.isNotEmpty) {
+      options.headers.removeWhere((key, _) =>
+          key.toLowerCase() == 'authorization' ||
+          key.toLowerCase() == 'x-hoppin-device-id');
+      handler.next(options);
+      return;
+    }
     try {
       final token = await _tokens.read().timeout(_headerBudget);
       if (token != null) options.headers['Authorization'] = 'Bearer $token';

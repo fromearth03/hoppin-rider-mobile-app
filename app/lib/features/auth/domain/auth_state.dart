@@ -28,9 +28,8 @@ class AuthSnapshot {
   /// Whether this rider may actually book a ride.
   ///
   /// The age gate lives HERE rather than at sign-in. The backend's booking
-  /// check treats a null date of birth as ALLOWED, so if the app does not
-  /// enforce it nobody does — but enforcing it at the door locked riders with
-  /// a real profile out of the whole app over one empty field.
+  /// check also rejects a null date of birth. Keeping the matching app check at
+  /// booking lets riders with incomplete profiles still use the rest of the app.
   ///
   /// Every path that starts a booking must consult this and send a rider with
   /// no date of birth to collect one first.

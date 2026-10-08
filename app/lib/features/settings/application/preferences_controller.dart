@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/result.dart';
+import '../../../core/auth/account_generation.dart';
 import '../data/preferences_repository.dart';
 
 /// What the Setting screen's two live toggles are showing right now.
@@ -60,7 +61,9 @@ class PreferencesController extends StateNotifier<PreferencesSnapshot> {
 
   Future<void> load() async {
     state = state.copyWith(isLoading: true, clearError: true);
-    switch (await _repo.read()) {
+    final result = await _repo.read();
+    if (!mounted) return;
+    switch (result) {
       case Ok(:final value):
         state = state.copyWith(
           pushTripUpdates: value.pushTripUpdates ?? _defaultPushTripUpdates,
@@ -87,7 +90,9 @@ class PreferencesController extends StateNotifier<PreferencesSnapshot> {
     final previous = state.pushTripUpdates;
     state = state.copyWith(pushTripUpdates: value, clearError: true);
 
-    switch (await _repo.update(pushTripUpdates: value)) {
+    final result = await _repo.update(pushTripUpdates: value);
+    if (!mounted) return;
+    switch (result) {
       case Ok(value: final saved):
         state = state.copyWith(
           pushTripUpdates: saved.pushTripUpdates ?? value,
@@ -103,7 +108,9 @@ class PreferencesController extends StateNotifier<PreferencesSnapshot> {
     final previous = state.soundOfferChime;
     state = state.copyWith(soundOfferChime: value, clearError: true);
 
-    switch (await _repo.update(soundOfferChime: value)) {
+    final result = await _repo.update(soundOfferChime: value);
+    if (!mounted) return;
+    switch (result) {
       case Ok(value: final saved):
         state = state.copyWith(
           pushTripUpdates: saved.pushTripUpdates ?? state.pushTripUpdates,
@@ -118,5 +125,8 @@ class PreferencesController extends StateNotifier<PreferencesSnapshot> {
 
 final preferencesControllerProvider =
     StateNotifierProvider<PreferencesController, PreferencesSnapshot>(
-  (ref) => PreferencesController(ref.watch(preferencesRepositoryProvider)),
+  (ref) {
+ ref.watch(accountGenerationProvider);
+ return PreferencesController(ref.watch(preferencesRepositoryProvider));
+ },
 );
