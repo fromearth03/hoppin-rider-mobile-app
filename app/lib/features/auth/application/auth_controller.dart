@@ -226,8 +226,10 @@ class AuthController extends StateNotifier<AuthSnapshot> {
     };
     // Drop the dead session with it, or every launch repeats the same doomed
     // refresh before landing on the same login screen.
+    // A staff login is refused by the backend (STAFF_ACCOUNT): staff use the
+    // admin panel only, so drop that session too rather than keep it here.
     if (state.status == AuthStatus.signedOut &&
-        state.error == null &&
+        (state.error == null || state.error?.code == 'STAFF_ACCOUNT') &&
         _auth.currentSession != null) {
       await _auth.signOut();
     }

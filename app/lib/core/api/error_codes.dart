@@ -60,6 +60,8 @@ class RiderErrorCopy {
 
     // Account / session — auth gates
     'SESSION_REPLACED': 'You signed in on another device.',
+    'STAFF_ACCOUNT':
+        'This is a staff account. Staff sign in on the admin panel, not the app.',
     'ACCOUNT_SUSPENDED': 'Your account is suspended. Contact support.',
     'ACCOUNT_BANNED': 'Your account has been closed. Contact support.',
     'DEVICE_BLACKLISTED': 'This device has been blocked. Contact support.',
