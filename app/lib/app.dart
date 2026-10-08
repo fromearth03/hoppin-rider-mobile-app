@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/device/device_checkin.dart';
+import 'core/push/push_registrar.dart';
 import 'core/net/network_status.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
@@ -37,6 +38,9 @@ class _HoppinAppState extends ConsumerState<HoppinApp> {
     _lifecycle = AppLifecycleListener(onResume: () {
       if (ref.read(authControllerProvider).status == AuthStatus.signedIn) {
         ref.read(deviceCheckinProvider).report();
+        // This is the phone in use now: calls and notifications come here,
+        // not to another phone still signed in to the same account.
+        ref.read(pushRegistrarProvider).register();
       }
     });
     // Resolve the startup state exactly once, after the first frame so the

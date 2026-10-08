@@ -66,6 +66,19 @@ void main() {
     expect(adapter.sentAuth, 'Bearer jwt-abc');
   });
 
+  test('with eventNames, each item carries the event name', () async {
+    final dio = Dio()
+      ..httpClientAdapter = _StreamAdapter([
+        ': connected\n\nevent: ride\ndata: r-1\n\n',
+        'event: ticket\ndata: t-9\n\ndata: plain\n\n',
+      ]);
+    final client = ApiClient(dio, tokens, device, baseUrl: 'https://x.test');
+
+    final items = await client.sse('/me/events', eventNames: true).toList();
+
+    expect(items, ['ride\nr-1', 'ticket\nt-9', 'message\nplain']);
+  });
+
   test('a refused stream errors so the caller falls back to polling',
       () async {
     final dio = Dio()..httpClientAdapter = _StreamAdapter(['{}'], status: 409);

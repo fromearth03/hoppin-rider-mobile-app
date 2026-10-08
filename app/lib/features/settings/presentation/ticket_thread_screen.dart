@@ -10,6 +10,7 @@ import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
 import '../../../shared/nav/app_router.dart';
 import '../data/support_tickets_repository.dart';
+import '../../../core/live/my_events.dart';
 
 /// One ticket + its whole thread; opening it marks the thread read.
 final _ticketDetailProvider = FutureProvider.autoDispose
@@ -45,19 +46,33 @@ class _TicketThreadScreenState extends ConsumerState<TicketThreadScreen> {
   /// refresh is silent (the list keeps showing the last copy while it loads)
   /// and never touches the reply box.
   Timer? _poll;
+  StreamSubscription<MyEvent>? _signals;
 
   @override
   void initState() {
     super.initState();
-    _poll = Timer.periodic(const Duration(seconds: 5), (_) {
+    // A staff reply arrives as a "your ticket changed" signal; the timer is
+    // only a safety net (and the old 5 s refresh while the channel is down).
+    final events = ref.read(myEventsProvider);
+    void refresh() {
       if (!mounted || _sending) return;
       ref.invalidate(_ticketDetailProvider(widget.ticketId));
+    }
+    _signals = events.watch('ticket', widget.ticketId).listen((_) => refresh());
+    var lastSafety = DateTime.now();
+    _poll = Timer.periodic(const Duration(seconds: 5), (_) {
+      final now = DateTime.now();
+      if (!events.live || now.difference(lastSafety).inSeconds >= 60) {
+        lastSafety = now;
+        refresh();
+      }
     });
   }
 
   @override
   void dispose() {
     _poll?.cancel();
+    _signals?.cancel();
     _reply.dispose();
     super.dispose();
   }

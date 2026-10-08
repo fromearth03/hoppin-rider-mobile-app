@@ -55,16 +55,21 @@ Future<void> initFirebaseGuarded() async {
 
 class PushRegistrar {
   final ApiClient _api;
-  bool _registered = false;
   bool _listening = false;
+  bool _inFlight = false;
 
   PushRegistrar(this._api);
 
-  /// Fire-and-forget on every arrival at signed-in. Latched per session; a
-  /// failure clears the latch so the next sign-in retries.
+  /// Tells the server THIS phone is the one to ring and notify. Called on every
+  /// sign-in and every time the app comes back to the foreground, so the phone
+  /// the rider last opened Hoppin on always wins (the server keeps one live
+  /// push target per account and retires the others). It used to run once per
+  /// sign-in and never again, and a failed send was treated as done: a second
+  /// phone signed in to the same account could keep getting the calls.
+  /// Never throws; push may never stop the app.
   Future<void> register() async {
-    if (!_firebaseReady || _registered) return;
-    _registered = true;
+    if (!_firebaseReady || _inFlight) return;
+    _inFlight = true;
     try {
       final messaging = FirebaseMessaging.instance;
       final settings = await messaging.requestPermission();
@@ -72,10 +77,7 @@ class PushRegistrar {
       final token = await messaging.getToken(
         vapidKey: PushConfig.vapidKey.isEmpty ? null : PushConfig.vapidKey,
       );
-      if (token == null || token.isEmpty) {
-        _registered = false;
-        return;
-      }
+      if (token == null || token.isEmpty) return;
       await _post(token);
       if (!_listening) {
         _listening = true;
@@ -84,7 +86,9 @@ class PushRegistrar {
         messaging.onTokenRefresh.listen((t) => _post(t), onError: (_) {});
       }
     } catch (_) {
-      _registered = false; // unregistered platform app / no play services
+      // unregistered platform app / no play services: next foreground retries
+    } finally {
+      _inFlight = false;
     }
   }
 

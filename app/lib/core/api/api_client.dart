@@ -63,7 +63,10 @@ class ApiClient {
   /// Same auth headers as every call. The stream ends (or errors) when the
   /// connection drops; the caller decides whether to reconnect. Not used on
   /// web, where the browser HTTP adapter buffers the whole response.
-  Stream<String> sse(String path) async* {
+  ///
+  /// With [eventNames], each item is "<event name>\n<data>" (the name is
+  /// "message" when the server sent none).
+  Stream<String> sse(String path, {bool eventNames = false}) async* {
     final res = await _dio.get<ResponseBody>(
       path,
       options: Options(
@@ -85,12 +88,21 @@ class ApiClient {
       while ((end = buffer.indexOf('\n\n')) >= 0) {
         final event = buffer.substring(0, end);
         buffer = buffer.substring(end + 2);
-        final data = event
-            .split('\n')
+        final lines = event.split('\n');
+        final data = lines
             .where((l) => l.startsWith('data:'))
             .map((l) => l.substring(5).trimLeft())
             .join('\n');
-        if (data.isNotEmpty) yield data;
+        if (data.isEmpty) continue;
+        if (!eventNames) {
+          yield data;
+          continue;
+        }
+        final name = lines
+            .firstWhere((l) => l.startsWith('event:'), orElse: () => 'event:message')
+            .substring(6)
+            .trim();
+        yield '$name\n$data';
       }
     }
   }

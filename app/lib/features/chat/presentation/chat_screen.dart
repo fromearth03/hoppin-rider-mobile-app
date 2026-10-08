@@ -9,6 +9,7 @@ import '../../../core/api/error_codes.dart';
 import '../../../core/result.dart';
 import '../../../core/theme/colors.dart';
 import '../data/chat_repository.dart';
+import '../../../core/live/my_events.dart';
 
 /// In-ride chat with the driver.
 ///
@@ -40,6 +41,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _messages = <RideMessage>[];
   DateTime? _since;
   Timer? _poll;
+  StreamSubscription<MyEvent>? _signals;
   bool _sending = false;
   ApiException? _error;
   bool _loadedOnce = false;
@@ -57,13 +59,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       return;
     }
     _load();
-    // There is no websocket for chat; the server expects a `since` cursor.
-    _poll = Timer.periodic(const Duration(seconds: 4), (_) => _load());
+    // New messages arrive as a "your chat changed" signal; the timer is only a
+    // safety net (and the old 4 s refresh while the live channel is down).
+    final events = ref.read(myEventsProvider);
+    _signals = events.watch('chat', widget.rideId).listen((_) => _load());
+    var lastSafety = DateTime.now();
+    _poll = Timer.periodic(const Duration(seconds: 4), (_) {
+      final now = DateTime.now();
+      if (!events.live || now.difference(lastSafety).inSeconds >= 30) {
+        lastSafety = now;
+        _load();
+      }
+    });
   }
 
   @override
   void dispose() {
     _poll?.cancel();
+    _signals?.cancel();
     _input.dispose();
     _scroll.dispose();
     super.dispose();

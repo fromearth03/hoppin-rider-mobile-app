@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/live/my_events.dart';
 import '../../../core/app_status.dart';
 import '../../../core/geo.dart';
 import '../../../core/money.dart';
@@ -23,7 +26,11 @@ import 'live_trip_source.dart';
 /// written against the decisions doc's guess and stays only for its tests.
 class RideContextRepository {
   final ApiClient _api;
-  const RideContextRepository(this._api);
+
+  /// The rider's live channel; when present, [watch] re-reads the ride the
+  /// moment the server says it changed instead of every [interval].
+  final MyEvents? _events;
+  const RideContextRepository(this._api, [this._events]);
 
   Future<Result<LiveTripInfo>> fetch(String rideId) async {
     if (rideId.isEmpty) {
@@ -106,46 +113,67 @@ class RideContextRepository {
       {Duration interval = const Duration(seconds: 2)}) async* {
     var id = rideId;
     LiveTripInfo? last;
-    while (true) {
-      if (id.isEmpty) {
-        id = await activeRideId() ?? '';
-        if (id.isEmpty) {
-          // Dispatch has the request but no ride row yet — honest matching
-          // state, then ask again next tick.
-          last ??= LiveTripInfo.awaiting(id);
-          yield last;
-          await Future<void>.delayed(interval);
-          continue;
-        }
+    // Woken by a "your ride changed" signal; otherwise a slow safety refresh
+    // while the channel is up, or the old [interval] while it is down.
+    Completer<void>? wake;
+    final signals = _events?.watch('ride', '').listen((e) {
+      if (id.isEmpty || e.id == id) {
+        final w = wake;
+        if (w != null && !w.isCompleted) w.complete();
       }
+    });
+    Future<void> nap() async {
+      final w = wake = Completer<void>();
+      final wait =
+          (_events?.live ?? false) ? const Duration(seconds: 30) : interval;
+      await Future.any([w.future, Future<void>.delayed(wait)]);
+      wake = null;
+    }
 
-      final result = await fetch(id);
-      switch (result) {
-        case Ok(:final value):
-          last = value;
-          yield value;
-        case Err(:final error)
-            when error.status == 404 || error.code == 'RIDE_NOT_FOUND':
-          // The id we hold is not a ride (a dispatch request id, or a ride
-          // that vanished). Re-resolve rather than 404ing forever.
-          final resolved = await activeRideId();
-          if (resolved != null && resolved != id) {
-            id = resolved;
-            continue; // retry immediately with the real id
-          }
-          if (last == null) {
-            last = LiveTripInfo.awaiting(id);
+    try {
+      while (true) {
+        if (id.isEmpty) {
+          id = await activeRideId() ?? '';
+          if (id.isEmpty) {
+            // Dispatch has the request but no ride row yet — honest matching
+            // state, then ask again next tick.
+            last ??= LiveTripInfo.awaiting(id);
             yield last;
+            await nap();
+            continue;
           }
-        case Err():
-          // Transient transport error: keep the last emitted state rather
-          // than flapping the screen into an error it has no rendering for.
-          if (last == null) {
-            last = LiveTripInfo.awaiting(id);
-            yield last;
-          }
+        }
+
+        final result = await fetch(id);
+        switch (result) {
+          case Ok(:final value):
+            last = value;
+            yield value;
+          case Err(:final error)
+              when error.status == 404 || error.code == 'RIDE_NOT_FOUND':
+            // The id we hold is not a ride (a dispatch request id, or a ride
+            // that vanished). Re-resolve rather than 404ing forever.
+            final resolved = await activeRideId();
+            if (resolved != null && resolved != id) {
+              id = resolved;
+              continue; // retry immediately with the real id
+            }
+            if (last == null) {
+              last = LiveTripInfo.awaiting(id);
+              yield last;
+            }
+          case Err():
+            // Transient transport error: keep the last emitted state rather
+            // than flapping the screen into an error it has no rendering for.
+            if (last == null) {
+              last = LiveTripInfo.awaiting(id);
+              yield last;
+            }
+        }
+        await nap();
       }
-      await Future<void>.delayed(interval);
+    } finally {
+      await signals?.cancel();
     }
   }
 
@@ -284,7 +312,8 @@ class RideContextRepository {
 }
 
 final rideContextRepositoryProvider = Provider<RideContextRepository>(
-    (ref) => RideContextRepository(ref.watch(apiClientProvider)));
+    (ref) => RideContextRepository(
+        ref.watch(apiClientProvider), ref.watch(myEventsProvider)));
 
 /// The rider's current non-terminal ride id (null if none). The app gate reads
 /// this so maintenance mode lets a rider with a LIVE ride keep using their trip

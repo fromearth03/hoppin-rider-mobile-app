@@ -8,6 +8,7 @@ import 'package:livekit_client/livekit_client.dart';
 import '../../../core/result.dart';
 import '../data/calls_repository.dart';
 import 'call_tones.dart';
+import '../../../core/live/my_events.dart';
 
 /// Where a call is. `ringing` is an outgoing call waiting for an answer;
 /// `incoming` is one ringing on this phone.
@@ -99,6 +100,7 @@ class CallController extends Notifier<CallState> {
   EventsListener<RoomEvent>? _listener;
   Timer? _ringTimer;
   Timer? _poll;
+  StreamSubscription<MyEvent>? _signals;
   Timer? _reset;
   bool _hangingUp = false;
   bool _viaCallKit = false;
@@ -381,6 +383,7 @@ class CallController extends Notifier<CallState> {
     if (state.phase == CallPhase.connected) return;
     _ringTimer?.cancel();
     _poll?.cancel();
+    _signals?.cancel();
     unawaited(CallTones.stop());
     state = state.copyWith(
       phase: CallPhase.connected,
@@ -397,7 +400,23 @@ class CallController extends Notifier<CallState> {
   /// Pushes can be late or lost, so an outgoing call also asks the backend
   /// every few seconds whether the driver declined or it rang out.
   void _pollWhileRinging() {
-    _poll = Timer.periodic(const Duration(seconds: 3), (_) async {
+    // The answer / decline / ring-out arrives as a "your call changed" signal;
+    // the 3 s check only runs while the live channel is down (every 15 s
+    // otherwise, as a safety net).
+    final events = ref.read(myEventsProvider);
+    _signals?.cancel();
+    _signals = events.watch('call', '').listen((e) {
+      if (e.id == state.callId) _checkRinging();
+    });
+    var ticks = 0;
+    _poll = Timer.periodic(const Duration(seconds: 3), (_) {
+      ticks++;
+      if (!events.live || ticks % 5 == 0) _checkRinging();
+    });
+  }
+
+  Future<void> _checkRinging() async {
+    {
       final id = state.callId;
       if (id == null || state.phase != CallPhase.ringing) return;
       final res = await _repo.status(id);
@@ -415,7 +434,7 @@ class CallController extends Notifier<CallState> {
             _endLocally('Call ended');
         }
       }
-    });
+    }
   }
 
   Future<void> _endLocally(String reason) async {
@@ -452,6 +471,7 @@ class CallController extends Notifier<CallState> {
     unawaited(CallTones.proximity(false));
     _ringTimer?.cancel();
     _poll?.cancel();
+    _signals?.cancel();
     state = state.copyWith(phase: CallPhase.ended, endReason: reason);
     final ended = state;
     // A failure carries its error on a second line; leave it up long enough
@@ -479,6 +499,7 @@ class CallController extends Notifier<CallState> {
     unawaited(CallTones.stop());
     _ringTimer?.cancel();
     _poll?.cancel();
+    _signals?.cancel();
     _reset?.cancel();
     unawaited(_teardownRoom());
   }
