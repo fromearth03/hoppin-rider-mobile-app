@@ -338,8 +338,23 @@ class CallController extends Notifier<CallState> {
           state = state.copyWith(phase: CallPhase.connected);
         }
       })
-      ..on<RoomDisconnectedEvent>((_) {
-        if (!_hangingUp && state.isActive) _endLocally('Call dropped');
+      ..on<RoomDisconnectedEvent>((_) async {
+        if (_hangingUp || !state.isActive) return;
+        // The server closes the room when the other side hangs up, so ask it
+        // why before calling this a dropped line.
+        final id = state.callId;
+        var reason = 'Call dropped';
+        if (id != null) {
+          final res = await _repo.status(id);
+          if (res case Ok(:final value)
+              when const {'ended', 'cancelled', 'declined', 'missed', 'failed'}
+                  .contains(value.status)) {
+            reason = 'Call ended';
+          }
+        }
+        if (!_hangingUp && state.isActive && state.callId == id) {
+          _endLocally(reason);
+        }
       });
     // Three steps, three outcomes. Only the first two can sink a call: an
     // earpiece/speaker preference the platform refuses must not hang up a
