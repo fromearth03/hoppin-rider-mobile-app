@@ -19,6 +19,7 @@ class RiderErrorCopy {
   static const _copy = <String, String>{
     // Booking guards — ride_handler.go:830-844
     'ACCOUNT_NOT_ELIGIBLE': 'Your account cannot book a ride right now.',
+    'DOB_REQUIRED': 'Add your date of birth before booking.',
     'ACTIVE_TRIP_EXISTS': 'You already have a trip in progress.',
     'OUTSIDE_SERVICE_AREA': 'Hoppin is not available at this pickup location.',
     'NO_PAYMENT_METHOD': 'Add a payment card to book a ride.',

@@ -3,13 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/api/error_codes.dart';
+import '../../../core/auth/account_generation.dart';
 import '../../../core/result.dart';
+import '../../auth/application/auth_controller.dart';
+import '../../auth/data/profile_repository.dart';
 import '../../../shared/nav/app_router.dart';
 import '../data/booking_repository.dart';
 import '../data/fare_repository.dart' show FareEstimate;
 import '../data/promo_repository.dart';
 import '../data/vehicle_repository.dart';
 import 'fare_confirm_screen.dart';
+import 'widgets/booking_dob_dialog.dart';
 import 'home_screen.dart' show vehicleCategoriesProvider;
 import 'route_entry_screen.dart' show ChosenRoute;
 
@@ -36,6 +40,7 @@ class _FareConfirmFlowState extends ConsumerState<FareConfirmFlow> {
   Future<void> _book(VehicleCategory category, FareEstimate? estimate,
       String note, String promoCode) async {
     if (_booking) return; // a double-tap on Confirm must not book twice
+    final generation = ref.read(accountGenerationProvider);
     setState(() => _booking = true);
 
     final result = await ref.read(bookingRepositoryProvider).request(
@@ -59,6 +64,7 @@ class _FareConfirmFlowState extends ConsumerState<FareConfirmFlow> {
         );
     if (!mounted) return;
     setState(() => _booking = false);
+    if (generation != ref.read(accountGenerationProvider)) return;
 
     switch (result) {
       case Ok(:final value):
@@ -95,6 +101,22 @@ class _FareConfirmFlowState extends ConsumerState<FareConfirmFlow> {
         // stays as the fallback resolver for stale links.
         context.go('${AppRoutes.liveTrip}?ride=${value.rideId}');
       case Err(:final error):
+        if (error.code == 'DOB_REQUIRED') {
+          final profile = await showDialog<RiderProfile>(
+            context: context,
+            builder: (_) => const BookingDobDialog(),
+          );
+          if (!mounted ||
+              generation != ref.read(accountGenerationProvider) ||
+              profile == null) {
+            return;
+          }
+          ref.read(authControllerProvider.notifier).acceptUpdatedProfile(profile);
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Date of birth saved. Confirm your booking when ready.'),
+          ));
+          return;
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(RiderErrorCopy.messageFor(error))),
         );

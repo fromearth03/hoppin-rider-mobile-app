@@ -165,6 +165,12 @@ class AuthController extends StateNotifier<AuthSnapshot> {
     if (state.status == AuthStatus.signedIn) _onSignedIn?.call();
   }
 
+  /// Apply a successful profile edit after the caller checks account identity.
+  void acceptUpdatedProfile(RiderProfile profile) {
+    if (state.status != AuthStatus.signedIn) return;
+    state = state.copyWith(profile: profile, clearError: true);
+  }
+
   Future<void> signOut() async {
     _onSignedOut?.call();
     await _auth.signOut();

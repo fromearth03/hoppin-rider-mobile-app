@@ -11,6 +11,8 @@ import 'package:hoppin_rider/features/booking/data/booking_repository.dart';
 import 'package:hoppin_rider/features/booking/data/fare_repository.dart';
 import 'package:hoppin_rider/features/booking/data/vehicle_repository.dart';
 import 'package:hoppin_rider/features/booking/presentation/fare_confirm_flow.dart';
+import 'package:hoppin_rider/features/booking/presentation/fare_confirm_screen.dart';
+import 'package:hoppin_rider/features/booking/presentation/widgets/booking_dob_dialog.dart';
 import 'package:hoppin_rider/features/booking/presentation/home_screen.dart';
 import 'package:hoppin_rider/features/booking/presentation/route_entry_screen.dart';
 import 'package:hoppin_rider/features/booking/presentation/widgets/vehicle_card.dart';
@@ -112,6 +114,43 @@ void main() {
     expect((captured.single as LatLng).lat, _route.pickup.position.lat);
   });
 
+  testWidgets('DOB_REQUIRED opens recovery without booking again', (tester) async {
+    when(() => booking.request(
+          pickup: any(named: 'pickup'),
+          dropoff: any(named: 'dropoff'),
+          vehicleCategoryId: any(named: 'vehicleCategoryId'),
+          waypoints: any(named: 'waypoints'),
+          estimatePence: any(named: 'estimatePence'),
+          estimateDistanceMeters: any(named: 'estimateDistanceMeters'),
+          estimateDurationSeconds: any(named: 'estimateDurationSeconds'),
+          pickupLabel: any(named: 'pickupLabel'),
+          dropoffLabel: any(named: 'dropoffLabel'),
+          riderNote: any(named: 'riderNote'),
+        )).thenAnswer((_) async => const Err(
+          ApiException('DOB_REQUIRED', 'set your date of birth before booking', 403),
+        ));
+    await tester.pumpWidget(harness());
+    await tester.pumpAndSettle();
+    tester.widget<FareConfirmScreen>(find.byType(FareConfirmScreen))
+        .onConfirm!(_standard, _estimate, '', '');
+    await tester.pumpAndSettle();
+    expect(find.byType(BookingDobDialog), findsOneWidget);
+    expect(find.text('Add your date of birth before booking.'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.byType(FareConfirmFlow), findsOneWidget);
+    expect(location, isNull);
+    verify(() => booking.request(
+          pickup: any(named: 'pickup'), dropoff: any(named: 'dropoff'),
+          vehicleCategoryId: any(named: 'vehicleCategoryId'),
+          waypoints: any(named: 'waypoints'), estimatePence: any(named: 'estimatePence'),
+          estimateDistanceMeters: any(named: 'estimateDistanceMeters'),
+          estimateDurationSeconds: any(named: 'estimateDurationSeconds'),
+          pickupLabel: any(named: 'pickupLabel'), dropoffLabel: any(named: 'dropoffLabel'),
+          riderNote: any(named: 'riderNote'),
+        )).called(1);
+  });
+
   testWidgets('confirm books the ride and lands on the live trip',
       (tester) async {
     when(() => booking.request(
@@ -198,10 +237,12 @@ void main() {
                 of: find.byType(DraggableScrollableSheet),
                 matching: find.byType(Scrollable))
             .first);
+    await tester.ensureVisible(find.text('Confirm Booking'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Confirm Booking'));
     await tester.pumpAndSettle();
 
     expect(find.text('live trip'), findsNothing);
-    expect(find.textContaining('card'), findsWidgets);
+    expect(find.text('Add a payment card first.'), findsOneWidget);
   });
 }
