@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -52,23 +53,23 @@ class _RenameDialogState extends State<_RenameDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Rename this place'),
+      title: const AppText('Rename this place'),
       content: TextField(
         controller: _controller,
         autofocus: true,
-        decoration: const InputDecoration(labelText: 'Label'),
+        decoration: InputDecoration(labelText: tr(context, 'Label')),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: const AppText('Cancel'),
         ),
         TextButton(
           onPressed: () {
             final label = _controller.text.trim();
             Navigator.of(context).pop(label.isEmpty ? null : label);
           },
-          child: const Text('Save'),
+          child: const AppText('Save'),
         ),
       ],
     );
@@ -186,7 +187,7 @@ class _AddPlaceDialogState extends ConsumerState<_AddPlaceDialog> {
     final chosen = _chosen;
 
     return AlertDialog(
-      title: const Text('Add a place'),
+      title: const AppText('Add a place'),
       content: SizedBox(
         width: double.maxFinite,
         child: Column(
@@ -198,9 +199,9 @@ class _AddPlaceDialogState extends ConsumerState<_AddPlaceDialog> {
                 controller: _search,
                 autofocus: true,
                 onChanged: _onSearchChanged,
-                decoration: const InputDecoration(
-                  labelText: 'Search for a place',
-                  prefixIcon: Icon(Icons.search),
+                decoration: InputDecoration(
+                  labelText: tr(context, 'Search for a place'),
+                  prefixIcon: const Icon(Icons.search),
                 ),
               ),
             if (chosen == null) ...[
@@ -210,7 +211,7 @@ class _AddPlaceDialogState extends ConsumerState<_AddPlaceDialog> {
                 child: TextButton.icon(
                   onPressed: _pickOnMap,
                   icon: const Icon(Icons.map_outlined, size: 18),
-                  label: const Text('Choose on map instead'),
+                  label: const AppText('Choose on map instead'),
                 ),
               ),
             ],
@@ -235,7 +236,7 @@ class _AddPlaceDialogState extends ConsumerState<_AddPlaceDialog> {
                       _chosen = null;
                       _label.clear();
                     }),
-                    child: const Text('Change'),
+                    child: const AppText('Change'),
                   ),
                 ],
               ),
@@ -243,9 +244,9 @@ class _AddPlaceDialogState extends ConsumerState<_AddPlaceDialog> {
               TextField(
                 controller: _label,
                 autofocus: true,
-                decoration: const InputDecoration(
-                  labelText: 'Save as',
-                  hintText: 'Home, Work, Mum\u2019s',
+                decoration: InputDecoration(
+                  labelText: tr(context, 'Save as'),
+                  hintText: trOptional(context, 'Home, Work, Mum\u2019s'),
                 ),
               ),
             ],
@@ -259,11 +260,11 @@ class _AddPlaceDialogState extends ConsumerState<_AddPlaceDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: const AppText('Cancel'),
         ),
         TextButton(
           onPressed: chosen == null ? null : _save,
-          child: const Text('Save'),
+          child: const AppText('Save'),
         ),
       ],
     );
@@ -273,7 +274,7 @@ class _AddPlaceDialogState extends ConsumerState<_AddPlaceDialog> {
     if (_chosen != null) return const SizedBox.shrink();
 
     if (_searchError != null) {
-      return Text(
+      return AppText(
         RiderErrorCopy.messageFor(_searchError!),
         style: const TextStyle(color: AppColors.negative),
       );

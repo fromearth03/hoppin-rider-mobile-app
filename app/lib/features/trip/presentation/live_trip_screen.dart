@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -213,14 +214,14 @@ class _LiveTripBody extends ConsumerWidget {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
+                        AppText(
                           'This ride was cancelled',
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontSize: 17, color: AppColors.ink),
                         ),
                         const SizedBox(height: 6),
-                        Text(
+                        AppText(
                           'No driver could be found nearby, or the ride was '
                           'cancelled. You have not been charged.',
                           textAlign: TextAlign.center,
@@ -229,7 +230,7 @@ class _LiveTripBody extends ConsumerWidget {
                         const SizedBox(height: 14),
                         FilledButton(
                           onPressed: () => context.go(AppRoutes.home),
-                          child: const Text('Book again'),
+                          child: const AppText('Book again'),
                         ),
                       ],
                     ),
@@ -317,14 +318,14 @@ class _LiveTripBody extends ConsumerWidget {
       case Ok():
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Ride cancelled.')));
+        ).showSnackBar(const SnackBar(content: AppText('Ride cancelled.')));
         context.go(AppRoutes.home);
       // The ride is already terminal — dispatch auto-cancelled it (no
       // driver) a moment before the tap, or it completed. From the rider's
       // seat that IS a successful cancel, not an error to apologise for.
       case Err(:final error) when error.code == 'ILLEGAL_TRANSITION':
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('This ride has already ended.')),
+          const SnackBar(content: AppText('This ride has already ended.')),
         );
         context.go(AppRoutes.home);
       // "Driver didn't show up" reported too early, or after the driver
@@ -339,7 +340,7 @@ class _LiveTripBody extends ConsumerWidget {
         );
       case Err(:final error):
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(RiderErrorCopy.messageFor(error))),
+          SnackBar(content: AppText(RiderErrorCopy.messageFor(error))),
         );
     }
   }
@@ -616,7 +617,7 @@ class _CancelReasonSheetState extends State<_CancelReasonSheet> {
           shrinkWrap: true,
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
           children: [
-            Text(
+            AppText(
               'Cancel this ride?',
               textAlign: TextAlign.center,
               style: theme.textTheme.titleMedium?.copyWith(
@@ -668,7 +669,7 @@ class _CancelReasonSheetState extends State<_CancelReasonSheet> {
               ),
             ),
             const SizedBox(height: 12),
-            Text(
+            AppText(
               'Tell us why (optional):',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium,
@@ -704,7 +705,7 @@ class _CancelReasonSheetState extends State<_CancelReasonSheet> {
               dense: true,
               contentPadding: EdgeInsets.zero,
               activeColor: AppColors.fill,
-              title: const Text(
+              title: const AppText(
                 'Prefer not to say',
                 style: TextStyle(fontSize: 14),
               ),
@@ -715,11 +716,11 @@ class _CancelReasonSheetState extends State<_CancelReasonSheet> {
                 true,
                 _selected == null || _selected!.isEmpty ? null : _selected,
               )),
-              child: const Text('Cancel Ride'),
+              child: const AppText('Cancel Ride'),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop((false, null)),
-              child: const Text('Keep ride'),
+              child: const AppText('Keep ride'),
             ),
           ],
         ),
@@ -848,12 +849,12 @@ class _DriverHereCardState extends ConsumerState<_DriverHereCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Your driver is here',
+                  AppText('Your driver is here',
                       style: TextStyle(
                           color: Colors.white,
                           fontSize: 15,
                           fontWeight: FontWeight.w600)),
-                  Text('Let them know you\u2019re on your way out',
+                  AppText('Let them know you\u2019re on your way out',
                       style: TextStyle(color: Colors.white70, fontSize: 12)),
                 ],
               ),
@@ -872,7 +873,7 @@ class _DriverHereCardState extends ConsumerState<_DriverHereCard> {
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('I\u2019m coming'),
+                  : const AppText('I\u2019m coming'),
             ),
           ],
         ),
@@ -902,7 +903,7 @@ class _RiderNoteChip extends StatelessWidget {
                 size: 16, color: AppColors.ink),
             const SizedBox(width: 8),
             Expanded(
-              child: Text(
+              child: AppText(
                 'Your note: $note',
                 style: const TextStyle(fontSize: 12.5),
                 maxLines: 2,
@@ -928,11 +929,11 @@ class _DestinationBar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
+          const AppText(
             'Destination',
             style: TextStyle(color: Colors.white70, fontSize: 12),
           ),
-          Text(
+          AppText(
             label,
             style: const TextStyle(
               color: Colors.white,

@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -128,18 +129,18 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Remove this card?'),
-        content: Text(
+        title: const AppText('Remove this card?'),
+        content: AppText(
             '${card.displayLabel} will be removed from your account. This cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: const AppText('Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(foregroundColor: AppColors.negative),
-            child: const Text('Remove'),
+            child: const AppText('Remove'),
           ),
         ],
       ),
@@ -188,8 +189,8 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
       await showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Add a card'),
-          content: const Text(kIsWeb
+          title: const AppText('Add a card'),
+          content: const AppText(kIsWeb
               ? 'Card entry needs the mobile app — the Stripe card field is '
                   'not available in this web build. Nothing was charged or saved.'
               : 'Card entry is unavailable in this build — the Stripe key is '
@@ -197,7 +198,7 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'),
+              child: const AppText('OK'),
             ),
           ],
         ),
@@ -275,7 +276,7 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
           onPressed: () => Navigator.of(context).maybePop(),
           icon: const Icon(Icons.arrow_back),
         ),
-        title: const Text('Payment Methods'),
+        title: const AppText('Payment Methods'),
         centerTitle: true,
       ),
       body: SafeArea(
@@ -290,7 +291,7 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
               ElevatedButton.icon(
                 onPressed: _startAddCard,
                 icon: const Icon(Icons.add),
-                label: const Text('Add Payment Methods'),
+                label: const AppText('Add Payment Methods'),
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size.fromHeight(56),
                   backgroundColor: AppColors.fill,
@@ -322,7 +323,7 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
             Text(_errorMessage!,
                 textAlign: TextAlign.center, style: theme.textTheme.bodyLarge),
             const SizedBox(height: 16),
-            OutlinedButton(onPressed: _load, child: const Text('Retry')),
+            OutlinedButton(onPressed: _load, child: const AppText('Retry')),
           ],
         ),
       );
@@ -336,10 +337,10 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
             Icon(Icons.credit_card_off,
                 size: 40, color: theme.textTheme.bodyMedium?.color),
             const SizedBox(height: 12),
-            Text('No payment cards saved yet',
+            AppText('No payment cards saved yet',
                 style: theme.textTheme.bodyLarge, textAlign: TextAlign.center),
             const SizedBox(height: 4),
-            Text('Add a card to book a ride.',
+            AppText('Add a card to book a ride.',
                 style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
           ],
         ),
@@ -371,7 +372,7 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
           // rides.
           if (recent.isNotEmpty) ...[
             const SizedBox(height: 10),
-            Text('Recent Payments',
+            AppText('Recent Payments',
                 style: theme.textTheme.titleMedium
                     ?.copyWith(fontSize: 15, color: AppColors.ink)),
             const SizedBox(height: 8),
@@ -417,20 +418,20 @@ class _RecentPaymentRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                AppText(
                   trip.dropoffLabel ?? trip.pickupLabel ?? 'Ride',
                   style: theme.textTheme.bodyLarge
                       ?.copyWith(fontSize: 14, color: AppColors.ink),
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
-                Text(DateFormat('d MMM, yyyy').format(when),
+                AppText(DateFormat('d MMM, yyyy').format(when),
                     style:
                         theme.textTheme.bodyMedium?.copyWith(fontSize: 11.5)),
               ],
             ),
           ),
-          Text(
+          AppText(
             // A charge leaving the rider's card, as the frame signs it.
             '-${trip.totalPence!.format(currency: trip.currency)}',
             style: theme.textTheme.titleMedium
@@ -473,11 +474,11 @@ class _CreditBanner extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Hoppin credit',
+                AppText('Hoppin credit',
                     style: theme.textTheme.bodyMedium
                         ?.copyWith(color: Colors.white.withValues(alpha: 0.8))),
                 const SizedBox(height: 2),
-                Text('Used automatically on your next ride',
+                AppText('Used automatically on your next ride',
                     style: theme.textTheme.bodyMedium?.copyWith(
                         color: Colors.white.withValues(alpha: 0.65),
                         fontSize: 12)),

@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -81,14 +82,14 @@ class _Failed extends StatelessWidget {
           Icon(Icons.cloud_off_rounded,
               size: 34, color: AppColors.textDisabled),
           const SizedBox(height: 12),
-          Text(
+          AppText(
             message,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           if (onRetry != null) ...[
             const SizedBox(height: 14),
-            OutlinedButton(onPressed: onRetry, child: const Text('Try again')),
+            OutlinedButton(onPressed: onRetry, child: const AppText('Try again')),
           ],
         ],
       ),
@@ -103,7 +104,7 @@ class _Empty extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 32),
         child: Center(
-          child: Text('Nothing here yet',
+          child: AppText('Nothing here yet',
               style: Theme.of(context).textTheme.bodyMedium),
         ),
       );

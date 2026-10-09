@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -54,20 +55,20 @@ class _SafetyScreenState extends ConsumerState<SafetyScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Raise an emergency alert?'),
-        content: const Text(
+        title: const AppText('Raise an emergency alert?'),
+        content: const AppText(
           'Our safety team is notified immediately and will contact you. '
           'Only use this if you feel unsafe.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
+            child: const AppText('Cancel'),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             style: FilledButton.styleFrom(backgroundColor: AppColors.negative),
-            child: const Text('Raise alert'),
+            child: const AppText('Raise alert'),
           ),
         ],
       ),
@@ -112,7 +113,7 @@ class _SafetyScreenState extends ConsumerState<SafetyScreen> {
     final platform = ref.watch(platformContactsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Safety')),
+      appBar: AppBar(title: const AppText('Safety')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -136,17 +137,17 @@ class _SafetyScreenState extends ConsumerState<SafetyScreen> {
             urgent: true,
           ),
           const SizedBox(height: 6),
-          Text(
+          AppText(
             'Talk to the Hoppin team through the app. No phone credit needed.',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall,
           ),
           const SizedBox(height: 28),
-          Text('Emergency contacts', style: theme.textTheme.titleMedium),
+          AppText('Emergency contacts', style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
           _Contacts(contacts: contacts),
           const SizedBox(height: 28),
-          Text('Get help', style: theme.textTheme.titleMedium),
+          AppText('Get help', style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
           _PlatformContacts(contacts: platform),
         ],
@@ -180,7 +181,7 @@ class _SosButton extends StatelessWidget {
                       const Icon(Icons.warning_amber_rounded,
                           color: Colors.white, size: 40),
                       const SizedBox(height: 6),
-                      Text('SOS',
+                      AppText('SOS',
                           style: Theme.of(context)
                               .textTheme
                               .headlineLarge
@@ -207,7 +208,7 @@ class _Contacts extends StatelessWidget {
         padding: EdgeInsets.symmetric(vertical: 20),
         child: Center(child: CircularProgressIndicator()),
       ),
-      error: (e, _) => Text(
+      error: (e, _) => AppText(
         e is ApiException
             ? RiderErrorCopy.messageFor(e)
             : 'Could not load your contacts.',
@@ -215,7 +216,7 @@ class _Contacts extends StatelessWidget {
       ),
       data: (list) {
         if (list.isEmpty) {
-          return Text(
+          return AppText(
             'No emergency contacts yet. Add someone we can reach if you '
             'need help.',
             style: Theme.of(context).textTheme.bodyMedium,
@@ -232,7 +233,7 @@ class _Contacts extends StatelessWidget {
                 child: ListTile(
                   leading: const Icon(Icons.person_outline),
                   title: Text(c.name),
-                  subtitle: Text(c.relationship == null
+                  subtitle: AppText(c.relationship == null
                       ? c.phone
                       : '${c.relationship} · ${c.phone}'),
                 ),
@@ -300,7 +301,7 @@ class _Row extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: Icon(icon),
-        title: Text(label),
+        title: AppText(label),
         subtitle: Text(value),
       ),
     );

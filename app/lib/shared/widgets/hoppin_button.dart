@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 /// Primary action button.
@@ -27,7 +28,7 @@ class HoppinButton extends StatelessWidget {
               child: CircularProgressIndicator(
                   strokeWidth: 2.5, color: Colors.white),
             )
-          : Text(label),
+          : AppText(label),
     );
   }
 }

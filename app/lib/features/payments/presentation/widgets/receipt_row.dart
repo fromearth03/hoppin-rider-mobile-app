@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 /// One label/value line inside a receipt card.
@@ -24,7 +25,7 @@ class ReceiptRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: theme.textTheme.bodyMedium),
+          AppText(label, style: theme.textTheme.bodyMedium),
           Text(
             value,
             style: emphasise

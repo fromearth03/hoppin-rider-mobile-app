@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 /// Labelled input matching the auth screens.
@@ -58,14 +59,22 @@ class _HoppinTextFieldState extends State<HoppinTextField> {
       keyboardType: widget.keyboardType,
       enabled: widget.enabled,
       onChanged: widget.onChanged,
-      validator: widget.validator,
+      validator: widget.validator == null
+          ? null
+          : (value) => trOptional(context, widget.validator!(value)),
+      textDirection:
+          widget.keyboardType == TextInputType.phone ||
+              widget.keyboardType == TextInputType.emailAddress ||
+              widget.label == 'Email'
+          ? TextDirection.ltr
+          : null,
       autovalidateMode: widget.autovalidateMode,
       autofillHints: widget.autofillHints,
       textInputAction: widget.textInputAction,
       decoration: InputDecoration(
-        labelText: widget.label,
-        hintText: widget.hint,
-        errorText: widget.errorText,
+        labelText: tr(context, widget.label),
+        hintText: trOptional(context, widget.hint),
+        errorText: trOptional(context, widget.errorText),
         prefixIcon: widget.prefixIcon,
         suffixIcon: widget.obscurable
             ? IconButton(
@@ -77,7 +86,10 @@ class _HoppinTextFieldState extends State<HoppinTextField> {
                 ),
                 // Screen readers otherwise announce an unlabelled button, and
                 // the icon alone does not say what it will do.
-                tooltip: _hidden ? 'Show password' : 'Hide password',
+                tooltip: tr(
+                  context,
+                  _hidden ? 'Show password' : 'Hide password',
+                ),
               )
             : null,
       ),

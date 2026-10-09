@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -63,7 +64,7 @@ class _PaymentMethodSheetState extends ConsumerState<_PaymentMethodSheet> {
         Navigator.of(context).pop();
       case Err(:final error):
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(RiderErrorCopy.messageFor(error))),
+          SnackBar(content: AppText(RiderErrorCopy.messageFor(error))),
         );
     }
   }
@@ -90,7 +91,7 @@ class _PaymentMethodSheetState extends ConsumerState<_PaymentMethodSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Center(
-            child: Text('Select Payment Method',
+            child: AppText('Select Payment Method',
                 style: theme.textTheme.titleMedium),
           ),
           const SizedBox(height: 16),
@@ -101,7 +102,7 @@ class _PaymentMethodSheetState extends ConsumerState<_PaymentMethodSheet> {
             ),
             error: (error, _) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Text(
+              child: AppText(
                 'Could not load your cards.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium,
@@ -113,7 +114,7 @@ class _PaymentMethodSheetState extends ConsumerState<_PaymentMethodSheet> {
                 if (list.isEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Text(
+                    child: AppText(
                       'No saved cards yet. Add one under Payments.',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium,
@@ -187,11 +188,11 @@ class _MethodRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
+                AppText(title,
                     style: theme.textTheme.bodyLarge
                         ?.copyWith(color: titleColor)),
                 if (subtitle != null)
-                  Text(subtitle!,
+                  AppText(subtitle!,
                       style: theme.textTheme.bodyMedium
                           ?.copyWith(fontSize: 12, color: muted)),
               ],

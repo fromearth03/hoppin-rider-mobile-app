@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show Platform;
@@ -493,7 +494,7 @@ class _OsmMapState extends State<_OsmMap> {
           border: Border.all(color: Colors.white, width: 2.5),
         ),
         alignment: Alignment.center,
-        child: Text(
+        child: AppText(
           label,
           style: const TextStyle(
             color: Colors.white,

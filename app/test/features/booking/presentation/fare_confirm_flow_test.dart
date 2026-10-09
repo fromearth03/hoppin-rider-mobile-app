@@ -12,13 +12,25 @@ import 'package:hoppin_rider/features/booking/data/fare_repository.dart';
 import 'package:hoppin_rider/features/booking/data/vehicle_repository.dart';
 import 'package:hoppin_rider/features/booking/presentation/fare_confirm_flow.dart';
 import 'package:hoppin_rider/features/booking/presentation/fare_confirm_screen.dart';
-import 'package:hoppin_rider/features/booking/presentation/widgets/booking_dob_dialog.dart';
+import 'package:hoppin_rider/features/auth/application/auth_controller.dart';
+import 'package:hoppin_rider/features/auth/data/auth_repository.dart';
+import 'package:hoppin_rider/features/auth/data/profile_repository.dart';
+import 'package:hoppin_rider/features/auth/domain/auth_state.dart';
 import 'package:hoppin_rider/features/booking/presentation/home_screen.dart';
 import 'package:hoppin_rider/features/booking/presentation/route_entry_screen.dart';
 import 'package:hoppin_rider/features/booking/presentation/widgets/vehicle_card.dart';
 import 'package:hoppin_rider/shared/nav/app_router.dart';
 import 'package:mocktail/mocktail.dart';
 
+class _AuthRepo extends Mock implements AuthRepository {}
+class _Profiles extends Mock implements ProfileRepository {}
+class _Auth extends AuthController {
+  _Auth(super.auth, super.profiles, {bool missing = false}) {
+    state = AuthSnapshot(status: AuthStatus.signedIn, profile: RiderProfile(
+      fullName: 'Rider', phoneNumber: null, email: 'r@example.com', avatarUrl: null,
+      dateOfBirth: missing ? null : '2000-01-01', rating: null, ratingCount: 0));
+  }
+}
 class _MockFares extends Mock implements FareRepository {}
 
 class _MockBooking extends Mock implements BookingRepository {}
@@ -60,10 +72,16 @@ void main() {
   late _MockBooking booking;
   String? location;
 
-  Widget harness() {
+  Widget harness({bool missingDob = false}) {
+    final authRepo = _AuthRepo();
+    when(() => authRepo.authStateChanges).thenAnswer((_) => const Stream.empty());
+    final auth = _Auth(authRepo, _Profiles(), missing: missingDob);
     final router = GoRouter(
       initialLocation: AppRoutes.fareConfirm,
       routes: [
+        GoRoute(path: AppRoutes.personalInformation, builder: (_, __) => Scaffold(
+          appBar: AppBar(title: const Text('Personal Information')),
+          body: const Text('Profile editor'))),
         GoRoute(
           path: AppRoutes.fareConfirm,
           builder: (_, __) => const FareConfirmFlow(route: _route),
@@ -79,6 +97,7 @@ void main() {
     );
     return ProviderScope(
       overrides: [
+        authControllerProvider.overrideWith((ref) => auth),
         vehicleCategoriesProvider.overrideWith((ref) async => [_standard]),
         fareRepositoryProvider.overrideWithValue(fares),
         bookingRepositoryProvider.overrideWithValue(booking),
@@ -114,7 +133,7 @@ void main() {
     expect((captured.single as LatLng).lat, _route.pickup.position.lat);
   });
 
-  testWidgets('DOB_REQUIRED opens recovery without booking again', (tester) async {
+  testWidgets('backend DOB_REQUIRED opens Personal Information without booking again', (tester) async {
     when(() => booking.request(
           pickup: any(named: 'pickup'),
           dropoff: any(named: 'dropoff'),
@@ -134,9 +153,9 @@ void main() {
     tester.widget<FareConfirmScreen>(find.byType(FareConfirmScreen))
         .onConfirm!(_standard, _estimate, '', '');
     await tester.pumpAndSettle();
-    expect(find.byType(BookingDobDialog), findsOneWidget);
-    expect(find.text('Add your date of birth before booking.'), findsOneWidget);
-    await tester.tap(find.text('Cancel'));
+    expect(find.text('Profile editor'), findsOneWidget);
+    expect(find.byType(DatePickerDialog), findsNothing);
+    await tester.pageBack();
     await tester.pumpAndSettle();
     expect(find.byType(FareConfirmFlow), findsOneWidget);
     expect(location, isNull);
@@ -149,6 +168,18 @@ void main() {
           pickupLabel: any(named: 'pickupLabel'), dropoffLabel: any(named: 'dropoffLabel'),
           riderNote: any(named: 'riderNote'),
         )).called(1);
+  });
+
+  testWidgets('missing DOB opens Personal Information before any booking request', (tester) async {
+    await tester.pumpWidget(harness(missingDob: true));
+    await tester.pumpAndSettle();
+    tester.widget<FareConfirmScreen>(find.byType(FareConfirmScreen)).onConfirm!(_standard, _estimate, '', '');
+    await tester.pumpAndSettle();
+    expect(find.text('Profile editor'), findsOneWidget);
+    verifyZeroInteractions(booking);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.byType(FareConfirmFlow), findsOneWidget);
   });
 
   testWidgets('confirm books the ride and lands on the live trip',

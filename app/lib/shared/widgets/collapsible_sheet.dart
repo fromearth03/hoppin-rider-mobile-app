@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 
@@ -82,7 +83,7 @@ class CollapsibleSheet extends StatelessWidget {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    Text(
+                    AppText(
                       title!,
                       style: theme.textTheme.titleMedium
                           ?.copyWith(fontSize: 16.5, color: AppColors.ink),

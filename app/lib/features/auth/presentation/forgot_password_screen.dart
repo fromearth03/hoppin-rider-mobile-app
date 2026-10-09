@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -80,7 +81,7 @@ class _ForgotPasswordScreenState
                 ),
                 if (error != null) ...[
                   const SizedBox(height: 12),
-                  Text(
+                  AppText(
                     RiderErrorCopy.messageFor(error),
                     style: const TextStyle(color: AppColors.negative),
                   ),
@@ -98,7 +99,7 @@ class _ForgotPasswordScreenState
                 Center(
                   child: TextButton(
                     onPressed: () => _backToLogin(context),
-                    child: Text(
+                    child: AppText(
                       'Back to login',
                       style: theme.textTheme.bodyMedium,
                     ),
@@ -125,13 +126,13 @@ class _Sent extends StatelessWidget {
         Icon(Icons.mark_email_read_outlined,
             size: 56, color: AppColors.ink),
         const SizedBox(height: 16),
-        Text(
+        AppText(
           'Check your email',
           textAlign: TextAlign.center,
           style: theme.textTheme.titleMedium,
         ),
         const SizedBox(height: 8),
-        Text(
+        AppText(
           'If an account exists for $email, we have sent it a link to '
           'reset the password. The link expires after a short while.',
           textAlign: TextAlign.center,

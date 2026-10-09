@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -71,7 +72,7 @@ class HelpSupportScreen extends ConsumerWidget {
                 Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  child: Text('Frequently Asked Questions (FAQs)',
+                  child: AppText('Frequently Asked Questions (FAQs)',
                       style: theme.textTheme.titleMedium),
                 ),
                 // SettingsCard inserts the dividers between children; adding
@@ -122,7 +123,7 @@ class HelpSupportScreen extends ConsumerWidget {
                 Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  child: Text('Contact to Support',
+                  child: AppText('Contact to Support',
                       style: theme.textTheme.titleMedium),
                 ),
                 Padding(
@@ -168,7 +169,7 @@ class HelpSupportScreen extends ConsumerWidget {
                 Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  child: Text('Legal', style: theme.textTheme.titleMedium),
+                  child: AppText('Legal', style: theme.textTheme.titleMedium),
                 ),
                 const _LegalRow(label: 'Terms of Services'),
                 const _LegalRow(label: 'Privacy Policy'),
@@ -209,7 +210,7 @@ class _ContactsSection extends ConsumerWidget {
             children: [
               Icon(icon, size: 20, color: color ?? AppColors.ink),
               const SizedBox(width: 12),
-              Text(label, style: theme.textTheme.bodyMedium),
+              AppText(label, style: theme.textTheme.bodyMedium),
               const Spacer(),
               SelectableText(value,
                   style: theme.textTheme.bodyLarge?.copyWith(
@@ -224,7 +225,7 @@ class _ContactsSection extends ConsumerWidget {
       Padding(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 6),
         child:
-            Text('Contact & Emergency', style: theme.textTheme.titleMedium),
+            AppText('Contact & Emergency', style: theme.textTheme.titleMedium),
       ),
       row(Icons.mail_outline, 'Email', email),
       if (phone != null && phone.isNotEmpty)
@@ -289,7 +290,7 @@ class _FaqTileState extends State<_FaqTile> {
             padding: const EdgeInsets.fromLTRB(20, 14, 16, 14),
             child: Row(
               children: [
-                Text('•  ', style: theme.textTheme.bodyLarge),
+                AppText('•  ', style: theme.textTheme.bodyLarge),
                 Expanded(
                   child: Text(widget.question,
                       style: theme.textTheme.bodyLarge),
@@ -372,20 +373,20 @@ class _ContactCard extends StatelessWidget {
           Row(
             children: [
               Flexible(
-                child: Text(title,
+                child: AppText(title,
                     style:
                         theme.textTheme.bodyLarge?.copyWith(color: titleColor)),
               ),
               if (!enabled) ...[
                 const SizedBox(width: 6),
-                Text('Soon',
+                AppText('Soon',
                     style: theme.textTheme.bodyMedium
                         ?.copyWith(fontSize: 11, color: titleColor)),
               ],
             ],
           ),
           const SizedBox(height: 4),
-          Text(subtitle,
+          AppText(subtitle,
               style:
                   theme.textTheme.bodyMedium?.copyWith(color: subtitleColor)),
         ],
@@ -418,12 +419,12 @@ class _LegalRow extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 14, 16, 14),
       child: Row(
         children: [
-          Text('•  ', style: TextStyle(color: muted, fontSize: 16)),
+          AppText('•  ', style: TextStyle(color: muted, fontSize: 16)),
           Expanded(
-            child: Text(label,
+            child: AppText(label,
                 style: theme.textTheme.bodyLarge?.copyWith(color: muted)),
           ),
-          Text('Soon',
+          AppText('Soon',
               style: theme.textTheme.bodyMedium
                   ?.copyWith(fontSize: 11, color: muted)),
         ],

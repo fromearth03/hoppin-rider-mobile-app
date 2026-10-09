@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/colors.dart';
@@ -61,13 +62,13 @@ class SavedPlaceTile extends StatelessWidget {
               IconButton(
                 onPressed: onRename,
                 icon: const Icon(Icons.edit_outlined),
-                tooltip: 'Rename this place',
+                tooltip: tr(context, 'Rename this place'),
               ),
               IconButton(
                 onPressed: onRemove,
                 icon: const Icon(Icons.delete_outline),
                 color: AppColors.negative,
-                tooltip: 'Remove this place',
+                tooltip: tr(context, 'Remove this place'),
               ),
             ],
           ),

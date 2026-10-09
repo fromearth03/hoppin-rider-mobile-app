@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -167,7 +168,7 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
         ref.invalidate(_ticketsProvider);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(resolution ??
+              content: AppText(resolution ??
                   (complaint
                       ? 'Complaint filed. The team will look into it and reply.'
                       : 'Ticket opened. A representative will respond in 24 hours.'))),
@@ -195,7 +196,7 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
         child: trips.isEmpty
             ? const Padding(
                 padding: EdgeInsets.all(24),
-                child: Text('No rides on this account yet.',
+                child: AppText('No rides on this account yet.',
                     textAlign: TextAlign.center),
               )
             : ListView(
@@ -206,11 +207,11 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
                     ListTile(
                       leading: Icon(Icons.directions_car,
                           color: AppColors.ink),
-                      title: Text(
+                      title: AppText(
                         t.dropoffLabel ?? t.pickupLabel ?? 'Ride',
                         overflow: TextOverflow.ellipsis,
                       ),
-                      subtitle: Text(DateFormat('d MMM, HH:mm')
+                      subtitle: AppText(DateFormat('d MMM, HH:mm')
                           .format(t.requestedAt.toLocal())),
                       onTap: () => Navigator.of(ctx).pop(t),
                     ),
@@ -229,7 +230,7 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
       child: Scaffold(
         appBar: AppBar(
           centerTitle: true,
-          title: const Text('Help & Support'),
+          title: const AppText('Help & Support'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () => Navigator.of(context).maybePop(),
@@ -270,7 +271,7 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(complaint ? 'File a Complaint' : 'New Support Ticket',
+                  AppText(complaint ? 'File a Complaint' : 'New Support Ticket',
                       style: theme.textTheme.titleMedium),
                   const SizedBox(height: 8),
                   if (complaint) ...[
@@ -279,8 +280,8 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
                       // Long labels ("Service animal refusal (regulatory
                       // breach)") overflowed the field border without this.
                       isExpanded: true,
-                      decoration: const InputDecoration(
-                          hintText: 'What went wrong?'),
+                      decoration: InputDecoration(
+                          hintText: trOptional(context, 'What went wrong?')),
                       icon: const Icon(Icons.keyboard_arrow_down),
                       items: [
                         for (final t in types)
@@ -297,19 +298,19 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
                     TextField(
                       controller: _subject,
                       onChanged: (_) => setState(() {}),
-                      decoration: const InputDecoration(
-                          hintText: 'What do you need help with?'),
+                      decoration: InputDecoration(
+                          hintText: trOptional(context, 'What do you need help with?')),
                     ),
                   ],
                   const SizedBox(height: 18),
-                  Text('Description', style: theme.textTheme.titleMedium),
+                  AppText('Description', style: theme.textTheme.titleMedium),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _body,
                     maxLines: 5,
                     onChanged: (_) => setState(() {}),
-                    decoration: const InputDecoration(
-                        hintText: 'Please describe the issue…'),
+                    decoration: InputDecoration(
+                        hintText: trOptional(context, 'Please describe the issue…')),
                   ),
                   if (complaint) ...[
                     const SizedBox(height: 18),
@@ -320,7 +321,7 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Tags (optional)',
+                          AppText('Tags (optional)',
                               style: theme.textTheme.titleMedium),
                           const SizedBox(height: 8),
                           Wrap(
@@ -346,7 +347,7 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
                         ],
                       );
                     }),
-                    Text('About a ride (optional)',
+                    AppText('About a ride (optional)',
                         style: theme.textTheme.titleMedium),
                     const SizedBox(height: 8),
                     _RidePickerField(
@@ -357,7 +358,7 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
                   ],
                   if (_error != null) ...[
                     const SizedBox(height: 12),
-                    Text(_error!,
+                    AppText(_error!,
                         style: const TextStyle(color: AppColors.negative)),
                   ],
                   const SizedBox(height: 20),
@@ -367,7 +368,7 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
                     onPressed: _canSubmit(complaint)
                         ? () => _submit(complaint: complaint)
                         : null,
-                    child: Text(_submitting
+                    child: AppText(_submitting
                         ? 'Submitting…'
                         : (complaint ? 'File Complaint' : 'Submit Ticket')),
                   ),
@@ -380,7 +381,7 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
             Padding(
               padding:
                   const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              child: Text(
+              child: AppText(
                   complaint ? 'Your Complaints' : 'Recent Tickets',
                   style: theme.textTheme.titleMedium),
             ),
@@ -391,7 +392,7 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
               ),
               error: (_, __) => Padding(
                 padding: const EdgeInsets.all(20),
-                child: Text('Could not load your tickets.',
+                child: AppText('Could not load your tickets.',
                     style: theme.textTheme.bodyMedium),
               ),
               data: (list) {
@@ -404,7 +405,7 @@ class _SupportTicketScreenState extends ConsumerState<SupportTicketScreen> {
                 return mine.isEmpty
                     ? Padding(
                         padding: const EdgeInsets.all(20),
-                        child: Text(
+                        child: AppText(
                             complaint
                                 ? 'No complaints filed.'
                                 : 'No tickets yet.',
@@ -455,9 +456,9 @@ class _RidePickerField extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: chosen == null
-                    ? Text('Attach the trip this is about',
+                    ? AppText('Attach the trip this is about',
                         style: theme.textTheme.bodyMedium)
-                    : Text(
+                    : AppText(
                         '${chosen.dropoffLabel ?? chosen.pickupLabel ?? 'Ride'}'
                         '  ·  ${DateFormat('d MMM').format(chosen.requestedAt.toLocal())}',
                         style: theme.textTheme.bodyLarge
@@ -470,7 +471,7 @@ class _RidePickerField extends StatelessWidget {
                   onPressed: onClear,
                   icon: const Icon(Icons.close, size: 18),
                   visualDensity: VisualDensity.compact,
-                  tooltip: 'Remove the attached ride',
+                  tooltip: tr(context, 'Remove the attached ride'),
                 )
               else
                 Icon(Icons.keyboard_arrow_down,

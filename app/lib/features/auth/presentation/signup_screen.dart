@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -147,7 +148,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               Padding(
                 padding: const EdgeInsets.only(left: 4, bottom: 6),
                 child:
-                    Text('Date of birth', style: theme.textTheme.bodyMedium),
+                    AppText('Date of birth', style: theme.textTheme.bodyMedium),
               ),
               InkWell(
                 onTap: _pickDate,
@@ -157,7 +158,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     errorText: _dobError,
                     prefixIcon: const Icon(Icons.calendar_today_outlined),
                   ),
-                  child: Text(
+                  child: AppText(
                     _dob == null ? 'Select date' : DobValidator.format(_dob!),
                     style: _dob == null
                         ? theme.textTheme.bodyMedium
@@ -169,14 +170,14 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           ),
           if (state.error != null) ...[
             const SizedBox(height: 12),
-            Text(
+            AppText(
               RiderErrorCopy.messageFor(state.error!),
               style: const TextStyle(color: AppColors.negative),
             ),
           ],
           if (unrecoverable) ...[
             const SizedBox(height: 12),
-            Text(
+            AppText(
               'Your account was created, but we could not set up your '
               'profile. Retrying will not help — please contact support and '
               'we will finish it for you.',
@@ -184,7 +185,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             ),
           ] else if (incomplete) ...[
             const SizedBox(height: 12),
-            Text(
+            AppText(
               'Your account was created but we could not finish setting it '
               'up. Tap below to finish.',
               style: theme.textTheme.bodyMedium,
@@ -218,11 +219,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               alignment: WrapAlignment.center,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                Text('Already have an account?',
+                AppText('Already have an account?',
                     style: theme.textTheme.bodyMedium),
                 TextButton(
                   onPressed: () => context.go(AppRoutes.login),
-                  child: const Text('Login'),
+                  child: const AppText('Login'),
                 ),
               ],
             ),

@@ -1,3 +1,5 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
+import 'package:hoppin_rider/core/preferences/device_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -75,7 +77,7 @@ class RideCompleteScreen extends ConsumerWidget {
           error: (error, _) => Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
-              child: Text(
+              child: AppText(
                 error is ApiException
                     ? RiderErrorCopy.messageFor(error)
                     : 'Something went wrong loading your receipt.',
@@ -97,7 +99,7 @@ class RideCompleteScreen extends ConsumerWidget {
   }
 }
 
-class _RideCompleteBody extends StatelessWidget {
+class _RideCompleteBody extends ConsumerWidget {
   final String rideId;
   final Receipt receipt;
   final LiveTripInfo? detail;
@@ -134,7 +136,7 @@ class _RideCompleteBody extends StatelessWidget {
       'Not charged yet';
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final duration = _duration;
     final route = detail?.route;
     final driver = detail?.driver;
@@ -143,13 +145,13 @@ class _RideCompleteBody extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          Text(
+          AppText(
             'Ride Completed',
             textAlign: TextAlign.center,
             style: theme.textTheme.headlineLarge?.copyWith(fontSize: 24),
           ),
           const SizedBox(height: 6),
-          Text(
+          AppText(
             'Thank you for riding with us!',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium,
@@ -164,7 +166,7 @@ class _RideCompleteBody extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Journey Summary', style: theme.textTheme.titleMedium),
+                AppText('Journey Summary', style: theme.textTheme.titleMedium),
                 const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -174,7 +176,7 @@ class _RideCompleteBody extends StatelessWidget {
                         icon: Icons.place_outlined,
                         label: 'Distance',
                         value: receipt.distanceMiles != null
-                            ? '${receipt.distanceMiles!.toStringAsFixed(1)} mi'
+                            ? formatDistance(receipt.distanceMiles! * 1609.344, ref.watch(deviceSettingsProvider).distanceUnit)
                             : '—',
                         theme: theme,
                       ),
@@ -207,7 +209,7 @@ class _RideCompleteBody extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Total Fare', style: theme.textTheme.titleMedium),
+                AppText('Total Fare', style: theme.textTheme.titleMedium),
                 Text(_totalLabel,
                     style:
                         theme.textTheme.headlineLarge?.copyWith(fontSize: 22)),
@@ -234,7 +236,7 @@ class _RideCompleteBody extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Your Driver', style: theme.textTheme.titleMedium),
+                  AppText('Your Driver', style: theme.textTheme.titleMedium),
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -317,13 +319,13 @@ class _RatingCardState extends ConsumerState<_RatingCard> {
     switch (result) {
       case Ok():
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Thanks for your feedback!')),
+          const SnackBar(content: AppText('Thanks for your feedback!')),
         );
       case Err(:final error):
         // The tapped stars must not claim a rating the server refused.
         setState(() => _score = previous);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(RiderErrorCopy.messageFor(error))),
+          SnackBar(content: AppText(RiderErrorCopy.messageFor(error))),
         );
     }
   }
@@ -334,7 +336,7 @@ class _RatingCardState extends ConsumerState<_RatingCard> {
       theme: widget.theme,
       child: Column(
         children: [
-          Text('How was your ride?', style: widget.theme.textTheme.titleMedium),
+          AppText('How was your ride?', style: widget.theme.textTheme.titleMedium),
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -396,7 +398,7 @@ class _SummaryStat extends StatelessWidget {
       children: [
         Icon(icon, size: 18, color: theme.textTheme.bodyMedium?.color),
         const SizedBox(height: 4),
-        Text(label, style: theme.textTheme.bodyMedium),
+        AppText(label, style: theme.textTheme.bodyMedium),
         Text(
           value,
           style: theme.textTheme.titleMedium,

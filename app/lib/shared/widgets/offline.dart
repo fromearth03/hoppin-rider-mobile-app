@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -53,11 +54,11 @@ class _OfflineScreenState extends ConsumerState<OfflineScreen> {
                       size: 42, color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 24),
-                Text("You're offline",
+                AppText("You're offline",
                     style: theme.textTheme.titleLarge
                         ?.copyWith(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 10),
-                Text(
+                AppText(
                   'We can’t reach Hoppin right now. Check your connection — '
                   'we’ll reconnect on our own as soon as it’s back.',
                   textAlign: TextAlign.center,
@@ -75,7 +76,7 @@ class _OfflineScreenState extends ConsumerState<OfflineScreen> {
                             child: CircularProgressIndicator(
                                 strokeWidth: 2.4, color: Colors.white),
                           )
-                        : const Text('Try again'),
+                        : const AppText('Try again'),
                   ),
                 ),
               ],
@@ -113,7 +114,7 @@ class OfflineBanner extends ConsumerWidget {
                     strokeWidth: 2, color: Colors.white),
               ),
               const SizedBox(width: 10),
-              Text(
+              AppText(
                 'Reconnecting — showing your last update',
                 style: Theme.of(context)
                     .textTheme

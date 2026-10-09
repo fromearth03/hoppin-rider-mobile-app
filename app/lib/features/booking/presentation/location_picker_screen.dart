@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
@@ -79,7 +80,7 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
     };
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
+      appBar: AppBar(title: AppText(widget.title)),
       body: Stack(
         children: [
           Positioned.fill(
@@ -134,7 +135,7 @@ class _Hint extends StatelessWidget {
               Icon(Icons.touch_app_outlined, size: 20, color: AppColors.ink),
               const SizedBox(width: 10),
               const Expanded(
-                child: Text('Tap anywhere on the map to drop a pin',
+                child: AppText('Tap anywhere on the map to drop a pin',
                     style: TextStyle(fontSize: 14)),
               ),
             ],
@@ -172,9 +173,9 @@ class _Confirm extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: resolving
-                        ? const Text('Finding the address…',
+                        ? const AppText('Finding the address…',
                             style: TextStyle(fontSize: 15))
-                        : Text(
+                        : AppText(
                             address ?? 'No pin yet',
                             style: TextStyle(
                               fontSize: 15,
@@ -189,7 +190,7 @@ class _Confirm extends StatelessWidget {
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: onConfirm,
-                child: const Text('Use this location'),
+                child: const AppText('Use this location'),
               ),
             ],
           ),

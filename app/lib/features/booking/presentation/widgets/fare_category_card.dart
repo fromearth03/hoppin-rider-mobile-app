@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/money.dart';
@@ -101,7 +102,7 @@ class FareCategoryCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Recommended fare', style: theme.textTheme.bodyMedium),
+                    AppText('Recommended fare', style: theme.textTheme.bodyMedium),
                     Text(
                       farePence!.format(),
                       style: theme.textTheme.titleMedium,

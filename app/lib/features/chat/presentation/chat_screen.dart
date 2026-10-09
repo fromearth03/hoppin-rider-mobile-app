@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -197,7 +198,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           if (_error != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
+              child: AppText(
                 RiderErrorCopy.messageFor(_error!),
                 style: const TextStyle(color: AppColors.negative),
               ),
@@ -220,7 +221,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
-          child: Text(
+          child: AppText(
             'No messages yet. Say hello to your driver.',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium,
@@ -446,7 +447,7 @@ class _Composer extends StatelessWidget {
                   style: const TextStyle(color: Colors.white, fontSize: 15),
                   cursorColor: Colors.white,
                   decoration: InputDecoration(
-                    hintText: 'Enter your message',
+                    hintText: trOptional(context, 'Enter your message'),
                     hintStyle:
                         TextStyle(color: AppColors.textDisabled, fontSize: 15),
                     filled: false,

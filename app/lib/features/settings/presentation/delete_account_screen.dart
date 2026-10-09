@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -95,7 +96,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                 Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  child: Text('Delete Account',
+                  child: AppText('Delete Account',
                       style: theme.textTheme.titleMedium),
                 ),
                 const Divider(height: 1),
@@ -104,16 +105,16 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      AppText(
                         'Would you like to deactivate account permanently '
                         'or temporarily delete your account?',
                         style: theme.textTheme.bodyLarge,
                       ),
                       const SizedBox(height: 16),
-                      Text('•  Temporarily Deletion',
+                      AppText('•  Temporarily Deletion',
                           style: theme.textTheme.labelLarge),
                       const SizedBox(height: 4),
-                      Text(
+                      AppText(
                         "Hide your account temporarily. You won't be able "
                         'to book rides but your data will be saved.',
                         // The frame paints body copy in the same navy as the
@@ -122,10 +123,10 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                             ?.copyWith(color: bodyColor),
                       ),
                       const SizedBox(height: 14),
-                      Text('•  Permanent Deletion',
+                      AppText('•  Permanent Deletion',
                           style: theme.textTheme.labelLarge),
                       const SizedBox(height: 4),
-                      Text(
+                      AppText(
                         'Erase all rides history and your data. This cannot '
                         'be undone.',
                         style: theme.textTheme.bodyMedium
@@ -137,7 +138,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                       ],
                       if (_error != null) ...[
                         const SizedBox(height: 16),
-                        Text(
+                        AppText(
                           // Server-owned copy, rendered verbatim.
                           _error!,
                           style: theme.textTheme.bodyMedium
@@ -159,7 +160,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                                         : AppColors.border,
                                 disabledForegroundColor: muted,
                               ),
-                              child: const Text('Deactivate'),
+                              child: const AppText('Deactivate'),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -185,7 +186,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                                         color: Colors.white,
                                       ),
                                     )
-                                  : const Text('Delete'),
+                                  : const AppText('Delete'),
                             ),
                           ),
                         ],
@@ -226,7 +227,7 @@ class _BlockerNotice extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          AppText(
             'Your account cannot be deleted yet',
             style: theme.textTheme.labelLarge
                 ?.copyWith(color: AppColors.negative),
@@ -236,7 +237,7 @@ class _BlockerNotice extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 2),
               // Server-owned copy, rendered verbatim.
-              child: Text('•  $reason',
+              child: AppText('•  $reason',
                   style: theme.textTheme.bodyMedium
                       ?.copyWith(color: theme.textTheme.bodyLarge?.color)),
             ),
@@ -261,8 +262,8 @@ Future<bool> _confirmDeletion(BuildContext context) async {
 
       return AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('Delete your account?', textAlign: TextAlign.center),
-        content: Text(
+        title: const AppText('Delete your account?', textAlign: TextAlign.center),
+        content: AppText(
           'This erases your rides history and personal data immediately. '
           'It cannot be undone.',
           textAlign: TextAlign.center,
@@ -280,7 +281,7 @@ Future<bool> _confirmDeletion(BuildContext context) async {
                         isDark ? AppColors.darkBorder : AppColors.border,
                     foregroundColor: theme.textTheme.bodyLarge?.color,
                   ),
-                  child: const Text('Cancel'),
+                  child: const AppText('Cancel'),
                 ),
               ),
               const SizedBox(width: 12),
@@ -291,7 +292,7 @@ Future<bool> _confirmDeletion(BuildContext context) async {
                     backgroundColor: AppColors.negative,
                     foregroundColor: Colors.white,
                   ),
-                  child: const Text('Delete'),
+                  child: const AppText('Delete'),
                 ),
               ),
             ],

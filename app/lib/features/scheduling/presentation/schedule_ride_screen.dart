@@ -1,3 +1,6 @@
+import '../../auth/application/auth_controller.dart';
+import '../../../core/auth/account_generation.dart';
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -98,6 +101,11 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
   }
 
   Future<void> _submit() async {
+    if (ref.read(authControllerProvider).needsDateOfBirthToBook) {
+      context.push(AppRoutes.personalInformation);
+      return;
+    }
+    final generation = ref.read(accountGenerationProvider);
     final route = _route;
     final when = _scheduledFor;
     if (route == null || when == null || _submitting) return;
@@ -114,6 +122,7 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
           vehicleCategoryId: _selectedVehicleId,
         );
     if (!mounted) return;
+    if (generation != ref.read(accountGenerationProvider)) { setState(() => _submitting = false); return; }
 
     switch (result) {
       case Ok():
@@ -125,7 +134,7 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
         ref.invalidate(_scheduledListProvider);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Ride scheduled. A driver is dispatched as the '
+              content: AppText('Ride scheduled. A driver is dispatched as the '
                   'pickup time approaches.')),
         );
       case Err(:final error):
@@ -134,6 +143,10 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
           // The 30-minute rule especially: the server's own words.
           _serverError = RiderErrorCopy.messageFor(error);
         });
+        if (error.code == 'DOB_REQUIRED') {
+          context.push(AppRoutes.personalInformation);
+        }
+
     }
   }
 
@@ -146,7 +159,7 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
         ref.invalidate(_scheduledListProvider);
       case Err(:final error):
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(RiderErrorCopy.messageFor(error))),
+          SnackBar(content: AppText(RiderErrorCopy.messageFor(error))),
         );
     }
   }
@@ -231,7 +244,7 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
                     color: isDark
                         ? AppColors.darkTextPrimary
                         : AppColors.textPrimary),
-                tooltip: 'Close',
+                tooltip: tr(context, 'Close'),
               ),
             ),
           ),
@@ -276,7 +289,7 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
                     ),
                     _HeaderCard(isDark: isDark),
                     const SizedBox(height: 24),
-                    Text('Schedule for', style: theme.textTheme.titleMedium),
+                    AppText('Schedule for', style: theme.textTheme.titleMedium),
                     const SizedBox(height: 8),
                     _FieldTile(
                       label: scheduledLabel,
@@ -286,7 +299,7 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
                       isDark: isDark,
                     ),
                     const SizedBox(height: 20),
-                    Text('Route', style: theme.textTheme.titleMedium),
+                    AppText('Route', style: theme.textTheme.titleMedium),
                     const SizedBox(height: 8),
                     // ONE bar, exactly like Home's "Where to?": tap once,
                     // pick pickup + destination together; afterwards it
@@ -295,13 +308,13 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
                     // read as broken.
                     _RouteBar(route: _route, onTap: _pickRoute),
                     const SizedBox(height: 24),
-                    Text('Ride Type', style: theme.textTheme.titleMedium),
+                    AppText('Ride Type', style: theme.textTheme.titleMedium),
                     const SizedBox(height: 8),
                     _vehicleCatalogue(theme, isDark),
                     const SizedBox(height: 24),
                     _fareEstimate(theme, isDark),
                     const SizedBox(height: 24),
-                    Text('Cancellation Policy',
+                    AppText('Cancellation Policy',
                         style: theme.textTheme.titleMedium),
                     const SizedBox(height: 8),
                     _policyCard(theme, isDark),
@@ -320,7 +333,7 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
                           _route != null && _scheduledFor != null && !_submitting
                               ? _submit
                               : null,
-                      child: Text(_submitting
+                      child: AppText(_submitting
                           ? 'Scheduling…'
                           : 'Confirm Schedule'),
                     ),
@@ -350,13 +363,13 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
         padding: EdgeInsets.symmetric(vertical: 8),
         child: Center(child: CircularProgressIndicator()),
       ),
-      error: (error, _) => Text(
+      error: (error, _) => AppText(
         'Could not load vehicle types',
         style: theme.textTheme.bodyMedium,
       ),
       data: (categories) {
         if (categories.isEmpty) {
-          return Text('No vehicles available right now',
+          return AppText('No vehicles available right now',
               style: theme.textTheme.bodyMedium);
         }
 
@@ -404,7 +417,7 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
 
     final rows = <Widget>[];
     if (route == null || categoryId == null) {
-      rows.add(Text('Choose a route to see your fare.',
+      rows.add(AppText('Choose a route to see your fare.',
           style: theme.textTheme.bodyMedium));
     } else {
       final quote = ref.watch(_quoteProvider((
@@ -420,7 +433,7 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
                   width: 20, height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2))),
         ),
-        error: (error, _) => Text(
+        error: (error, _) => AppText(
           error is ApiException
               ? RiderErrorCopy.messageFor(error)
               : 'Could not quote this trip.',
@@ -429,7 +442,7 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
         data: (estimate) => Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Total', style: theme.textTheme.titleMedium),
+            AppText('Total', style: theme.textTheme.titleMedium),
             Text(estimate.totalPence.format(currency: estimate.currency),
                 style: theme.textTheme.titleMedium),
           ],
@@ -440,7 +453,7 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Fare Estimate', style: theme.textTheme.titleMedium),
+        AppText('Fare Estimate', style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),
         Container(
           width: double.infinity,
@@ -473,8 +486,8 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
         borderRadius: BorderRadius.circular(16),
       ),
       child: policy.when(
-        loading: () => Text('Loading policy…', style: theme.textTheme.bodyMedium),
-        error: (_, __) => Text(
+        loading: () => AppText('Loading policy…', style: theme.textTheme.bodyMedium),
+        error: (_, __) => AppText(
           'Cancelling is free any time before your trip starts.',
           style: theme.textTheme.bodyMedium,
         ),
@@ -483,7 +496,7 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
           Widget row(String label, String value) => Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
+                  Expanded(child: AppText(label, style: theme.textTheme.bodyMedium)),
                   const SizedBox(width: 12),
                   Text(value, style: theme.textTheme.bodyMedium),
                 ],
@@ -528,7 +541,7 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Upcoming rides', style: theme.textTheme.titleMedium),
+            AppText('Upcoming rides', style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
             for (final ride in upcoming) ...[
               Container(
@@ -550,7 +563,7 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          AppText(
                             ride.requestedPickupTime == null
                                 ? 'Scheduled ride'
                                 : DateFormat('MMM d, yyyy  -  h:mm a').format(
@@ -559,7 +572,7 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
                           ),
                           if (ride.vehicleCategory != null ||
                               ride.estimatePence != null)
-                            Text(
+                            AppText(
                               [
                                 if (ride.vehicleCategory != null)
                                   ride.vehicleCategory!,
@@ -574,7 +587,7 @@ class _ScheduleRideScreenState extends ConsumerState<ScheduleRideScreen> {
                     ),
                     TextButton(
                       onPressed: () => _cancelScheduled(ride),
-                      child: const Text('Cancel',
+                      child: const AppText('Cancel',
                           style: TextStyle(color: AppColors.negative)),
                     ),
                   ],
@@ -655,11 +668,11 @@ class _HeaderCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('Schedule Ride',
+                      AppText('Schedule Ride',
                           style: theme.textTheme.titleMedium?.copyWith(
                               fontSize: 15, color: AppColors.ink),
                           overflow: TextOverflow.ellipsis),
-                      Text('Book your ride in advance',
+                      AppText('Book your ride in advance',
                           style: theme.textTheme.bodyMedium
                               ?.copyWith(fontSize: 11.5),
                           overflow: TextOverflow.ellipsis),
@@ -710,7 +723,7 @@ class _RouteBar extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: chosen == null
-                    ? Text('Where to & from?',
+                    ? AppText('Where to & from?',
                         style:
                             theme.textTheme.bodyMedium?.copyWith(fontSize: 14),
                         overflow: TextOverflow.ellipsis)
@@ -722,7 +735,7 @@ class _RouteBar extends StatelessWidget {
                               style: theme.textTheme.bodyLarge?.copyWith(
                                   fontSize: 13.5, color: AppColors.ink),
                               overflow: TextOverflow.ellipsis),
-                          Text(
+                          AppText(
                             '→ ${chosen.dropoff.label}'
                             '${chosen.stops.isNotEmpty ? '  ·  ${chosen.stops.length} stop${chosen.stops.length == 1 ? '' : 's'}' : ''}',
                             style: theme.textTheme.bodyMedium
@@ -779,7 +792,7 @@ class _FieldTile extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: Text(label,
+              child: AppText(label,
                   style: theme.textTheme.bodyLarge?.copyWith(color: textColor)),
             ),
             Icon(trailingIcon,

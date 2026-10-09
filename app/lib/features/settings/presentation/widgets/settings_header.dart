@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 /// The plain back-arrow + centred title header shared by Settings and Help &
@@ -18,7 +19,7 @@ class SettingsHeader extends StatelessWidget implements PreferredSizeWidget {
         onPressed: () => Navigator.of(context).maybePop(),
         icon: const Icon(Icons.arrow_back),
       ),
-      title: Text(title, style: Theme.of(context).textTheme.titleMedium),
+      title: AppText(title, style: Theme.of(context).textTheme.titleMedium),
     );
   }
 

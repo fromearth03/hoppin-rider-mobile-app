@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -72,13 +73,13 @@ class AuthScaffold extends StatelessWidget {
                     ),
                   ),
                 const SizedBox(height: 48),
-                Text(title,
+                AppText(title,
                     style: const TextStyle(
                         fontSize: 38,
                         fontWeight: FontWeight.w400,
                         color: Colors.white)),
                 const SizedBox(height: 8),
-                Text(subtitle,
+                AppText(subtitle,
                     style: TextStyle(
                         fontSize: 15,
                         color: Colors.white.withValues(alpha: 0.85))),

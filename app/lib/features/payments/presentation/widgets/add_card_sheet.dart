@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 
@@ -111,9 +112,9 @@ class _AddCardSheetState extends State<AddCardSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Add a card', style: theme.textTheme.headlineLarge?.copyWith(fontSize: 22)),
+          AppText('Add a card', style: theme.textTheme.headlineLarge?.copyWith(fontSize: 22)),
           const SizedBox(height: 4),
-          Text(
+          AppText(
             'Card details are sent directly to Stripe and never pass through Hoppin.',
             style: theme.textTheme.bodyMedium,
           ),
@@ -141,9 +142,9 @@ class _AddCardSheetState extends State<AddCardSheet> {
                 : (value) => setState(() => _makeDefault = value ?? false),
             controlAffinity: ListTileControlAffinity.leading,
             contentPadding: EdgeInsets.zero,
-            title: const Text('Set as default'),
+            title: const AppText('Set as default'),
           ),
-          Text(
+          AppText(
             'By adding a card you agree to be charged for rides booked with it, '
             'per our Terms of Service.',
             style: theme.textTheme.bodyMedium,
@@ -163,7 +164,7 @@ class _AddCardSheetState extends State<AddCardSheet> {
                   onPressed: _submitting
                       ? null
                       : () => Navigator.of(context).pop(false),
-                  child: const Text('Cancel'),
+                  child: const AppText('Cancel'),
                 ),
               ),
               const SizedBox(width: 12),
@@ -179,7 +180,7 @@ class _AddCardSheetState extends State<AddCardSheet> {
                             color: Colors.white,
                           ),
                         )
-                      : const Text('Save'),
+                      : const AppText('Save'),
                 ),
               ),
             ],

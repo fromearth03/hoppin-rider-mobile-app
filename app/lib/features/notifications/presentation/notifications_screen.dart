@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
@@ -48,7 +49,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: const Text('Notifications'),
+        title: const AppText('Notifications'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).maybePop(),
@@ -180,7 +181,7 @@ class _GlassButton extends StatelessWidget {
             child: Container(
               height: 48,
               alignment: Alignment.center,
-              child: Text(
+              child: AppText(
                 label,
                 style: TextStyle(
                   color: isDark
@@ -239,7 +240,7 @@ class _FilterTabs extends StatelessWidget {
             borderRadius: BorderRadius.circular(9),
           ),
           alignment: Alignment.center,
-          child: Text(
+          child: AppText(
             label,
             style: TextStyle(
               color: selected
@@ -277,7 +278,7 @@ class _EmptyState extends StatelessWidget {
                 size: 56,
                 color: Theme.of(context).textTheme.bodyMedium?.color),
             const SizedBox(height: 16),
-            Text(
+            AppText(
               failed
                   ? 'Notifications could not be loaded'
                   : 'No notifications yet',
@@ -285,7 +286,7 @@ class _EmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
-            Text(
+            AppText(
               failed
                   ? error!
                   : "You're all caught up. New updates about your rides will appear here.",

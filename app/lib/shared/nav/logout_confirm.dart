@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme/colors.dart';
@@ -37,13 +38,13 @@ Future<bool> confirmLogout(BuildContext context) async {
                 width: 190,
               ),
               const SizedBox(height: 20),
-              Text(
+              AppText(
                 'Are you logging out?',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.headlineLarge?.copyWith(fontSize: 24),
               ),
               const SizedBox(height: 14),
-              Text(
+              AppText(
                 "You've been signed out successfully. We'll be here "
                 "whenever you're ready for your next ride.",
                 textAlign: TextAlign.center,
@@ -59,7 +60,7 @@ Future<bool> confirmLogout(BuildContext context) async {
                         backgroundColor: AppColors.pick(const Color(0xFFEFEFF1), const Color(0xFF2A2A35)),
                         foregroundColor: theme.textTheme.bodyLarge?.color,
                       ),
-                      child: const Text('Cancel'),
+                      child: const AppText('Cancel'),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -70,7 +71,7 @@ Future<bool> confirmLogout(BuildContext context) async {
                         backgroundColor: AppColors.fill,
                         foregroundColor: Colors.white,
                       ),
-                      child: const Text('Logout'),
+                      child: const AppText('Logout'),
                     ),
                   ),
                 ],

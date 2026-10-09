@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/money.dart';
@@ -41,7 +42,7 @@ class FareLegsBreakdown extends StatelessWidget {
             ),
           ),
         const SizedBox(height: 8),
-        Text(
+        AppText(
           'Stops are priced per leg and added up. Fees are charged once on '
           'the total.',
           style: theme.textTheme.bodyMedium,

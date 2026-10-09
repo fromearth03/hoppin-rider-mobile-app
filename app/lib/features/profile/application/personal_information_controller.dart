@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/result.dart';
+import '../../../core/auth/account_generation.dart';
+import '../../auth/application/auth_controller.dart';
 import '../../auth/data/profile_repository.dart';
 import '../domain/personal_information_state.dart';
 
@@ -14,25 +16,28 @@ import '../domain/personal_information_state.dart';
 class PersonalInformationController
     extends StateNotifier<PersonalInformationState> {
   final ProfileRepository _profiles;
+  final void Function(RiderProfile)? onUpdated;
 
-  PersonalInformationController(this._profiles)
-      : super(const PersonalInformationState()) {
+  PersonalInformationController(this._profiles, {this.onUpdated})
+    : super(const PersonalInformationState()) {
     load();
   }
 
   Future<void> load() async {
     state = state.copyWith(status: PersonalInformationStatus.loading);
     final result = await _profiles.get();
+    if (!mounted) return;
     state = switch (result) {
       Ok(:final value) => state.copyWith(
-          status: PersonalInformationStatus.ready,
-          profile: value,
-        ),
+        status: PersonalInformationStatus.ready,
+        profile: value,
+      ),
       Err(:final error) => state.copyWith(
-          status: PersonalInformationStatus.error,
-          loadError: error,
-        ),
+        status: PersonalInformationStatus.error,
+        loadError: error,
+      ),
     };
+    if (result case Ok(:final value)) onUpdated?.call(value);
   }
 
   /// Patches the profile. [phoneNumber] is sent as typed; the server ignores
@@ -43,30 +48,45 @@ class PersonalInformationController
     required String fullName,
     String? phoneNumber,
     String? address,
+    String? dateOfBirth,
   }) async {
+    if (state.isSaving) return;
     state = state.copyWith(isSaving: true, clearSaveError: true);
 
     final result = await _profiles.patch(
       fullName: fullName,
       phoneNumber: phoneNumber,
       address: address,
+      dateOfBirth: dateOfBirth,
     );
+    if (!mounted) return;
 
     state = switch (result) {
       Ok(:final value) => state.copyWith(
-          isSaving: false,
-          profile: value,
-          clearSaveError: true,
-        ),
-      Err(:final error) => state.copyWith(
-          isSaving: false,
-          saveError: error,
-        ),
+        isSaving: false,
+        profile: value,
+        clearSaveError: true,
+      ),
+      Err(:final error) => state.copyWith(isSaving: false, saveError: error),
     };
+    if (result case Ok(:final value)) onUpdated?.call(value);
   }
 }
 
-final personalInformationControllerProvider = StateNotifierProvider<
-    PersonalInformationController, PersonalInformationState>(
-  (ref) => PersonalInformationController(ref.watch(profileRepositoryProvider)),
-);
+final personalInformationControllerProvider =
+    StateNotifierProvider<
+      PersonalInformationController,
+      PersonalInformationState
+    >((ref) {
+      final generation = ref.watch(accountGenerationProvider);
+      return PersonalInformationController(
+        ref.watch(profileRepositoryProvider),
+        onUpdated: (profile) {
+          if (generation == ref.read(accountGenerationProvider)) {
+            ref
+                .read(authControllerProvider.notifier)
+                .acceptUpdatedProfile(profile);
+          }
+        },
+      );
+    });

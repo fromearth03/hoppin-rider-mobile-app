@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -37,7 +38,7 @@ class ProfileAvatar extends ConsumerWidget {
       backgroundColor: AppColors.fill,
       backgroundImage: bytes != null ? MemoryImage(bytes) : null,
       child: bytes == null
-          ? Text(
+          ? AppText(
               (display == null || display.isEmpty)
                   ? '?'
                   : display.characters.first.toUpperCase(),

@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -97,7 +98,7 @@ class _DriverInfoCardState extends ConsumerState<DriverInfoCard> {
               alignment: Alignment.center,
               children: [
                 Center(
-                  child: Text('Ride Details',
+                  child: AppText('Ride Details',
                       style: theme.textTheme.titleMedium),
                 ),
                 Align(
@@ -109,7 +110,7 @@ class _DriverInfoCardState extends ConsumerState<DriverInfoCard> {
                             ? Icons.keyboard_arrow_up
                             : Icons.close,
                         size: 20),
-                    tooltip: _collapsed ? 'Show details' : 'Hide details',
+                    tooltip: tr(context, _collapsed ? 'Show details' : 'Hide details'),
                     onPressed: () =>
                         setState(() => _collapsed = !_collapsed),
                   ),
@@ -187,7 +188,7 @@ class _DriverInfoCardState extends ConsumerState<DriverInfoCard> {
               ),
             ),
             // The frame labels the pre-pickup action Cancel Booking.
-            child: Text(d == null ? 'Cancel Ride' : 'Cancel Booking'),
+            child: AppText(d == null ? 'Cancel Ride' : 'Cancel Booking'),
           ),
         ],
       ),
@@ -216,7 +217,7 @@ class _SpecRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
+          Expanded(child: AppText(label, style: theme.textTheme.bodyMedium)),
           const SizedBox(width: 12),
           Text(value,
               style: style?.copyWith(
@@ -291,8 +292,8 @@ class _AwaitingDriverRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Finding your driver', style: theme.textTheme.titleMedium),
-              Text(
+              AppText('Finding your driver', style: theme.textTheme.titleMedium),
+              AppText(
                 'This usually takes a moment',
                 style: theme.textTheme.bodyMedium,
               ),
@@ -324,7 +325,7 @@ class _AssignedDriverRow extends StatelessWidget {
         CircleAvatar(
           radius: 22,
           backgroundColor: AppColors.fill.withValues(alpha: 0.25),
-          child: Text(
+          child: AppText(
             driver.name.isNotEmpty ? driver.name[0].toUpperCase() : '?',
             style: theme.textTheme.titleMedium,
           ),
@@ -344,7 +345,7 @@ class _AssignedDriverRow extends StatelessWidget {
                   children: [
                     const Icon(Icons.star, size: 16, color: AppColors.warning),
                     const SizedBox(width: 4),
-                    Text(
+                    AppText(
                       '${driver.rating!.toStringAsFixed(1)} (${driver.ratingCount})',
                       style: theme.textTheme.bodyMedium,
                     ),

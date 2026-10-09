@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +6,7 @@ import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
+import 'core/preferences/device_settings.dart';
 import 'core/theme/theme_controller.dart';
 import 'core/config.dart';
 import 'core/push/push_registrar.dart';
@@ -47,8 +49,9 @@ Future<void> main() async {
   // The saved light / dark choice, read before the first frame so the app
   // does not open light and then flip.
   final brightness = await loadSavedBrightness();
+  final deviceSettings = await const DeviceSettingsStore().read();
   runApp(ProviderScope(
-    overrides: [initialBrightnessProvider.overrideWithValue(brightness)],
+    overrides: [initialBrightnessProvider.overrideWithValue(brightness), initialDeviceSettingsProvider.overrideWithValue(deviceSettings)],
     child: const HoppinApp(),
   ));
 }
@@ -63,7 +66,7 @@ class _ConfigError extends StatelessWidget {
           body: Center(
             child: Padding(
               padding: const EdgeInsets.all(32),
-              child: Text(message, textAlign: TextAlign.center),
+              child: AppText(message, textAlign: TextAlign.center),
             ),
           ),
         ),

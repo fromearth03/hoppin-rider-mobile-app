@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/colors.dart';
@@ -46,7 +47,7 @@ class MapPlaceholder extends StatelessWidget {
                       .withValues(alpha: 0.5),
                 ),
                 const SizedBox(height: 8),
-                Text(
+                AppText(
                   label,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: isDark

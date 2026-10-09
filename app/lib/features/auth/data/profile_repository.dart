@@ -46,8 +46,8 @@ class RiderProfile {
   });
 
   /// True exactly when [dateOfBirth] is null — meaning the app must collect
-  /// a date of birth before this rider is usable, since the backend itself
-  /// will not block booking on the missing value.
+  /// a date of birth in Personal Information before booking. The backend
+  /// independently rejects a missing value.
   bool get needsDateOfBirth => dateOfBirth == null;
 
   static String? _orNull(Object? v) {

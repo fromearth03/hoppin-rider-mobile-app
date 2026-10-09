@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,14 +7,12 @@ import '../../../core/api/error_codes.dart';
 import '../../../core/auth/account_generation.dart';
 import '../../../core/result.dart';
 import '../../auth/application/auth_controller.dart';
-import '../../auth/data/profile_repository.dart';
 import '../../../shared/nav/app_router.dart';
 import '../data/booking_repository.dart';
 import '../data/fare_repository.dart' show FareEstimate;
 import '../data/promo_repository.dart';
 import '../data/vehicle_repository.dart';
 import 'fare_confirm_screen.dart';
-import 'widgets/booking_dob_dialog.dart';
 import 'home_screen.dart' show vehicleCategoriesProvider;
 import 'route_entry_screen.dart' show ChosenRoute;
 
@@ -40,6 +39,10 @@ class _FareConfirmFlowState extends ConsumerState<FareConfirmFlow> {
   Future<void> _book(VehicleCategory category, FareEstimate? estimate,
       String note, String promoCode) async {
     if (_booking) return; // a double-tap on Confirm must not book twice
+    if (ref.read(authControllerProvider).needsDateOfBirthToBook) {
+      context.push(AppRoutes.personalInformation);
+      return;
+    }
     final generation = ref.read(accountGenerationProvider);
     setState(() => _booking = true);
 
@@ -85,12 +88,12 @@ class _FareConfirmFlowState extends ConsumerState<FareConfirmFlow> {
           switch (applied) {
             case Ok(value: final promo):
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('${promo.code} applied — '
+                content: AppText('${promo.code} applied — '
                     '£${promo.discountAmount.toStringAsFixed(2)} off.'),
               ));
             case Err(:final error):
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(
+                content: AppText(
                     '${RiderErrorCopy.messageFor(error)} Your ride is still booked.'),
               ));
           }
@@ -102,23 +105,14 @@ class _FareConfirmFlowState extends ConsumerState<FareConfirmFlow> {
         context.go('${AppRoutes.liveTrip}?ride=${value.rideId}');
       case Err(:final error):
         if (error.code == 'DOB_REQUIRED') {
-          final profile = await showDialog<RiderProfile>(
-            context: context,
-            builder: (_) => const BookingDobDialog(),
-          );
-          if (!mounted ||
-              generation != ref.read(accountGenerationProvider) ||
-              profile == null) {
-            return;
-          }
-          ref.read(authControllerProvider.notifier).acceptUpdatedProfile(profile);
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Date of birth saved. Confirm your booking when ready.'),
+            content: AppText('Set your date of birth in Personal Information before booking.'),
           ));
+          context.push(AppRoutes.personalInformation);
           return;
         }
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(RiderErrorCopy.messageFor(error))),
+          SnackBar(content: AppText(RiderErrorCopy.messageFor(error))),
         );
     }
   }
@@ -131,19 +125,19 @@ class _FareConfirmFlowState extends ConsumerState<FareConfirmFlow> {
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (_, __) => Scaffold(
-        appBar: AppBar(title: const Text('Pricing Details')),
+        appBar: AppBar(title: const AppText('Pricing Details')),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Could not load vehicle options.',
+                AppText('Could not load vehicle options.',
                     style: Theme.of(context).textTheme.bodyLarge),
                 const SizedBox(height: 12),
                 TextButton(
                   onPressed: () => ref.invalidate(vehicleCategoriesProvider),
-                  child: const Text('Retry'),
+                  child: const AppText('Retry'),
                 ),
               ],
             ),
@@ -160,6 +154,8 @@ class _FareConfirmFlowState extends ConsumerState<FareConfirmFlow> {
           for (final stop in widget.route.stops) stop.label,
           widget.route.dropoff.label,
         ],
+        needsDateOfBirth: ref.watch(authControllerProvider).needsDateOfBirthToBook,
+        onCompleteProfile: () => context.push(AppRoutes.personalInformation),
         onConfirm: _book,
       ),
     );

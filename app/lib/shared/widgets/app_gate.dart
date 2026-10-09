@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -160,7 +161,7 @@ class _Blocked extends StatelessWidget {
                 const SizedBox(height: 40),
                 Icon(icon, size: 56, color: AppColors.brand),
                 const SizedBox(height: 24),
-                Text(
+                AppText(
                   title,
                   textAlign: TextAlign.center,
                   style: theme.textTheme.titleLarge?.copyWith(

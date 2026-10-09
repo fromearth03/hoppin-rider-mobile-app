@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 import '../../data/live_trip_source.dart';
@@ -28,7 +29,7 @@ class TripStatusBanner extends StatelessWidget {
     return GlassChip(
       radius: 16,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      child: Text(
+      child: AppText(
         _label,
         textAlign: TextAlign.center,
         style: const TextStyle(

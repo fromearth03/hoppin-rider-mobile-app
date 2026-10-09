@@ -1,3 +1,5 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
+import 'package:hoppin_rider/core/preferences/device_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show MaxLengthEnforcement;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -74,6 +76,9 @@ class FareConfirmScreen extends ConsumerStatefulWidget {
   )?
   onConfirm;
 
+  final bool needsDateOfBirth;
+  final VoidCallback? onCompleteProfile;
+
   const FareConfirmScreen({
     super.key,
     this.pickup = const LatLng(0, 0),
@@ -82,6 +87,8 @@ class FareConfirmScreen extends ConsumerStatefulWidget {
     this.categories = const [],
     this.routeLabels = const [],
     this.onConfirm,
+    this.needsDateOfBirth = false,
+    this.onCompleteProfile,
   });
 
   @override
@@ -276,6 +283,8 @@ class _FareConfirmScreenState extends ConsumerState<FareConfirmScreen> {
                   ? _resolved.values.whereType<Err<FareEstimate>>().first.error
                   : null,
               waypoints: widget.waypoints,
+              needsDateOfBirth: widget.needsDateOfBirth,
+              onCompleteProfile: widget.onCompleteProfile,
               confirmEnabled: _selectedId != null && _selectedHasFare,
               noteController: _note,
               promoController: _promo,
@@ -308,6 +317,8 @@ class _Sheet extends ConsumerWidget {
   final TextEditingController noteController;
   final TextEditingController promoController;
   final VoidCallback onConfirm;
+  final bool needsDateOfBirth;
+  final VoidCallback? onCompleteProfile;
 
   const _Sheet({
     required this.scrollController,
@@ -323,6 +334,8 @@ class _Sheet extends ConsumerWidget {
     required this.noteController,
     required this.promoController,
     required this.onConfirm,
+    required this.needsDateOfBirth,
+    this.onCompleteProfile,
   });
 
   @override
@@ -362,7 +375,7 @@ class _Sheet extends ConsumerWidget {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                Text(
+                AppText(
                   'Ride Details',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontSize: 16.5,
@@ -422,7 +435,7 @@ class _Sheet extends ConsumerWidget {
                   },
                 ),
                 const SizedBox(height: 14),
-                Text(
+                AppText(
                   'Fare Estimate',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontSize: 15,
@@ -447,7 +460,7 @@ class _Sheet extends ConsumerWidget {
                 // Waiting is never in the estimate and accrues live --
                 // state that it may apply without attaching a number the
                 // app cannot know.
-                Text(
+                AppText(
                   'Cancellation Policy',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontSize: 15,
@@ -458,7 +471,7 @@ class _Sheet extends ConsumerWidget {
                 // Matches the server's rules: free any time before the trip
                 // starts; once it has started, the fare so far plus a
                 // cancellation fee after a short free window.
-                Text(
+                AppText(
                   'Cancelling is free any time before your trip starts. '
                   'If you cancel after it has started, you pay the fare so far '
                   'plus a cancellation fee (not charged in the first moments '
@@ -467,9 +480,13 @@ class _Sheet extends ConsumerWidget {
                   style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12),
                 ),
                 const SizedBox(height: 14),
-                FilledButton(
+                if (needsDateOfBirth) ...[
+                  const AppText('Set your date of birth in Personal Information before booking.'),
+                  const SizedBox(height: 8),
+                  FilledButton(onPressed: onCompleteProfile, child: const AppText('Personal Information')),
+                ] else FilledButton(
                   onPressed: confirmEnabled ? onConfirm : null,
-                  child: const Text('Confirm Booking'),
+                  child: const AppText('Confirm Booking'),
                 ),
               ],
             ],
@@ -556,7 +573,7 @@ class _PromoFieldState extends ConsumerState<_PromoField> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
+        AppText(
           'Promo code',
           style: theme.textTheme.titleMedium
               ?.copyWith(fontSize: 15, color: AppColors.ink),
@@ -580,31 +597,31 @@ class _PromoFieldState extends ConsumerState<_PromoField> {
                   }
                 },
                 onSubmitted: (_) => _check(),
-                decoration: const InputDecoration(
-                  hintText: 'Have a code?',
+                decoration: InputDecoration(
+                  hintText: trOptional(context, 'Have a code?'),
                   isDense: true,
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                 ),
               ),
             ),
             const SizedBox(width: 8),
             TextButton(
               onPressed: _checking ? null : _check,
-              child: Text(_checking ? 'Checking…' : 'Apply'),
+              child: AppText(_checking ? 'Checking…' : 'Apply'),
             ),
           ],
         ),
         if (_error != null)
           Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Text(_error!,
+            child: AppText(_error!,
                 style: theme.textTheme.bodySmall
                     ?.copyWith(color: theme.colorScheme.error)),
           )
         else if (stillAccepted)
           Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Text(
+            child: AppText(
               // Not "you saved £X" — this check has not seen the fare.
               'Code accepted. The discount is applied to your fare when you book.',
               style: theme.textTheme.bodySmall
@@ -627,7 +644,7 @@ class _DriverNoteField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
+        AppText(
           'Note for your driver',
           style: theme.textTheme.titleMedium
               ?.copyWith(fontSize: 15, color: AppColors.ink),
@@ -645,11 +662,11 @@ class _DriverNoteField extends StatelessWidget {
           buildCounter: (context,
               {required currentLength, required isFocused, maxLength}) {
             if (currentLength < 240) return null;
-            return Text('$currentLength/$maxLength',
+            return AppText('$currentLength/$maxLength',
                 style: theme.textTheme.bodySmall);
           },
           decoration: InputDecoration(
-            hintText: 'Optional — e.g. second gate past the barrier',
+            hintText: trOptional(context, 'Optional — e.g. second gate past the barrier'),
             hintStyle: const TextStyle(fontSize: 13),
             filled: true,
             fillColor: AppColors.surface,
@@ -672,7 +689,7 @@ class _DriverNoteField extends StatelessWidget {
 
 /// The white fare card: legs for a multi-stop trip, then the total — the
 /// real quote for the selected category.
-class _FareCard extends StatelessWidget {
+class _FareCard extends ConsumerWidget {
   final String? selectedId;
   final Map<String, Result<FareEstimate>> resolved;
   final List<LatLng> waypoints;
@@ -684,13 +701,13 @@ class _FareCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
     Widget inner;
     final result = selectedId == null ? null : resolved[selectedId];
     if (selectedId == null) {
-      inner = Text(
+      inner = AppText(
         'Select a vehicle to see your fare.',
         style: theme.textTheme.bodyMedium,
       );
@@ -706,13 +723,13 @@ class _FareCard extends StatelessWidget {
         ),
       );
     } else if (result is Err<FareEstimate>) {
-      inner = Text(
+      inner = AppText(
         RiderErrorCopy.messageFor(result.error),
         style: const TextStyle(color: AppColors.negative, fontSize: 13),
       );
     } else {
       final est = (result as Ok<FareEstimate>).value;
-      final km = (est.distanceMeters / 1000).toStringAsFixed(1);
+      final distance = formatDistance(est.distanceMeters, ref.watch(deviceSettingsProvider).distanceUnit);
       final mins = (est.durationSeconds / 60).round();
       inner = Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -727,7 +744,7 @@ class _FareCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
+                AppText(
                   'Total',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontSize: 15,
@@ -745,7 +762,7 @@ class _FareCard extends StatelessWidget {
               ],
             ),
           ] else ...[
-            _row(theme, 'Distance', '$km km'),
+            _row(theme, 'Distance', distance),
             const SizedBox(height: 6),
             _row(theme, 'Time', '$mins min'),
             if (est.hasSurcharge) ...[
@@ -756,7 +773,7 @@ class _FareCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
+                AppText(
                   'Total',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontSize: 15,
@@ -797,7 +814,7 @@ class _FareCard extends StatelessWidget {
   Widget _row(ThemeData theme, String label, String value) => Row(
     mainAxisAlignment: MainAxisAlignment.spaceBetween,
     children: [
-      Text(label, style: theme.textTheme.bodyMedium),
+      AppText(label, style: theme.textTheme.bodyMedium),
       Text(value, style: theme.textTheme.bodyLarge?.copyWith(fontSize: 14)),
     ],
   );
@@ -832,7 +849,7 @@ class _PaymentRow extends ConsumerWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: card == null
-                    ? Text(
+                    ? AppText(
                         'Add a payment card',
                         style: theme.textTheme.bodyLarge?.copyWith(
                           fontSize: 14,
@@ -849,7 +866,7 @@ class _PaymentRow extends ConsumerWidget {
                               color: AppColors.ink,
                             ),
                           ),
-                          Text(
+                          AppText(
                             '**** **** **** ${card.last4}',
                             style: theme.textTheme.bodyMedium?.copyWith(
                               fontSize: 11,
@@ -891,13 +908,13 @@ class _ErrorState extends StatelessWidget {
               color: AppColors.negative,
             ),
             const SizedBox(height: 16),
-            Text(
+            AppText(
               message,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyLarge,
             ),
             const SizedBox(height: 16),
-            TextButton(onPressed: onRetry, child: const Text('Retry')),
+            TextButton(onPressed: onRetry, child: const AppText('Retry')),
           ],
         ),
       ),
@@ -922,7 +939,7 @@ class _EmptyState extends StatelessWidget {
               color: Theme.of(context).textTheme.bodyMedium?.color,
             ),
             const SizedBox(height: 16),
-            Text(
+            AppText(
               'No vehicle categories to price yet',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyLarge,
@@ -953,19 +970,19 @@ class _SurchargeLine extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Flexible(
-              child: Text(
+              child: AppText(
                 'Cancellation-rate surcharge (+$pctText%)',
                 style: theme.textTheme.bodyMedium,
               ),
             ),
-            Text(
+            AppText(
               '+${estimate.surchargePence.format(currency: estimate.currency)}',
               style: theme.textTheme.bodyLarge?.copyWith(fontSize: 14),
             ),
           ],
         ),
         const SizedBox(height: 2),
-        Text(
+        AppText(
           'Included in the total because you cancel a lot of your bookings. '
           'It comes off once your cancellation rate drops.',
           style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),

@@ -1,3 +1,6 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hoppin_rider/core/preferences/device_settings.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/colors.dart';
@@ -12,7 +15,7 @@ import '../../../payments/presentation/widgets/receipt_row.dart';
 /// Complete and Trip Details, and the same money rules: [Pence.format] for
 /// every amount, a null total read as "Not charged yet" rather than
 /// "£0.00", and a waiting row shown only when the charge is non-zero.
-class RideDetailsSummaryCard extends StatelessWidget {
+class RideDetailsSummaryCard extends ConsumerWidget {
   final Receipt receipt;
 
   const RideDetailsSummaryCard({super.key, required this.receipt});
@@ -40,7 +43,7 @@ class RideDetailsSummaryCard extends StatelessWidget {
       : receipt.totalPence!.format(currency: receipt.currency);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final duration = _duration;
 
@@ -53,7 +56,7 @@ class RideDetailsSummaryCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Journey Summary', style: theme.textTheme.titleMedium),
+                AppText('Journey Summary', style: theme.textTheme.titleMedium),
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -64,7 +67,7 @@ class RideDetailsSummaryCard extends StatelessWidget {
                         label: 'Distance',
                         value: receipt.distanceMiles == null
                             ? '—'
-                            : '${receipt.distanceMiles!.toStringAsFixed(1)} mi',
+                            : formatDistance(receipt.distanceMiles! * 1609.344, ref.watch(deviceSettingsProvider).distanceUnit),
                       ),
                     ),
                     Expanded(
@@ -95,7 +98,7 @@ class RideDetailsSummaryCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Fare Estimate', style: theme.textTheme.titleMedium),
+                AppText('Fare Estimate', style: theme.textTheme.titleMedium),
                 const SizedBox(height: 4),
                 Text(_totalLabel,
                     style: theme.textTheme.headlineLarge?.copyWith(fontSize: 24)),
@@ -118,9 +121,9 @@ class RideDetailsSummaryCard extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Date', style: theme.textTheme.bodyMedium),
+                  AppText('Date', style: theme.textTheme.bodyMedium),
                   Flexible(
-                    child: Text(
+                    child: AppText(
                       DateFormat('d MMM yyyy, HH:mm')
                           .format(receipt.pickupTime!.toLocal()),
                       style: theme.textTheme.bodyLarge,
@@ -161,7 +164,7 @@ class _SummaryStat extends StatelessWidget {
           child: Icon(icon, size: 18, color: AppColors.brand),
         ),
         const SizedBox(height: 6),
-        Text(label, style: theme.textTheme.bodyMedium),
+        AppText(label, style: theme.textTheme.bodyMedium),
         Text(
           value,
           style: theme.textTheme.labelLarge,

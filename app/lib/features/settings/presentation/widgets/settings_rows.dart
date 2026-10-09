@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/colors.dart';
@@ -30,8 +31,8 @@ class SettingsToggleRow extends StatelessWidget {
     final disabled = onChanged == null;
     final textColor = disabled
         ? (theme.brightness == Brightness.light
-            ? AppColors.textDisabled
-            : AppColors.darkTextDisabled)
+              ? AppColors.textDisabled
+              : AppColors.darkTextDisabled)
         : theme.textTheme.bodyLarge?.color;
 
     return Padding(
@@ -41,13 +42,12 @@ class SettingsToggleRow extends StatelessWidget {
           Icon(icon, size: 22, color: textColor),
           const SizedBox(width: 16),
           Expanded(
-            child: Text(label,
-                style: theme.textTheme.bodyLarge?.copyWith(color: textColor)),
+            child: AppText(
+              label,
+              style: theme.textTheme.bodyLarge?.copyWith(color: textColor),
+            ),
           ),
-          if (comingSoon) ...[
-            _SoonBadge(),
-            const SizedBox(width: 8),
-          ],
+          if (comingSoon) ...[_SoonBadge(), const SizedBox(width: 8)],
           // The design's toggles are orange, not the app's indigo brand
           // colour -- coloured here rather than in the shared theme, since
           // Switch appears nowhere else in the app and a theme-wide change
@@ -72,6 +72,7 @@ class SettingsToggleRow extends StatelessWidget {
 class SettingsNavRow extends StatelessWidget {
   final IconData icon;
   final String label;
+  final String? value;
   final VoidCallback? onTap;
   final bool comingSoon;
 
@@ -79,6 +80,7 @@ class SettingsNavRow extends StatelessWidget {
     super.key,
     required this.icon,
     required this.label,
+    this.value,
     this.onTap,
     this.comingSoon = false,
   });
@@ -89,8 +91,8 @@ class SettingsNavRow extends StatelessWidget {
     final disabled = onTap == null;
     final textColor = disabled
         ? (theme.brightness == Brightness.light
-            ? AppColors.textDisabled
-            : AppColors.darkTextDisabled)
+              ? AppColors.textDisabled
+              : AppColors.darkTextDisabled)
         : theme.textTheme.bodyLarge?.color;
 
     final row = Padding(
@@ -100,13 +102,23 @@ class SettingsNavRow extends StatelessWidget {
           Icon(icon, size: 22, color: textColor),
           const SizedBox(width: 16),
           Expanded(
-            child: Text(label,
-                style: theme.textTheme.bodyLarge?.copyWith(color: textColor)),
+            child: AppText(
+              label,
+              style: theme.textTheme.bodyLarge?.copyWith(color: textColor),
+            ),
           ),
-          if (comingSoon) ...[
-            _SoonBadge(),
-            const SizedBox(width: 8),
-          ],
+          if (value != null)
+            Flexible(
+              child: Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: AppText(
+                  value!,
+                  textAlign: TextAlign.end,
+                  style: theme.textTheme.bodySmall,
+                ),
+              ),
+            ),
+          if (comingSoon) ...[_SoonBadge(), const SizedBox(width: 8)],
           Icon(Icons.chevron_right, size: 22, color: textColor),
         ],
       ),
@@ -142,11 +154,11 @@ class SettingsActionRow extends StatelessWidget {
     final disabled = onTap == null;
     final Color? textColor = disabled
         ? (theme.brightness == Brightness.light
-            ? AppColors.textDisabled
-            : AppColors.darkTextDisabled)
+              ? AppColors.textDisabled
+              : AppColors.darkTextDisabled)
         : destructive
-            ? AppColors.negative
-            : theme.textTheme.bodyLarge?.color;
+        ? AppColors.negative
+        : theme.textTheme.bodyLarge?.color;
 
     final row = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -155,8 +167,10 @@ class SettingsActionRow extends StatelessWidget {
           Icon(icon, size: 22, color: textColor),
           const SizedBox(width: 16),
           Expanded(
-            child: Text(label,
-                style: theme.textTheme.bodyLarge?.copyWith(color: textColor)),
+            child: AppText(
+              label,
+              style: theme.textTheme.bodyLarge?.copyWith(color: textColor),
+            ),
           ),
           if (comingSoon) _SoonBadge(),
         ],
@@ -185,9 +199,14 @@ class _SoonBadge extends StatelessWidget {
         color: bg,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text('Soon',
-          style: theme.textTheme.bodyMedium
-              ?.copyWith(color: fg, fontSize: 11, fontWeight: FontWeight.w600)),
+      child: AppText(
+        'Soon',
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: fg,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 }

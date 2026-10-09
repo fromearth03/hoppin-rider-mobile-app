@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -32,7 +33,7 @@ class _PromotionalScreenState extends ConsumerState<PromotionalScreen> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: const Text('Promotional'),
+        title: const AppText('Promotional'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).maybePop(),
@@ -80,7 +81,7 @@ class _EmptyState extends StatelessWidget {
                 size: 56,
                 color: Theme.of(context).textTheme.bodyMedium?.color),
             const SizedBox(height: 16),
-            Text(
+            AppText(
               failed
                   ? 'Promotions could not be loaded'
                   : 'No promotions right now',

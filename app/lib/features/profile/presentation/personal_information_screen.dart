@@ -1,3 +1,5 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
+import '../../../core/auth/account_generation.dart';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -14,6 +16,7 @@ import '../../../shared/widgets/hoppin_button.dart';
 import '../../../shared/widgets/hoppin_text_field.dart';
 import '../../../shared/widgets/profile_avatar.dart';
 import '../../auth/data/profile_repository.dart';
+import '../../auth/domain/dob_validator.dart';
 import '../application/personal_information_controller.dart';
 import '../domain/personal_information_state.dart';
 
@@ -37,14 +40,14 @@ import '../domain/personal_information_state.dart';
 /// `NetworkImage` — on web an `<img>` tag cannot carry the bearer token —
 /// so the bytes come through the authenticated client and render from
 /// memory. Null (initials fallback) on any failure.
-final avatarBytesProvider =
-    FutureProvider.autoDispose.family<Uint8List?, String>((ref, url) async {
-  final result = await ref.watch(apiClientProvider).getBytes(url);
-  return switch (result) {
-    Ok(:final value) => value,
-    Err() => null,
-  };
-});
+final avatarBytesProvider = FutureProvider.autoDispose
+    .family<Uint8List?, String>((ref, url) async {
+      final result = await ref.watch(apiClientProvider).getBytes(url);
+      return switch (result) {
+        Ok(:final value) => value,
+        Err() => null,
+      };
+    });
 
 class PersonalInformationScreen extends ConsumerStatefulWidget {
   const PersonalInformationScreen({super.key});
@@ -63,6 +66,8 @@ class _PersonalInformationScreenState
 
   RiderProfile? _loadedProfile;
   String? _nameError;
+  DateTime? _dob;
+  String? _dobError;
   bool _uploadingAvatar = false;
 
   @override
@@ -95,8 +100,10 @@ class _PersonalInformationScreenState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text(
-                  'Could not open the photo picker. Please try again.')),
+            content: AppText(
+              'Could not open the photo picker. Please try again.',
+            ),
+          ),
         );
       }
       return;
@@ -120,11 +127,11 @@ class _PersonalInformationScreenState
         ref.invalidate(profileAvatarBytesProvider);
         ref.read(personalInformationControllerProvider.notifier).load();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile photo updated.')),
+          const SnackBar(content: AppText('Profile photo updated.')),
         );
       case Err(:final error):
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(RiderErrorCopy.messageFor(error))),
+          SnackBar(content: AppText(RiderErrorCopy.messageFor(error))),
         );
     }
   }
@@ -142,6 +149,29 @@ class _PersonalInformationScreenState
     _phone.text = profile.phoneNumber ?? '';
     _address.text = profile.address ?? '';
     _email.text = profile.email;
+    _dob = DateTime.tryParse(profile.dateOfBirth ?? '');
+    _dobError = null;
+  }
+
+  Future<void> _pickDob() async {
+    final generation = ref.read(accountGenerationProvider);
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _dob ?? DateTime(now.year - 30, now.month, now.day),
+      firstDate: DateTime(1900),
+      lastDate: now,
+      helpText: tr(context, 'Select your date of birth'),
+    );
+    if (!mounted ||
+        generation != ref.read(accountGenerationProvider) ||
+        picked == null) {
+      return;
+    }
+    setState(() {
+      _dob = picked;
+      _dobError = DobValidator.validate(picked);
+    });
   }
 
   void _submit() {
@@ -152,41 +182,67 @@ class _PersonalInformationScreenState
     }
     setState(() => _nameError = null);
 
+    final missingDob = _loadedProfile?.needsDateOfBirth == true;
+    if (missingDob && _dob != null) {
+      final error = DobValidator.validate(_dob);
+      if (error != null) {
+        setState(() => _dobError = error);
+        return;
+      }
+    }
     final phone = _phone.text.trim();
-    ref.read(personalInformationControllerProvider.notifier).save(
+    ref
+        .read(personalInformationControllerProvider.notifier)
+        .save(
           fullName: name,
           phoneNumber: phone.isEmpty ? null : phone,
           // Sent as typed: an empty box clears the address.
           address: _address.text.trim(),
+          dateOfBirth: missingDob && _dob != null
+              ? DobValidator.format(_dob!)
+              : null,
         );
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(personalInformationControllerProvider, (previous, next) {
+      if (previous?.isSaving == true &&
+          !next.isSaving &&
+          next.saveError == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: AppText('Personal information saved.')),
+        );
+      }
+    });
     final state = ref.watch(personalInformationControllerProvider);
     final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Personal Information'),
+        title: const AppText('Personal Information'),
         centerTitle: true,
       ),
       body: switch (state.status) {
-        PersonalInformationStatus.loading =>
-          const Center(child: CircularProgressIndicator()),
+        PersonalInformationStatus.loading => const Center(
+          child: CircularProgressIndicator(),
+        ),
         PersonalInformationStatus.error => _ErrorView(
-            message: state.loadError?.message ??
-                'Something went wrong. Try again.',
-            onRetry: () =>
-                ref.read(personalInformationControllerProvider.notifier).load(),
-          ),
+          message:
+              state.loadError?.message ?? 'Something went wrong. Try again.',
+          onRetry: () =>
+              ref.read(personalInformationControllerProvider.notifier).load(),
+        ),
         PersonalInformationStatus.ready => _buildForm(context, theme, state),
       },
     );
   }
 
   Widget _buildForm(
-      BuildContext context, ThemeData theme, PersonalInformationState state) {
+    BuildContext context,
+    ThemeData theme,
+    PersonalInformationState state,
+  ) {
     final profile = state.profile;
     if (profile == null) {
       // Unreachable in practice -- `ready` is only ever set alongside a
@@ -204,26 +260,30 @@ class _PersonalInformationScreenState
             Center(
               child: Stack(
                 children: [
-                  Builder(builder: (context) {
-                    final bytes = profile.avatarUrl == null
-                        ? null
-                        : ref
-                            .watch(avatarBytesProvider(profile.avatarUrl!))
-                            .valueOrNull;
-                    return CircleAvatar(
-                      radius: 56,
-                      backgroundColor:
-                          AppColors.primary.withValues(alpha: 0.15),
-                      backgroundImage:
-                          bytes != null ? MemoryImage(bytes) : null,
-                      child: bytes == null
-                          ? Text(
-                              _initials(profile.fullName),
-                              style: theme.textTheme.headlineLarge,
-                            )
-                          : null,
-                    );
-                  }),
+                  Builder(
+                    builder: (context) {
+                      final bytes = profile.avatarUrl == null
+                          ? null
+                          : ref
+                                .watch(avatarBytesProvider(profile.avatarUrl!))
+                                .valueOrNull;
+                      return CircleAvatar(
+                        radius: 56,
+                        backgroundColor: AppColors.primary.withValues(
+                          alpha: 0.15,
+                        ),
+                        backgroundImage: bytes != null
+                            ? MemoryImage(bytes)
+                            : null,
+                        child: bytes == null
+                            ? Text(
+                                _initials(profile.fullName),
+                                style: theme.textTheme.headlineLarge,
+                              )
+                            : null,
+                      );
+                    },
+                  ),
                   // The frame's edit badge — wired to the real
                   // POST /me/avatar/upload.
                   Positioned(
@@ -243,10 +303,15 @@ class _PersonalInformationScreenState
                                   width: 16,
                                   height: 16,
                                   child: CircularProgressIndicator(
-                                      strokeWidth: 2, color: Colors.white),
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
                                 )
-                              : const Icon(Icons.edit,
-                                  size: 16, color: Colors.white),
+                              : const Icon(
+                                  Icons.edit,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
                         ),
                       ),
                     ),
@@ -263,6 +328,36 @@ class _PersonalInformationScreenState
                 if (_nameError != null) setState(() => _nameError = null);
               },
             ),
+            const SizedBox(height: 18),
+            AppText('Date of birth', style: theme.textTheme.titleSmall),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: profile.needsDateOfBirth && !state.isSaving
+                  ? _pickDob
+                  : null,
+              icon: Icon(
+                profile.needsDateOfBirth
+                    ? Icons.calendar_month_outlined
+                    : Icons.lock_outline,
+              ),
+              label: AppText(
+                _dob == null
+                    ? 'Set date of birth'
+                    : '${_dob!.day.toString().padLeft(2, '0')}/${_dob!.month.toString().padLeft(2, '0')}/${_dob!.year}',
+              ),
+            ),
+            const SizedBox(height: 8),
+            AppText(
+              profile.needsDateOfBirth
+                  ? 'Required to book a ride. You must be at least 13. Choose your date of birth, then tap Save. Once saved, contact support to correct it.'
+                  : 'Your date of birth is saved. Contact support if you need to correct it.',
+              style: theme.textTheme.bodySmall,
+            ),
+            if (_dobError != null)
+              AppText(
+                _dobError!,
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
             const SizedBox(height: 18),
             HoppinTextField(
               label: 'Email',
@@ -282,11 +377,14 @@ class _PersonalInformationScreenState
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.info_outline,
-                    size: 18, color: theme.textTheme.bodyMedium?.color),
+                Icon(
+                  Icons.info_outline,
+                  size: 18,
+                  color: theme.textTheme.bodyMedium?.color,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
+                  child: AppText(
                     'A phone number cannot be removed once saved, and one '
                     'already used on another account cannot be reused here.',
                     style: theme.textTheme.bodyMedium,
@@ -324,8 +422,10 @@ class _PersonalInformationScreenState
   }
 
   static String _initials(String fullName) {
-    final parts =
-        fullName.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty);
+    final parts = fullName
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty);
     if (parts.isEmpty) return '?';
     final first = parts.first[0];
     final last = parts.length > 1 ? parts.last[0] : '';
@@ -347,7 +447,7 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(message, textAlign: TextAlign.center),
+            AppText(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
             HoppinButton(label: 'Try again', onPressed: onRetry),
           ],

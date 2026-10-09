@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/colors.dart';
@@ -37,7 +38,7 @@ class LinkSentScreen extends StatelessWidget {
           Icon(Icons.mark_email_read_outlined,
               size: 72, color: AppColors.ink),
           const SizedBox(height: 24),
-          Text(
+          AppText(
             hasEmail
                 ? "If an account exists for $trimmedEmail, we've sent you a "
                     'password reset link. Please open the email and follow '

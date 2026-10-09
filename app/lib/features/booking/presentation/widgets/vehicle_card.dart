@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/colors.dart';
@@ -65,7 +66,7 @@ class VehicleCard extends StatelessWidget {
                       // no capacity line rather than "0 Seats 0 Bags", which
                       // would state something false.
                       if (category.hasCapacity)
-                        Text(
+                        AppText(
                           '${category.seats} Seats ${category.bags} Bags',
                           style: theme.textTheme.bodyMedium
                               ?.copyWith(fontSize: 11),

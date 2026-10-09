@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -73,19 +74,19 @@ class _SavedPlacesScreenState extends ConsumerState<SavedPlacesScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Remove this place?'),
-        content: Text(
+        title: const AppText('Remove this place?'),
+        content: AppText(
           '"${place.label}" will be removed from your saved places. This cannot be undone.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: const AppText('Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(foregroundColor: AppColors.negative),
-            child: const Text('Remove'),
+            child: const AppText('Remove'),
           ),
         ],
       ),
@@ -170,14 +171,14 @@ class _SavedPlacesScreenState extends ConsumerState<SavedPlacesScreen> {
               ListTile(
                 leading: const Icon(Icons.star, color: AppColors.accent),
                 title: Text(place.label),
-                subtitle: Text(
+                subtitle: AppText(
                   '${place.lat.toStringAsFixed(5)}, ${place.lng.toStringAsFixed(5)}',
                 ),
               ),
               const Divider(height: 1),
               ListTile(
                 leading: const Icon(Icons.my_location),
-                title: const Text('Ride from here'),
+                title: const AppText('Ride from here'),
                 onTap: () {
                   Navigator.of(sheet).pop();
                   _bookWith(place, asPickup: true);
@@ -185,7 +186,7 @@ class _SavedPlacesScreenState extends ConsumerState<SavedPlacesScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.place_outlined),
-                title: const Text('Ride to here'),
+                title: const AppText('Ride to here'),
                 onTap: () {
                   Navigator.of(sheet).pop();
                   _bookWith(place, asPickup: false);
@@ -194,7 +195,7 @@ class _SavedPlacesScreenState extends ConsumerState<SavedPlacesScreen> {
               const Divider(height: 1),
               ListTile(
                 leading: const Icon(Icons.edit_outlined),
-                title: const Text('Rename'),
+                title: const AppText('Rename'),
                 onTap: () {
                   Navigator.of(sheet).pop();
                   _openRename(place);
@@ -205,7 +206,7 @@ class _SavedPlacesScreenState extends ConsumerState<SavedPlacesScreen> {
                   Icons.delete_outline,
                   color: AppColors.negative,
                 ),
-                title: const Text('Remove'),
+                title: const AppText('Remove'),
                 onTap: () {
                   Navigator.of(sheet).pop();
                   _confirmRemove(place);
@@ -251,7 +252,7 @@ class _SavedPlacesScreenState extends ConsumerState<SavedPlacesScreen> {
           onPressed: () => Navigator.of(context).maybePop(),
           icon: const Icon(Icons.arrow_back),
         ),
-        title: const Text('Saved Places'),
+        title: const AppText('Saved Places'),
         centerTitle: true,
       ),
       body: SafeArea(
@@ -265,7 +266,7 @@ class _SavedPlacesScreenState extends ConsumerState<SavedPlacesScreen> {
               ElevatedButton.icon(
                 onPressed: _openAdd,
                 icon: const Icon(Icons.add),
-                label: const Text('Add a place'),
+                label: const AppText('Add a place'),
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size.fromHeight(56),
                   backgroundColor: AppColors.primary,
@@ -304,7 +305,7 @@ class _SavedPlacesScreenState extends ConsumerState<SavedPlacesScreen> {
               style: theme.textTheme.bodyLarge,
             ),
             const SizedBox(height: 16),
-            OutlinedButton(onPressed: _load, child: const Text('Retry')),
+            OutlinedButton(onPressed: _load, child: const AppText('Retry')),
           ],
         ),
       );
@@ -321,13 +322,13 @@ class _SavedPlacesScreenState extends ConsumerState<SavedPlacesScreen> {
               color: theme.textTheme.bodyMedium?.color,
             ),
             const SizedBox(height: 12),
-            Text(
+            AppText(
               'No saved places yet',
               style: theme.textTheme.bodyLarge,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 4),
-            Text(
+            AppText(
               'Save your home, work or anywhere you go often — then book straight from it.',
               style: theme.textTheme.bodyMedium,
               textAlign: TextAlign.center,

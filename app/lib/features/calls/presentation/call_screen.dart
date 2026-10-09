@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -111,7 +112,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                     color: Colors.white.withValues(alpha: 0.55),
                   ),
                   const SizedBox(width: 6),
-                  Text(
+                  AppText(
                     'Hoppin voice call',
                     style: TextStyle(
                       fontSize: 13,
@@ -131,7 +132,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                 ),
               ),
               const SizedBox(height: 6),
-              Text(
+              AppText(
                 switch (s.peerRole) {
                   'support' => 'Hoppin safety and support team',
                   'rider' => 'Rider',
@@ -355,7 +356,7 @@ class _RoundButton extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Text(
+          AppText(
             label,
             style: const TextStyle(color: Colors.white70, fontSize: 13),
           ),

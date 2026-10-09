@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -46,7 +47,7 @@ class _SelectVehicleScreenState extends ConsumerState<SelectVehicleScreen> {
     final catalogue = ref.watch(_vehicleCatalogueProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Select Vehicle')),
+      appBar: AppBar(title: const AppText('Select Vehicle')),
       body: SafeArea(
         child: catalogue.when(
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -114,11 +115,11 @@ class _ErrorState extends StatelessWidget {
           children: [
             const Icon(Icons.error_outline, size: 40, color: AppColors.negative),
             const SizedBox(height: 16),
-            Text(message,
+            AppText(message,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyLarge),
             const SizedBox(height: 16),
-            TextButton(onPressed: onRetry, child: const Text('Retry')),
+            TextButton(onPressed: onRetry, child: const AppText('Retry')),
           ],
         ),
       ),
@@ -141,7 +142,7 @@ class _EmptyState extends StatelessWidget {
                 size: 40,
                 color: Theme.of(context).textTheme.bodyMedium?.color),
             const SizedBox(height: 16),
-            Text('No vehicles available right now',
+            AppText('No vehicles available right now',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyLarge),
           ],

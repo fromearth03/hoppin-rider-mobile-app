@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -18,7 +19,7 @@ class OffersScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final ads = ref.watch(activeAdsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Ads & promotions')),
+      appBar: AppBar(title: const AppText('Ads & promotions')),
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(activeAdsProvider),
         child: ListView(
@@ -35,14 +36,14 @@ class OffersScreen extends ConsumerWidget {
                   Icons.confirmation_number_outlined,
                   color: Colors.white,
                 ),
-                title: const Text(
+                title: const AppText(
                   'Your promo codes',
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                subtitle: const Text(
+                subtitle: const AppText(
                   'Codes you can use at checkout',
                   style: TextStyle(color: Colors.white70),
                 ),
@@ -55,7 +56,7 @@ class OffersScreen extends ConsumerWidget {
               AsyncData(:final value) when value.isEmpty => [
                 Padding(
                   padding: const EdgeInsets.only(top: 40),
-                  child: Text(
+                  child: AppText(
                     'No ads right now. Check back soon.',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyMedium,

@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -66,7 +67,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             alignment: Alignment.centerRight,
             child: GestureDetector(
               onTap: () => context.go(AppRoutes.forgotPassword),
-              child: Text(
+              child: AppText(
                 'Forgot Password',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   decoration: TextDecoration.underline,
@@ -77,7 +78,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
           if (error != null) ...[
             const SizedBox(height: 8),
-            Text(
+            AppText(
               RiderErrorCopy.messageFor(error),
               style: const TextStyle(color: AppColors.negative),
             ),
@@ -95,7 +96,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             const Expanded(child: Divider()),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Text('or', style: theme.textTheme.bodySmall),
+              child: AppText('or', style: theme.textTheme.bodySmall),
             ),
             const Expanded(child: Divider()),
           ]),
@@ -111,7 +112,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               height: 20,
               width: 20,
             ),
-            label: const Text('Continue with Google'),
+            label: const AppText('Continue with Google'),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size.fromHeight(52),
               foregroundColor: AppColors.ink,
@@ -130,11 +131,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             alignment: WrapAlignment.center,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Text("Don't have an account?",
+              AppText("Don't have an account?",
                   style: theme.textTheme.bodyMedium),
               TextButton(
                 onPressed: () => context.go(AppRoutes.signup),
-                child: const Text('Sign up'),
+                child: const AppText('Sign up'),
               ),
             ],
           ),

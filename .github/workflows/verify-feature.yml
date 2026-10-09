@@ -29,5 +29,5 @@ jobs:
             cd "$WORK/app"
             flutter pub get
             flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings
-            flutter test --no-pub --concurrency=2 test/core/api test/features/auth/application test/features/notifications test/features/settings/application
+            flutter test --no-pub --concurrency=2 test/core/api test/features/auth/application test/features/notifications test/features/settings/application test/core/preferences test/features/profile test/features/settings/presentation/settings_screen_test.dart test/features/booking/presentation/fare_confirm_flow_test.dart
           '

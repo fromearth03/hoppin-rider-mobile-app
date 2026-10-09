@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -183,7 +184,7 @@ class _Header extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
+                AppText(
                   (name == null || name.isEmpty) ? 'Rider' : name,
                   style: theme.textTheme.titleMedium?.copyWith(fontSize: 19),
                   overflow: TextOverflow.ellipsis,
@@ -227,7 +228,7 @@ class _Stars extends StatelessWidget {
           ),
         const SizedBox(width: 6),
         Flexible(
-          child: Text(
+          child: AppText(
             '${rating.toStringAsFixed(2)} ($count)',
             style:
                 Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 13),
@@ -269,14 +270,14 @@ class _Item extends StatelessWidget {
                   Icon(icon, size: 22, color: color),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: Text(
+                    child: AppText(
                       label,
                       style: theme.textTheme.bodyLarge
                           ?.copyWith(fontSize: 15.5, color: color),
                     ),
                   ),
                   if (!enabled)
-                    Text(
+                    AppText(
                       'Soon',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         fontSize: 11,

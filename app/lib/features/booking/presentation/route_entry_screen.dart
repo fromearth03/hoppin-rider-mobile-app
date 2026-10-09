@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -292,7 +293,7 @@ class _RouteEntryScreenState extends ConsumerState<RouteEntryScreen> {
         _choose(value);
       case Err(:final error):
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(RiderErrorCopy.messageFor(error))),
+          SnackBar(content: AppText(RiderErrorCopy.messageFor(error))),
         );
     }
   }
@@ -464,7 +465,7 @@ class _RouteEntryScreenState extends ConsumerState<RouteEntryScreen> {
               ),
               const SizedBox(height: 6),
               // A quiet nudge that the map itself is an input.
-              Text(
+              AppText(
                 'Tip: pull this panel down and tap the map to drop a point.',
                 style: theme.textTheme.bodyMedium?.copyWith(fontSize: 11.5),
               ),
@@ -478,7 +479,7 @@ class _RouteEntryScreenState extends ConsumerState<RouteEntryScreen> {
         minimum: const EdgeInsets.fromLTRB(20, 0, 20, 16),
         child: FilledButton(
           onPressed: _routeComplete ? _confirm : null,
-          child: const Text('Confirm Route'),
+          child: const AppText('Confirm Route'),
         ),
       ),
     );
@@ -489,7 +490,7 @@ class _RouteEntryScreenState extends ConsumerState<RouteEntryScreen> {
       return [
         Padding(
           padding: const EdgeInsets.all(24),
-          child: Text(
+          child: AppText(
             RiderErrorCopy.messageFor(_error!),
             textAlign: TextAlign.center,
             style: const TextStyle(color: AppColors.negative),
@@ -509,7 +510,7 @@ class _RouteEntryScreenState extends ConsumerState<RouteEntryScreen> {
       return [
         Padding(
           padding: const EdgeInsets.all(24),
-          child: Text(
+          child: AppText(
             // Deliberately not "that place doesn't exist": when the geocoder
             // is unreachable the server returns saved places alone, silently,
             // so an empty list cannot distinguish the two.
@@ -577,7 +578,7 @@ class _Field extends StatelessWidget {
         onTap: onTap,
         onChanged: onChanged,
         decoration: InputDecoration(
-          hintText: hint,
+          hintText: trOptional(context, hint),
           isDense: true,
           filled: true,
           fillColor: AppColors.surface,
@@ -600,11 +601,11 @@ class _Field extends StatelessWidget {
             (final add?, _) => IconButton(
                 onPressed: add,
                 icon: const Icon(Icons.add),
-                tooltip: 'Add a stop'),
+                tooltip: tr(context, 'Add a stop')),
             (_, final remove?) => IconButton(
                 onPressed: remove,
                 icon: const Icon(Icons.close),
-                tooltip: 'Remove this stop'),
+                tooltip: tr(context, 'Remove this stop')),
             _ => null,
           },
         ),
@@ -637,7 +638,7 @@ class _Chip extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-          child: Text(
+          child: AppText(
             label,
             style: TextStyle(
               fontSize: 13,

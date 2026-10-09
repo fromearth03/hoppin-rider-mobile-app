@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -44,10 +45,10 @@ class CancellationRateCard extends ConsumerWidget {
           Row(
             children: [
               Expanded(
-                child: Text('Your cancellations',
+                child: AppText('Your cancellations',
                     style: theme.textTheme.titleMedium?.copyWith(fontSize: 15)),
               ),
-              Text('${pct.toStringAsFixed(pct % 1 == 0 ? 0 : 1)}%',
+              AppText('${pct.toStringAsFixed(pct % 1 == 0 ? 0 : 1)}%',
                   style: theme.textTheme.titleMedium
                       ?.copyWith(fontSize: 20, color: tone)),
             ],
@@ -56,7 +57,7 @@ class CancellationRateCard extends ConsumerWidget {
           // The counts, not just the percentage: 50% means something very
           // different at 2 rides and at 200, and the bare number invites a
           // rider to panic about a rate built from almost nothing.
-          Text(
+          AppText(
             '${stats.cancelled} of your last ${stats.ridesTotal} '
             '${stats.ridesTotal == 1 ? 'booking' : 'bookings'} '
             'in ${stats.windowDays} days',

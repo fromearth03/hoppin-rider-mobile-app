@@ -1,3 +1,5 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
+import 'package:hoppin_rider/core/preferences/external_navigation.dart';
 import 'package:flutter/material.dart';
 
 import '../../data/live_trip_source.dart';
@@ -39,20 +41,27 @@ class TripRouteHeader extends StatelessWidget {
                   Expanded(
                     child: Text(
                       waypoints[i].label.isEmpty
-                          ? (i == 0 ? 'Pickup' : 'Destination')
+                          ? tr(context, i == 0 ? 'Pickup' : 'Destination')
                           : waypoints[i].label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                          color: Colors.white, fontSize: 12.5),
+                        color: Colors.white,
+                        fontSize: 12.5,
+                      ),
                     ),
                   ),
+                  if (waypoints[i].position != null)
+                    DirectionsButton(
+                      point: waypoints[i].position!,
+                      pickup: i == 0,
+                      compact: true,
+                    ),
                 ],
               ),
             ),
             if (i != waypoints.length - 1)
-              Divider(
-                  height: 1, color: Colors.white.withValues(alpha: 0.15)),
+              Divider(height: 1, color: Colors.white.withValues(alpha: 0.15)),
           ],
         ],
       ),

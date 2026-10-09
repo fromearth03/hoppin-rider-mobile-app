@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/colors.dart';
@@ -73,7 +74,7 @@ class PaymentCardTile extends StatelessWidget {
                   softWrap: false,
                 ),
                 const SizedBox(height: 2),
-                Text(
+                AppText(
                   // The frame masks everything but the tail; the expiry
                   // rides along so the rider can still spot a dying card.
                   '**** **** **** ${card.last4}   ·   $_expiry',
@@ -99,14 +100,14 @@ class PaymentCardTile extends StatelessWidget {
               onPressed: onMakeDefault,
               icon: Icon(Icons.verified,
                   size: 24, color: AppColors.textDisabled),
-              tooltip: 'Make default',
+              tooltip: tr(context, 'Make default'),
               visualDensity: VisualDensity.compact,
             ),
           IconButton(
             onPressed: onRemove,
             icon: const Icon(Icons.delete_outline, size: 20),
             color: AppColors.textSecondary,
-            tooltip: 'Remove card',
+            tooltip: tr(context, 'Remove card'),
             visualDensity: VisualDensity.compact,
           ),
         ],

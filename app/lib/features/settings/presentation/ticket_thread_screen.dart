@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -94,7 +95,7 @@ class _TicketThreadScreenState extends ConsumerState<TicketThreadScreen> {
         ref.invalidate(_ticketDetailProvider(widget.ticketId));
       case Err(:final error):
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(RiderErrorCopy.messageFor(error))),
+          SnackBar(content: AppText(RiderErrorCopy.messageFor(error))),
         );
     }
   }
@@ -107,7 +108,7 @@ class _TicketThreadScreenState extends ConsumerState<TicketThreadScreen> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: const Text('Ticket'),
+        title: const AppText('Ticket'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).maybePop(),
@@ -119,7 +120,7 @@ class _TicketThreadScreenState extends ConsumerState<TicketThreadScreen> {
           error: (_, __) => const Center(
             child: Padding(
               padding: EdgeInsets.all(24),
-              child: Text(
+              child: AppText(
                 'Could not load this ticket.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: AppColors.negative),
@@ -140,7 +141,7 @@ class _TicketThreadScreenState extends ConsumerState<TicketThreadScreen> {
                       if (d.messages.isEmpty)
                         Padding(
                           padding: const EdgeInsets.all(20),
-                          child: Text(
+                          child: AppText(
                             'No replies yet — the team usually responds '
                             'within 24 hours.',
                             textAlign: TextAlign.center,
@@ -164,8 +165,8 @@ class _TicketThreadScreenState extends ConsumerState<TicketThreadScreen> {
                         controller: _reply,
                         minLines: 1,
                         maxLines: 4,
-                        decoration: const InputDecoration(
-                          hintText: 'Write a reply…',
+                        decoration: InputDecoration(
+                          hintText: trOptional(context, 'Write a reply…'),
                           isDense: true,
                         ),
                         onSubmitted: (_) => _send(),
@@ -243,7 +244,7 @@ class _TicketHeader extends StatelessWidget {
                       ?.copyWith(color: fg, fontWeight: FontWeight.w600)),
               const Spacer(),
               if (ticket.createdAt != null)
-                Text(
+                AppText(
                   DateFormat('d MMM, HH:mm')
                       .format(ticket.createdAt!.toLocal()),
                   style: theme.textTheme.bodyMedium?.copyWith(fontSize: 11.5),
@@ -261,7 +262,7 @@ class _TicketHeader extends StatelessWidget {
                   Icon(Icons.directions_car,
                       size: 16, color: AppColors.ink),
                   const SizedBox(width: 6),
-                  Text('View the ride this is about',
+                  AppText('View the ride this is about',
                       style: theme.textTheme.bodyMedium?.copyWith(
                           color: AppColors.ink,
                           decoration: TextDecoration.underline)),
@@ -281,7 +282,7 @@ class _TicketHeader extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Resolution',
+                  AppText('Resolution',
                       style: theme.textTheme.titleMedium?.copyWith(
                           fontSize: 13, color: AppColors.positive)),
                   const SizedBox(height: 4),
@@ -327,7 +328,7 @@ class _Bubble extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (message.isStaff)
-              Text('Support',
+              AppText('Support',
                   style: theme.textTheme.bodyMedium?.copyWith(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -344,7 +345,7 @@ class _Bubble extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (message.createdAt != null)
-                  Text(
+                  AppText(
                     DateFormat('d MMM, HH:mm')
                         .format(message.createdAt!.toLocal()),
                     style: TextStyle(

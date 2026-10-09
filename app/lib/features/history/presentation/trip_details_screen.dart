@@ -1,3 +1,5 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
+import 'package:hoppin_rider/core/preferences/device_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -50,13 +52,13 @@ class TripDetailsScreen extends ConsumerWidget {
     final detail = ref.watch(rideCompleteContextProvider(rideId));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Trip Details')),
+      appBar: AppBar(title: const AppText('Trip Details')),
       body: receipt.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Text(
+            child: AppText(
               e is ApiException
                   ? RiderErrorCopy.messageFor(e)
                   : 'Could not load this trip.',
@@ -72,7 +74,7 @@ class TripDetailsScreen extends ConsumerWidget {
   }
 }
 
-class _TripDetailsBody extends StatelessWidget {
+class _TripDetailsBody extends ConsumerWidget {
   final Receipt receipt;
   final LiveTripInfo? detail;
   const _TripDetailsBody({required this.receipt, required this.detail});
@@ -95,7 +97,7 @@ class _TripDetailsBody extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final duration = _duration;
     final route = detail?.route;
@@ -115,7 +117,7 @@ class _TripDetailsBody extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Journey Summary', style: theme.textTheme.titleMedium),
+                AppText('Journey Summary', style: theme.textTheme.titleMedium),
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -126,7 +128,7 @@ class _TripDetailsBody extends StatelessWidget {
                         label: 'Distance',
                         value: receipt.distanceMiles == null
                             ? '—'
-                            : '${receipt.distanceMiles!.toStringAsFixed(1)} mi',
+                            : formatDistance(receipt.distanceMiles! * 1609.344, ref.watch(deviceSettingsProvider).distanceUnit),
                       ),
                     ),
                     Expanded(
@@ -158,7 +160,7 @@ class _TripDetailsBody extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Total Fare',
+                AppText('Total Fare',
                     style: theme.textTheme.headlineLarge
                         ?.copyWith(fontSize: 24)),
                 const SizedBox(height: 4),
@@ -169,7 +171,7 @@ class _TripDetailsBody extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
-                        child: Text('Waiting time',
+                        child: AppText('Waiting time',
                             style: theme.textTheme.bodyMedium),
                       ),
                       Text(
@@ -200,7 +202,7 @@ class _TripDetailsBody extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Your Driver',
+                        AppText('Your Driver',
                             style: theme.textTheme.bodyMedium
                                 ?.copyWith(fontSize: 12)),
                         Text(driver.name,
@@ -212,7 +214,7 @@ class _TripDetailsBody extends StatelessWidget {
                               const Icon(Icons.star_rounded,
                                   size: 16, color: AppColors.warning),
                               const SizedBox(width: 3),
-                              Text(
+                              AppText(
                                 '${driver.rating!.toStringAsFixed(1)}'
                                 '${driver.ratingCount > 0 ? ' (${driver.ratingCount})' : ''}',
                                 style: theme.textTheme.bodyMedium
@@ -236,9 +238,9 @@ class _TripDetailsBody extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Date', style: theme.textTheme.bodyMedium),
+                  AppText('Date', style: theme.textTheme.bodyMedium),
                   Flexible(
-                    child: Text(
+                    child: AppText(
                       DateFormat('d MMM yyyy, HH:mm')
                           .format(receipt.pickupTime!.toLocal()),
                       style: theme.textTheme.bodyLarge,
@@ -264,7 +266,7 @@ class _TripDetailsBody extends StatelessWidget {
               dropoff: to.position!,
             ),
             icon: const Icon(Icons.replay, size: 20),
-            label: const Text('Book this trip again'),
+            label: const AppText('Book this trip again'),
             style: FilledButton.styleFrom(
               minimumSize: const Size.fromHeight(52),
             ),
@@ -320,7 +322,7 @@ class _SummaryStat extends StatelessWidget {
           child: Icon(icon, size: 18, color: AppColors.brand),
         ),
         const SizedBox(height: 6),
-        Text(label, style: theme.textTheme.bodyMedium),
+        AppText(label, style: theme.textTheme.bodyMedium),
         Text(
           value,
           style: theme.textTheme.labelLarge,

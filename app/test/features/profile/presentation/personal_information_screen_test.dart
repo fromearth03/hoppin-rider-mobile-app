@@ -66,6 +66,7 @@ void main() {
           fullName: any(named: 'fullName'),
           phoneNumber: any(named: 'phoneNumber'),
           address: any(named: 'address'),
+          dateOfBirth: any(named: 'dateOfBirth'),
         )).thenAnswer((_) async {});
     stub(const PersonalInformationState());
   });
@@ -160,6 +161,7 @@ void main() {
           fullName: any(named: 'fullName'),
           phoneNumber: any(named: 'phoneNumber'),
           address: any(named: 'address'),
+          dateOfBirth: any(named: 'dateOfBirth'),
         ));
     expect(find.text('Enter your name'), findsOneWidget);
   });
@@ -185,6 +187,7 @@ void main() {
           fullName: 'Taimoor Asghar',
           phoneNumber: '+44 123 567 8910',
           address: '',
+          dateOfBirth: null,
         )).called(1);
   });
 

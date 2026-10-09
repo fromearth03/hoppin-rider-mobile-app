@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 /// Recent Payments — `GET /api/v1/me/transactions`.
@@ -31,7 +32,7 @@ class TransactionsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: const Text('Recent Payments'),
+        title: const AppText('Recent Payments'),
         // AppBar's automatic back button needs a route to pop to, which is
         // absent in isolation (e.g. under test). Wired explicitly instead,
         // matching the rest of this app's screens.
@@ -67,13 +68,13 @@ class _EmptyState extends StatelessWidget {
               color: theme.textTheme.bodyMedium?.color,
             ),
             const SizedBox(height: 16),
-            Text(
+            AppText(
               'No recent payments',
               textAlign: TextAlign.center,
               style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
-            Text(
+            AppText(
               'Your charged rides will appear here in a future update.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium,

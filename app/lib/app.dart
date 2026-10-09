@@ -1,3 +1,5 @@
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'core/preferences/device_settings.dart';
 import 'dart:ui' show PointerDeviceKind;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -10,6 +12,7 @@ import 'core/device/device_checkin.dart';
 import 'core/push/push_registrar.dart';
 import 'core/net/network_status.dart';
 import 'core/theme/app_theme.dart';
+import 'core/preferences/screen_awake.dart';
 import 'core/theme/theme_controller.dart';
 import 'features/auth/application/auth_controller.dart';
 import 'shared/nav/app_router.dart';
@@ -35,14 +38,16 @@ class _HoppinAppState extends ConsumerState<HoppinApp> {
     super.initState();
     // Back in the foreground: refresh the device check-in (throttled inside
     // to every 15 min) so the panel's last-seen time and IP stay current.
-    _lifecycle = AppLifecycleListener(onResume: () {
-      if (ref.read(authControllerProvider).status == AuthStatus.signedIn) {
-        ref.read(deviceCheckinProvider).report();
-        // This is the phone in use now: calls and notifications come here,
-        // not to another phone still signed in to the same account.
-        ref.read(pushRegistrarProvider).register();
-      }
-    });
+    _lifecycle = AppLifecycleListener(
+      onResume: () {
+        if (ref.read(authControllerProvider).status == AuthStatus.signedIn) {
+          ref.read(deviceCheckinProvider).report();
+          // This is the phone in use now: calls and notifications come here,
+          // not to another phone still signed in to the same account.
+          ref.read(pushRegistrarProvider).register();
+        }
+      },
+    );
     // Resolve the startup state exactly once, after the first frame so the
     // provider container is ready.
     //
@@ -70,6 +75,11 @@ class _HoppinAppState extends ConsumerState<HoppinApp> {
     final brightness = ref.watch(themeControllerProvider);
     return MaterialApp.router(
       title: 'Hoppin Rider',
+      locale: ref.watch(deviceSettingsProvider).language == 'en'
+          ? const Locale('en', 'GB')
+          : Locale(ref.watch(deviceSettingsProvider).language),
+      supportedLocales: const [Locale('en', 'GB'), Locale('ur'), Locale('hi')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       debugShowCheckedModeBanner: false,
       // Web/desktop testers use a MOUSE, and Flutter's default behavior
       // ignores mouse drags on scrollables — which made every draggable
@@ -119,14 +129,16 @@ class _HoppinAppState extends ConsumerState<HoppinApp> {
                   ),
                 ),
               );
-        if (!kIsWeb) return shell;
+        if (!kIsWeb) return ScreenAwake(child: shell);
         return LayoutBuilder(
           builder: (context, constraints) {
-            if (constraints.maxWidth <= 500) return shell;
+            if (constraints.maxWidth <= 500) return ScreenAwake(child: shell);
             final dark = Theme.of(context).brightness == Brightness.dark;
             return ColoredBox(
               color: dark ? const Color(0xFF101016) : const Color(0xFFE7E7EC),
-              child: Center(child: SizedBox(width: 430, child: shell)),
+              child: Center(
+                child: SizedBox(width: 430, child: ScreenAwake(child: shell)),
+              ),
             );
           },
         );

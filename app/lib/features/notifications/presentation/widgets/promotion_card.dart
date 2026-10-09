@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -37,7 +38,7 @@ class PromotionCard extends StatelessWidget {
           // line, but a fabricated date is worse than no line at all.
           if (item.validUntil case final validUntil?) ...[
             const SizedBox(height: 14),
-            Text(
+            AppText(
               'Valid Until: ${DateFormat('dd MMMM, yyyy').format(validUntil)}',
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontStyle: FontStyle.italic,
@@ -68,7 +69,7 @@ class _StatusPill extends StatelessWidget {
         color: color,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(
+      child: AppText(
         label,
         style: const TextStyle(
           color: Colors.white,

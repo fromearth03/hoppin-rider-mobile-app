@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -107,7 +108,7 @@ class _AdBannerState extends ConsumerState<AdBanner> {
                   top: 2,
                   right: 2,
                   child: IconButton(
-                    tooltip: 'Hide ads',
+                    tooltip: tr(context, 'Hide ads'),
                     visualDensity: VisualDensity.compact,
                     iconSize: 18,
                     icon: Icon(
@@ -168,7 +169,7 @@ class _AdBannerState extends ConsumerState<AdBanner> {
                     color: AppColors.ink,
                   ),
                   const SizedBox(width: 5),
-                  Text(
+                  AppText(
                     'Ads & promotions',
                     style: TextStyle(
                       fontSize: 12.5,

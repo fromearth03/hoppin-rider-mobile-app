@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -62,7 +63,7 @@ class RideHistoryScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: const Text('Ride History'),
+        title: const AppText('Ride History'),
         // AppBar only draws a back button automatically when it can find a
         // route to pop to. In isolation (e.g. this screen opened directly, or
         // under test with no navigation stack) that auto-detection finds
@@ -133,7 +134,7 @@ class _FrequentTrips extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Your frequent trips',
+          AppText('Your frequent trips',
               style: theme.textTheme.titleMedium?.copyWith(fontSize: 15)),
           const SizedBox(height: 8),
           for (final trip in trips)
@@ -157,14 +158,14 @@ class _FrequentTrips extends ConsumerWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
+                              AppText(
                                 '${trip.fromLabel} → ${trip.toLabel}',
                                 style: theme.textTheme.bodyMedium
                                     ?.copyWith(fontSize: 14, height: 1.25),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              Text(
+                              AppText(
                                 '${trip.tripCount} trips',
                                 style: theme.textTheme.bodySmall?.copyWith(
                                     fontSize: 12,
@@ -173,7 +174,7 @@ class _FrequentTrips extends ConsumerWidget {
                             ],
                           ),
                         ),
-                        Text('Rebook',
+                        AppText('Rebook',
                             style: theme.textTheme.bodyMedium?.copyWith(
                                 fontSize: 13, color: AppColors.brand)),
                         Icon(Icons.chevron_right,
@@ -236,7 +237,7 @@ class _MonthFilterCard extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(title,
+                      AppText(title,
                           style: theme.textTheme.titleMedium?.copyWith(
                               fontSize: 15, color: AppColors.ink)),
                       Text(range,
@@ -273,7 +274,7 @@ class _MonthFilterCard extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(vertical: 8),
           children: [
             ListTile(
-              title: const Text('All time'),
+              title: const AppText('All time'),
               trailing: current == null
                   ? Icon(Icons.check, color: AppColors.ink)
                   : null,
@@ -281,7 +282,7 @@ class _MonthFilterCard extends ConsumerWidget {
             ),
             for (final m in months)
               ListTile(
-                title: Text(
+                title: AppText(
                   m.year == now.year && m.month == now.month
                       ? 'This Month'
                       : DateFormat('MMMM yyyy').format(m),
@@ -343,7 +344,7 @@ class _HistoryList extends StatelessWidget {
           children: [
             Padding(
               padding: EdgeInsets.only(top: i == 0 ? 8 : 20, bottom: 10),
-              child: Text(
+              child: AppText(
                 // "16 Feb", exactly as the frame heads each group.
                 DateFormat('d MMM').format(section.day),
                 style: theme.textTheme.titleMedium,
@@ -430,7 +431,7 @@ class _TripCard extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: Text(
+                    child: AppText(
                       DateFormat('h:mm a').format(trip.displayTime.toLocal()),
                       style: theme.textTheme.bodyMedium,
                       overflow: TextOverflow.ellipsis,
@@ -450,7 +451,7 @@ class _TripCard extends StatelessWidget {
                         dropoff: trip.dropoff!,
                       ),
                       icon: const Icon(Icons.replay, size: 16),
-                      label: const Text('Rebook'),
+                      label: const AppText('Rebook'),
                       style: TextButton.styleFrom(
                         foregroundColor: AppColors.brand,
                         padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -492,7 +493,7 @@ class _TripTrailing extends StatelessWidget {
           color: theme.colorScheme.error.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Text(
+        child: AppText(
           'Cancelled',
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.error,
@@ -512,7 +513,7 @@ class _TripTrailing extends StatelessWidget {
       children: [
         const Icon(Icons.star, size: 18, color: AppColors.warning),
         const SizedBox(width: 6),
-        Text(
+        AppText(
           '${rating.toStringAsFixed(1)} (${trip.driver!.ratingCount})',
           style: theme.textTheme.bodyMedium
               ?.copyWith(color: theme.colorScheme.onSurface),
@@ -546,7 +547,7 @@ class _PlaceRow extends StatelessWidget {
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: Text(
+          child: AppText(
             label,
             style: muted
                 ? theme.textTheme.bodyMedium
@@ -590,7 +591,7 @@ class _HistoryMessage extends StatelessWidget {
           children: [
             Icon(icon, size: 56, color: tone ?? theme.textTheme.bodyMedium?.color),
             const SizedBox(height: 16),
-            Text(
+            AppText(
               message,
               textAlign: TextAlign.center,
               style: theme.textTheme.titleMedium?.copyWith(color: tone),

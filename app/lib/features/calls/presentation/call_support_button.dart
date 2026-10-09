@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -32,7 +33,7 @@ class CallSupportButton extends ConsumerWidget {
     void call() => ref
         .read(callControllerProvider.notifier)
         .placeSupportCall(sosId: sosId, rideId: rideId);
-    final label = Text(onCall ? 'You are on a call' : 'Call Hoppin Support');
+    final label = AppText(onCall ? 'You are on a call' : 'Call Hoppin Support');
     const icon = Icon(Icons.support_agent);
     final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(12),

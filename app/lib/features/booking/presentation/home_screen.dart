@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -284,10 +285,10 @@ class _ModeRow extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('Ride Type',
+                      AppText('Ride Type',
                           style: theme.textTheme.titleMedium?.copyWith(
                               fontSize: 14.5, color: AppColors.ink)),
-                      Text('Pick the vehicle that fits your trip',
+                      AppText('Pick the vehicle that fits your trip',
                           style: theme.textTheme.bodyMedium
                               ?.copyWith(fontSize: 10.5),
                           overflow: TextOverflow.ellipsis),
@@ -349,7 +350,7 @@ class _SearchField extends StatelessWidget {
                   color: theme.textTheme.bodyMedium?.color, size: 22),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(
+                child: AppText(
                   'Where to & for how much?',
                   style: theme.textTheme.bodyMedium?.copyWith(fontSize: 14),
                   overflow: TextOverflow.ellipsis,
@@ -398,14 +399,14 @@ class _FrequentTripRow extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      AppText(
                         'Book again: ${trip.toLabel}',
                         style: theme.textTheme.bodyMedium
                             ?.copyWith(fontSize: 14, height: 1.25),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      Text(
+                      AppText(
                         'From ${trip.fromLabel} · ${trip.tripCount} trips',
                         style: theme.textTheme.bodySmall?.copyWith(
                             fontSize: 12, color: AppColors.textSecondary),

@@ -1,3 +1,4 @@
+import 'package:hoppin_rider/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/colors.dart';
@@ -36,7 +37,7 @@ class ExpiredLinkScreen extends StatelessWidget {
           Icon(Icons.error_outline,
               size: 72, color: AppColors.ink),
           const SizedBox(height: 24),
-          Text(
+          AppText(
             "We couldn't complete your password reset right now. Please "
             'wait a moment and try again.',
             textAlign: TextAlign.center,
